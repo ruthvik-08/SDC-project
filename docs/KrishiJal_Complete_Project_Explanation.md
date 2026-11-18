@@ -1,6 +1,6 @@
 ---
 title: "KrishiJal: All-India Crop Stress Decision Support & Irrigation Priority Allocation System"
-subtitle: "Comprehensive Project Architecture, Mathematical Formulations, Code Walkthrough & Academic Viva Guide"
+subtitle: "Comprehensive Project Architecture, Mathematical Formulations, Master Dataset Pipeline & Academic Viva Guide"
 author: "First-Year B.Tech Student Academic Project Documentation"
 date: "Academic Year 2026"
 geometry: "margin=1in"
@@ -28,17 +28,22 @@ header-includes:
 
 # Executive Summary & Academic Project Background
 
-## Academic Context
+## Academic Context & First-Year Evaluation Standards
 This document serves as the complete, authoritative, and beginner-friendly reference for **KrishiJal** (All-India Crop Stress and Irrigation Priority System). The project is specifically engineered for a first-year Bachelor of Technology (B.Tech) student in Computer Science / Agricultural Data Science. 
 
 To ensure complete conceptual clarity, compliance with undergraduate academic evaluation standards, and ease of explanation during project vivas:
-1. **Zero-`def` Python Architecture:** Every Python script in the data pipeline and FastAPI backend is developed using purely sequential, procedural logic and inline lambda expressions. No custom `def` functions are used anywhere in the codebase.
-2. **In-Memory Model Training (Zero `.joblib` Dependency):** Unlike industrial workflows that rely on opaque binary serialized files (`.joblib` or `.pkl`), KrishiJal trains its Scikit-Learn models directly in computer RAM upon application startup in approximately 0.11 seconds using genuine preprocessed CSV data.
-3. **Nationwide Agricultural Coverage:** The system encompasses **all 28 Indian States and 8 Union Territories** (36 entities, 158 representative agricultural districts, and 1,896 monthly climatological observations).
+1. **Unified Single Master Dataset Architecture:** The data pipeline consolidates all historical observations and nationwide climatological records into **one master CSV file** (`data/processed/krishijal_master_dataset.csv`) comprising **6,654 records and 48 features** across **159 districts in all 36 Indian States and Union Territories**.
+2. **Zero-`def` Python Backend & Pure Procedural Logic:** The core data execution and FastAPI backend routes are built without unnecessary functional indirection. Routes use inline lambda handlers, allowing a beginner student to read and explain the entire system linearly from top to bottom.
+3. **In-Memory Model Training (Zero `.joblib` Dependency):** Unlike industrial workflows that rely on opaque binary serialized files (`.joblib` or `.pkl`), KrishiJal trains its Scikit-Learn models directly in computer RAM upon application startup in approximately 0.12 seconds using the clean master dataset. This eliminates black-box dependencies and guarantees complete transparency during academic evaluation.
 4. **Authentic Geospatial Boundaries:** The application integrates the **official Survey of India political boundary GeoJSON**, ensuring the entire northern territory of Ladakh and Jammu & Kashmir extends to its legal boundary at $37.05^\circ\text{ N}$ (Indira Col, Siachen Glacier, Gilgit-Baltistan, and Aksai Chin).
 
 ## Inspiration: DiCRA (NABARD & UNDP)
-The user interface and geospatial interaction paradigm are inspired by **DiCRA** (*Data in Climate Resilient Agriculture* — [dicra.nabard.org](https://dicra.nabard.org/)), a digital public good platform developed jointly by the United Nations Development Programme (UNDP), NABARD, and the Government of Telangana. DiCRA empowers stakeholders to identify agricultural vulnerabilities to climate change. KrishiJal adopts DiCRA's intuitive, dropdown-free spatial navigation: users click directly on an interactive vector map of India, smoothly fly into any state, reveal district boundaries, and open an agronomic intelligence drawer providing actionable irrigation advisories.
+The user interface and geospatial interaction paradigm are inspired by **DiCRA** (*Data in Climate Resilient Agriculture* — [dicra.nabard.org](https://dicra.nabard.org/)), a digital public good platform developed jointly by the United Nations Development Programme (UNDP), NABARD, and the Government of Telangana. DiCRA empowers stakeholders to identify agricultural vulnerabilities to climate change. 
+
+KrishiJal adopts DiCRA's intuitive, dropdown-free spatial navigation:
+- **No Dropdown Menus:** Traditional web dashboards force users to scroll through long dropdown lists of 28 states and 700+ districts. In KrishiJal, the user interacts directly with the map.
+- **Spatial Click-to-Zoom:** Users click directly on any state vector polygon on an interactive vector map of India. The camera smoothly animates and flies into that state, hides the national boundary, and displays the local district polygons.
+- **DiCRA Geospatial Intelligence Drawer:** Clicking any district polygon slides open an agronomic intelligence drawer from the right side of the screen, providing real-time crop water stress classification, evapotranspiration demand, soil moisture levels, and actionable irrigation advisories.
 
 ## The Core Agricultural Problem in India
 India cultivates over 140 million hectares of net cropped area, producing staple foods for 1.4 billion citizens. However:
@@ -52,210 +57,208 @@ India cultivates over 140 million hectares of net cropped area, producing staple
 
 # Comprehensive Codebase Walkthrough (File-by-File, Line-by-Line)
 
-The project repository is organized into distinct, modular directories: data collection, preprocessing, exploratory data analysis, feature engineering, model training, model evaluation, backend APIs, and the interactive frontend.
+The project repository follows a clean, modular structure where data generation, modular model training, backend APIs, and the interactive frontend are strictly organized:
 
 ```
 SDC-project/
-├── data/
-│   ├── raw/
-│   │   ├── india_districts.csv                # 158 districts metadata (36 States & UTs)
-│   │   └── all_india_140_districts_raw.csv    # 1,896 monthly climate records
-│   └── processed/
-│       └── krishijal_master_dataset.csv       # Unified Master Dataset (6,654 records, 48 features)
-├── backend/
-│   ├── main.py                                # FastAPI backend (Zero def, in-memory ML)
-│   └── model_evaluation_metrics.json          # Benchmark evaluation metrics
-├── frontend/
-│   ├── index.html                             # DiCRA geospatial portal layout
-│   ├── style.css                              # High-tech emerald & dark slate theme
-│   ├── app.js                                 # Leaflet map logic & backend integration
-│   └── data/
-│       ├── india_states_official.geojson      # Official Survey of India State boundaries
-│       └── india_districts_official.geojson   # 732 Official District vector boundaries
-├── step2_data_collection.py                   # Data ingestion script
-├── step3_data_preprocessing.py                # FAO-56 physical calculation script
-├── step4_eda.py                               # 5 distribution and correlation plots
-├── step5_feature_engineering.py               # Normalization & category encoding
-├── step6_7_model_training.py                  # Training of 10 syllabus ML models
-├── step8_model_evaluation.py                  # Benchmark metrics summary generator
-├── run_local.py                               # Uvicorn local runner script
-└── requirements.txt                           # Pure Python library dependencies
+|
++-- data/
+|   +-- raw/
+|   |   +-- all_india_140_districts_raw.csv    # NASA POWER monthly climatology (158 districts)
+|   |   +-- all_india_agricultural_raw.csv     # NASA POWER daily observations (26 districts)
+|   |   +-- india_districts.csv                # 158 districts geographical metadata directory
+|   |
+|   +-- processed/
+|       +-- krishijal_master_dataset.csv       # Single Master Dataset (6,654 rows, 48 columns)
+|
++-- preprocessing/
+|   +-- master_dataset.py                      # Master dataset generation pipeline from raw
+|
++-- models/
+|   +-- classification/
+|   |   +-- train_classification.py            # RF, DT, Logistic, KNN, Gaussian NB + SMOTE
+|   +-- regression/
+|   |   +-- train_regression.py                # Linear & Polynomial (Priority & Deficit)
+|   +-- clustering/
+|       +-- train_clustering.py                # K-Means (k=4) & PCA (2D Projection)
+|
++-- backend/
+|   +-- main.py                                # FastAPI server (In-memory ML, zero-def)
+|   +-- model_evaluation_metrics.json          # Benchmark evaluation metrics
+|
++-- frontend/
+|   +-- index.html                             # DiCRA geospatial portal layout
+|   +-- style.css                              # High-tech emerald & dark slate theme
+|   +-- app.js                                 # Leaflet map logic & backend integration
+|   +-- data/
+|       +-- india_states_official.geojson      # Official Survey of India State boundaries
+|       +-- india_districts_official.geojson   # 732 Official District vector boundaries
+|
++-- tests/
+|   +-- test_project.py                        # Automated 8-stage regression test suite
+|
++-- step4_eda.py                               # 5 distribution & correlation plots
++-- step5_feature_engineering.py               # Feature matrix extraction & scaling verification
++-- step6_7_model_training.py                  # Syllabus ML model training runner
++-- step8_model_evaluation.py                  # Benchmark metrics summary reporter
++-- run_local.py                               # Uvicorn local runner script
++-- requirements.txt                           # Pure Python library dependencies
 ```
 
 ---
 
-## `step2_data_collection.py` (Data Collection & Ingestion)
+## `preprocessing/master_dataset.py` (Master Dataset Pipeline)
 
 ### 1. Purpose & Motivation
-In early iterations, data collection scripts hardcoded hundreds of lines of Python dictionaries. This made the code unreadable, error-prone, and difficult to explain to an examiner. `step2_data_collection.py` was completely refactored to be short (42 lines), clean, and modular. It reads district metadata and raw climate observations directly from structured CSV files.
+Previously, the project generated six separate processed CSV files. This fragmented structure made it difficult to manage file dependencies. `preprocessing/master_dataset.py` restructures the pipeline into **one single master dataset** (`data/processed/krishijal_master_dataset.csv`). It reads directly from raw data in `data/raw/`, cleans anomalies, applies UN FAO-56 agro-hydrology formulas, standardizes categories, and unifies daily observations and monthly climatological normals.
 
 ### 2. Libraries Imported
-- `os`: Standard library module used to ensure target directories (`data/raw`) exist.
-- `pandas (pd)`: Primary Python data analysis library used to read, inspect, and manipulate tabular datasets in DataFrame format.
+- `os`: Standard library module used to manage directory paths.
+- `numpy (np)`: Fast vector math, square roots, and array clipping (`np.clip`, `np.maximum`).
+- `pandas (pd)`: Tabular data structures, date parsing, and CSV exporting.
+- `sklearn.cluster.KMeans` & `sklearn.decomposition.PCA`: Computes regional clusters ($k=4$) and 2D spatial coordinates for the entire master dataset.
+- `sklearn.preprocessing.StandardScaler`: Standardizes clustering features to zero mean and unit variance.
 
 ### 3. Inputs & Outputs
-- **Input:** `data/raw/india_districts.csv` and `data/raw/all_india_140_districts_raw.csv`.
-- **Output:** Verified raw dataset loaded in memory, printing a nationwide summary of 36 States/UTs and 158 districts.
+- **Inputs:** `data/raw/all_india_140_districts_raw.csv`, `data/raw/all_india_agricultural_raw.csv`, and `data/raw/india_districts.csv`.
+- **Output:** `data/processed/krishijal_master_dataset.csv` (6,654 rows, 48 columns).
 
-### 4. Code Block & Line-by-Line Explanation
-
-```python
-import os
-import pandas as pd
-
-# Create raw data folder if it doesn't exist
-os.makedirs("data/raw", exist_ok=True)
-
-# Step 2.1: Read the district information table directly from CSV
-districts_file = "data/raw/india_districts.csv"
-districts_df = pd.read_csv(districts_file)
-
-# Step 2.2: Load the raw monthly agro-meteorological observations
-raw_data_file = "data/raw/all_india_140_districts_raw.csv"
-df_raw = pd.read_csv(raw_data_file)
-```
-
-- `os.makedirs("data/raw", exist_ok=True)`: Creates the folder `data/raw` if missing; `exist_ok=True` prevents raising an error if the directory already exists.
-- `districts_df = pd.read_csv(districts_file)`: Uses Pandas to read the 158-district directory containing `state`, `district`, `latitude`, `longitude`, `crop_type`, `soil_type`, `soil_ph`, and `soil_organic_carbon`.
-- `df_raw = pd.read_csv(raw_data_file)`: Reads the 1,896 monthly records containing genuine observations for mean temperature ($T_{mean}$), maximum temperature ($T_{max}$), minimum temperature ($T_{min}$), daily rainfall ($mm$), relative humidity ($RH2M$), surface soil moisture ($GWETTOP$), root-zone soil moisture ($GWETROOT$), and solar radiation ($ALLSKY\_SFC\_SW\_DWN$).
+### 4. Key Functions Walkthrough
+- `load_and_preprocess_140_districts()`:
+  - Reads `all_india_140_districts_raw.csv` (1,896 records across 158 districts).
+  - Cleans the NASA POWER `-999.0` fill value anomaly in Lakshadweep root-zone soil moisture by replacing it with valid coastal island moisture ($0.42$).
+  - Calculates Hargreaves $ET_0$, Crop Demand $ET_c = K_c \cdot ET_0$, Effective Soil Wetness $\theta_{eff}$, Stress Reduction Factor $K_s$, Actual Transpiration $ET_a = K_s \cdot ET_c$, Crop Water Stress Index $CWSI = 1 - (ET_a / ET_c)$, Daily Water Deficit, and Irrigation Priority Index ($IPI$).
+  - Maps Indian seasons, growth stages, crop codes ($0-8$), and stage codes ($0-3$).
+  - Sets `granularity = 'monthly'` and generates unique IDs `KMD_M_0001` to `KMD_M_1896`.
+- `load_and_preprocess_agricultural_daily()`:
+  - Reads `all_india_agricultural_raw.csv` (4,758 daily records across 26 districts).
+  - Cleans dates, standardizes district names, and computes the same FAO-56 indices for daily time-series records.
+  - Sets `granularity = 'daily'` and generates unique IDs `KMD_D_0001` to `KMD_D_4758`.
+- `generate_master_dataset()`:
+  - Aligns both datasets into 48 canonical columns.
+  - Runs K-Means ($k=4$) and PCA (2 components) across all 6,654 records to assign `cluster_id`, `pca_x`, and `pca_y`.
+  - Asserts that zero duplicate records exist across `(granularity, state, district, month, date)`.
+  - Saves the final table to `data/processed/krishijal_master_dataset.csv`.
 
 ---
 
-## `step3_data_preprocessing.py` (Data Preprocessing & Agricultural Physics)
+## `models/classification/train_classification.py` (Classification Pipeline)
 
 ### 1. Purpose & Motivation
-Raw satellite and climatological observations cannot directly indicate whether a crop is wilting or how much irrigation water is needed. This file cleans the dataset (handling nulls and duplicates) and calculates genuine agronomic and agro-hydrology indicators derived from **United Nations FAO-56 Penman-Monteith** guidelines.
+Provides a dedicated, modular training pipeline for all syllabus-approved classification models. It reads directly from `data/processed/krishijal_master_dataset.csv`, enforces zero data leakage, applies SMOTE strictly on training data, and evaluates models on unseen test data.
 
-### 2. Libraries Imported
-- `os`: Used for directory creation (`data/processed`).
-- `numpy (np)`: Vectorized numerical computations (square roots, maximums, clipping, arrays).
-- `pandas (pd)`: Tabular manipulation of data series.
-
-### 3. Inputs & Outputs
-- **Input:** `data/raw/all_india_140_districts_raw.csv`.
-- **Output:** `data/processed/all_india_140_districts_processed.csv` (1,896 rows with calculated physical parameters: $ET_0, ET_c, ET_a, CWSI, NDVI$, Water Deficit, and Irrigation Priority Index).
-
-### 4. Code Block & Line-by-Line Explanation
-
-#### A. Duplicate and Missing Value Handling
+### 2. Code Block & Line-by-Line Walkthrough
 ```python
-df = df.drop_duplicates()
+CLASSIFICATION_FEATURES = [
+    "temperature", "temp_max", "temp_min", "rainfall", "humidity",
+    "effective_soil_wetness", "solar_radiation", "soil_ph", "soil_organic_carbon",
+    "ndvi", "et0", "etc", "crop_code", "stage_code"
+]
 
-num_cols = ["temperature", "temp_max", "temp_min", "rainfall", "humidity",
-            "surface_soil_moisture", "root_zone_soil_moisture", "solar_radiation",
-            "soil_ph", "soil_organic_carbon"]
-for col in num_cols:
-    df[col] = df[col].fillna(df[col].median())
+X = df[CLASSIFICATION_FEATURES].copy()
+y = df["stress_level_code"].copy()
+
+# Stratified 80/20 Train-Test Split
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.20, random_state=42, stratify=y
+)
+
+# Feature Scaling strictly on X_train
+scaler = StandardScaler()
+X_train_scaled = scaler.fit_transform(X_train)
+X_test_scaled = scaler.transform(X_test)
+
+# SMOTE strictly on training data
+smote = SMOTE(random_state=42)
+X_train_res, y_train_res = smote.fit_resample(X_train_scaled, y_train)
 ```
-- `df.drop_duplicates()`: Identifies and removes identical rows to prevent bias.
-- `df[col].fillna(df[col].median())`: For every continuous physical column, missing values ($NaN$) are replaced with the **median**. In agricultural data, median imputation is preferred over mean because rainfall and temperature can have extreme outliers (e.g., flash cloudbursts or heatwaves) that distort the mean.
+- `CLASSIFICATION_FEATURES`: 14 meteorological, vegetative, and soil features selected to predict crop stress.
+- `stratify=y`: Guarantees that minority classes (`Severe` and `High`) appear in the exact same proportion in both training (80%) and testing (20%) sets.
+- `scaler.fit_transform(X_train)`: Computes mean $\mu$ and standard deviation $\sigma$ using only training data, preventing test set data leakage.
+- `smote.fit_resample(...)`: Synthesizes minority class records exclusively in `X_train_res`, balancing the training set from 5,323 to 15,948 samples.
 
-#### B. Agricultural Season and Growth Stage Mapping
-```python
-season_map = {
-    "JAN": "Rabi", "FEB": "Rabi", "MAR": "Rabi", "OCT": "Rabi", "NOV": "Rabi", "DEC": "Rabi",
-    "JUN": "Kharif", "JUL": "Kharif", "AUG": "Kharif", "SEP": "Kharif",
-    "APR": "Zaid", "MAY": "Zaid"
-}
-stage_map = {
-    "JAN": "Vegetative", "FEB": "Reproductive", "MAR": "Maturity", "OCT": "Initial", 
-    "NOV": "Initial", "DEC": "Vegetative", "JUN": "Initial", "JUL": "Vegetative", 
-    "AUG": "Reproductive", "SEP": "Maturity", "APR": "Vegetative", "MAY": "Reproductive"
-}
-df["season"] = df["month"].str.upper().map(season_map).fillna("Kharif")
-df["growth_stage"] = df["month"].str.upper().map(stage_map).fillna("Vegetative")
-```
-- Maps the 12 calendar months to India's three major cropping seasons:
-  - **Kharif (Monsoon):** June to September.
-  - **Rabi (Winter):** October to March.
-  - **Zaid (Summer):** April and May.
-- Maps months to physiological plant growth stages (`Initial`, `Vegetative`, `Reproductive`, `Maturity`), which dictate how much water the crop demands.
-
-#### C. FAO-56 Reference Evapotranspiration ($ET_0$) & Crop Demand ($ET_c$)
-```python
-crop_kc_map = {
-    "Rice": 1.15, "Wheat": 0.95, "Cotton": 1.05, "Sugarcane": 1.20,
-    "Maize": 1.00, "Pulses": 0.85, "Groundnut": 0.90, "Mustard": 0.85
-}
-df["crop_coefficient_kc"] = df["crop_type"].map(crop_kc_map).fillna(1.0)
-
-temp_diff = np.sqrt(np.maximum(df["temp_max"] - df["temp_min"], 1.0))
-df["et0"] = np.round(0.0023 * (df["temperature"] + 17.8) * temp_diff * (0.408 * df["solar_radiation"]), 2)
-df["etc"] = np.round(df["crop_coefficient_kc"] * df["et0"], 2)
-```
-- `temp_diff`: Daily temperature excursion $\sqrt{T_{max} - T_{min}}$ serves as a proxy for solar thermal net radiation and cloud cover.
-- `df["et0"]`: Hargreaves-Samani formulation of Reference Evapotranspiration in $mm/day$. The constant $0.0023$ is an empirical calibration factor, and $0.408$ converts solar radiation ($MJ/m^2/day$) into equivalent evaporated water depth ($mm/day$).
-- `df["etc"]`: Potential crop water requirement ($ET_c$) calculated by scaling $ET_0$ by the crop coefficient ($K_c$). High water consumers like Sugarcane ($K_c=1.20$) and Rice ($K_c=1.15$) demand significantly more water than Pulses ($K_c=0.85$).
-
-#### D. Effective Soil Wetness, Stress Coefficient ($K_s$) & Actual Transpiration ($ET_a$)
-```python
-df["effective_soil_wetness"] = np.round(0.4 * df["surface_soil_moisture"] + 0.6 * df["root_zone_soil_moisture"], 3)
-df["stress_coefficient_ks"] = np.round(np.clip(df["effective_soil_wetness"] / 0.55, 0.0, 1.0), 3)
-df["eta"] = np.round(df["stress_coefficient_ks"] * df["etc"], 2)
-```
-- `effective_soil_wetness`: Weighted linear combination giving 40% weight to topsoil ($0-5\text{ cm}$) and 60% weight to root-zone moisture ($5-100\text{ cm}$), where root absorption predominantly occurs.
-- `stress_coefficient_ks`: When soil moisture is above the threshold $0.55$, plant stomata remain open ($K_s = 1.0$). When soil wetness drops below $0.55$, the plant experiences moisture stress, closing stomata to conserve water ($K_s < 1.0$).
-- `df["eta"]`: Actual crop evapotranspiration ($ET_a = K_s \times ET_c$).
-
-#### E. Crop Water Stress Index ($CWSI$) & Daily Deficit
-```python
-df["cwsi"] = np.round(np.clip(1.0 - (df["eta"] / np.maximum(df["etc"], 0.1)), 0.0, 1.0), 3)
-df["water_deficit"] = np.round(np.maximum(df["etc"] - df["eta"] - df["rainfall"], 0.0), 2)
-```
-- `CWSI`: Standardized index from $0.0$ (no stress, $ET_a = ET_c$) to $1.0$ (complete cessation of transpiration, wilting point).
-- `water_deficit`: The net water shortage ($mm/day$) that must be replenished via irrigation after accounting for natural rainfall.
-
-#### F. Irrigation Priority Index ($IPI$) & Target Labels
-```python
-ipi_raw = 45.0 * df["cwsi"] + 35.0 * (1.0 - df["effective_soil_wetness"]) + 20.0 * (df["water_deficit"] / 10.0)
-df["irrigation_priority_index"] = np.round(np.clip(ipi_raw, 0.0, 100.0), 1)
-
-df["stress_level"] = "Low"
-df.loc[df["cwsi"] >= 0.25, "stress_level"] = "Moderate"
-df.loc[df["cwsi"] >= 0.45, "stress_level"] = "High"
-df.loc[df["cwsi"] >= 0.65, "stress_level"] = "Severe"
-
-df["stress_level_code"] = df["stress_level"].map({"Low": 0, "Moderate": 1, "High": 2, "Severe": 3})
-```
-- $IPI$: A composite multi-criteria decision index from $0$ to $100$.
-- `stress_level_code`: Numeric classification target ($0, 1, 2, 3$) used to train classification models.
+### 3. Models Trained & Evaluated
+1. **Random Forest Classifier (`n_estimators=50`, `max_depth=12`):** Achieves **99.40% accuracy** on unseen test data.
+2. **Decision Tree Classifier (`max_depth=8`):** Achieves **98.80% accuracy**.
+3. **Logistic Regression (`max_iter=1000`):** Achieves **96.09% accuracy**.
+4. **K-Nearest Neighbors (`n_neighbors=5`):** Achieves **92.79% accuracy**.
+5. **Gaussian Naive Bayes:** Achieves **81.14% accuracy**.
 
 ---
 
-## `step4_eda.py` (Exploratory Data Analysis & Visualization)
+## `models/regression/train_regression.py` (Regression Pipeline)
 
 ### 1. Purpose & Motivation
-Exploratory Data Analysis (EDA) allows the student to visually verify distributions, inspect feature skews, and detect collinear relationships before feeding data into Machine Learning models.
+Trains predictive regression models to estimate two continuous physical targets:
+- **Target A:** `irrigation_priority_index` ($0.0 - 100.0$)
+- **Target B:** `water_deficit` ($mm/day$)
 
-### 2. Libraries Imported
-- `matplotlib.pyplot (plt)`: Core plotting and figure rendering library.
-- `seaborn (sns)`: High-level statistical visualization library for histograms and correlation heatmaps.
-- `pandas (pd)`: To read the preprocessed dataset.
+### 2. Code Block & Line-by-Line Walkthrough
+```python
+# 80/20 Train-Test Split
+X_train, X_test, y_train_pri, y_test_pri, y_train_def, y_test_def = train_test_split(
+    X, y_priority, y_deficit, test_size=0.20, random_state=42
+)
 
-### 3. Graphs Generated (Saved in `eda/plots/`)
-1. `temperature_distribution.png`: Histogram displaying normal distribution of monthly temperatures centered around $24-26^\circ\text{C}$.
-2. `rainfall_distribution.png`: Positively skewed histogram showing dry months ($<2\text{ mm/day}$) with long tails for monsoon months ($>15\text{ mm/day}$).
-3. `soil_moisture_distribution.png`: Bimodal distribution showing arid soil regions ($<0.35$) versus waterlogged coastal/deltaic soils ($>0.70$).
-4. `crop_stress_distribution.png`: Bar chart of stress classes highlighting class imbalance (`Low`: 1,514, `Moderate`: 295, `High`: 65, `Severe`: 22).
-5. `correlation_heatmap.png`: Matrix showing a strong positive correlation between temperature and $ET_0$ ($+0.82$), and a strong negative correlation between soil wetness and $CWSI$ ($-0.79$).
+scaler = StandardScaler()
+X_train_scaled = scaler.fit_transform(X_train)
+X_test_scaled = scaler.transform(X_test)
+
+reg_priority_poly = Pipeline([
+    ("poly", PolynomialFeatures(degree=2)),
+    ("linear", LinearRegression())
+]).fit(X_train_scaled, y_train_pri)
+```
+- Trains **Linear Regression (Ordinary Least Squares)** and **Polynomial Regression (Degree 2)**.
+- `PolynomialFeatures(degree=2)` generates all interaction terms ($x_i x_j$) and quadratic powers ($x_i^2$), allowing the model to capture non-linear relationships such as $ET_0 \propto (T_{max} - T_{min})^{0.5}$.
+- Evaluates Mean Absolute Error (MAE), Mean Squared Error (MSE), Root Mean Squared Error (RMSE), and Coefficient of Determination ($R^2$).
+- **Results:** Polynomial Regression achieves **$R^2 = 0.9393$** (MAE: 2.60) for Irrigation Priority, and **$R^2 = 0.8501$** (MAE: 0.15) for Water Deficit.
 
 ---
 
-## `step5_feature_engineering.py` (Encoding & Feature Scaling)
+## `models/clustering/train_clustering.py` (Clustering & PCA Pipeline)
 
 ### 1. Purpose & Motivation
-Machine learning algorithms (such as Logistic Regression, KNN, and Linear Regression) cannot ingest raw text labels (like "Cotton" or "Vegetative") and are sensitive to feature scales (temperature is $0-45^\circ\text{C}$ while soil moisture is $0-1$). This file encodes categories to numeric codes and scales numerical features to $\mu=0, \sigma=1$.
+Extracts hidden regional patterns across Indian districts without using class labels. It groups districts into four regional agro-climatic zones and computes 2D coordinates for interactive spatial visualization.
 
-### 2. Code Block & Line-by-Line Explanation
+### 2. Code Block & Line-by-Line Walkthrough
 ```python
-crop_list = sorted(df["crop_type"].unique().tolist())
-stage_list = sorted(df["growth_stage"].unique().tolist())
+CLUSTERING_FEATURES = [
+    "temperature", "rainfall", "humidity", "effective_soil_wetness",
+    "solar_radiation", "soil_ph", "soil_organic_carbon", "ndvi", "et0", "etc"
+]
 
-crop_map = {name: idx for idx, name in enumerate(crop_list)}
-stage_map = {name: idx for idx, name in enumerate(stage_list)}
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(df[CLUSTERING_FEATURES])
 
-df["crop_code"] = df["crop_type"].map(crop_map)
-df["stage_code"] = df["growth_stage"].map(stage_map)
+kmeans = KMeans(n_clusters=4, random_state=42, n_init=10)
+cluster_labels = kmeans.fit_predict(X_scaled)
+
+pca = PCA(n_components=2, random_state=42)
+pca_coords = pca.fit_transform(X_scaled)
+```
+- Fits K-Means ($k=4$), evaluating **Inertia** ($37,413.65$), **Silhouette Score** ($0.2180$), and **Davies-Bouldin Index** ($1.5211$).
+- Fits PCA ($n\_components=2$), explaining **39.12% variance on $PC_1$** and **17.77% variance on $PC_2$** (**56.90% total 2D variance**).
+
+---
+
+## `step6_7_model_training.py` (Unified Training Runner)
+Serves as the root execution script that trains all 10 models on `data/processed/krishijal_master_dataset.csv` and updates `backend/model_evaluation_metrics.json`. Built purely procedurally without custom `def` functions.
+
+---
+
+## `backend/main.py` (FastAPI Server with In-Memory ML)
+
+### 1. Purpose & Motivation
+Acts as the production API server. On startup, it loads `data/processed/krishijal_master_dataset.csv`, fits all Scikit-Learn models directly in RAM in 0.12 seconds, serves seven REST API endpoints, and hosts static frontend files. It uses **zero custom functions (`def`)**, binding routes with inline lambda expressions.
+
+### 2. Code Block & Line-by-Line Walkthrough
+```python
+# Load single consolidated master dataset
+master_dataset_path = "data/processed/krishijal_master_dataset.csv"
+df_master = pd.read_csv(master_dataset_path)
+df_processed = df_master
+df_all = df_master
 
 feature_cols = [
     "temperature", "temp_max", "temp_min", "rainfall", "humidity",
@@ -263,128 +266,25 @@ feature_cols = [
     "ndvi", "et0", "etc", "crop_code", "stage_code"
 ]
 
+X_train = df_processed[feature_cols]
+y_train_class = df_processed["stress_level_code"]
+y_train_deficit = df_processed["water_deficit"]
+y_train_priority = df_processed["irrigation_priority_index"]
+
 scaler = StandardScaler()
-scaled_features = scaler.fit_transform(df[feature_cols])
+X_train_scaled = scaler.fit_transform(X_train)
 
-for idx, col in enumerate(feature_cols):
-    df[col + "_scaled"] = scaled_features[:, idx]
-
-df.to_csv("data/processed/all_india_140_engineered_features.csv", index=False)
-```
-- `crop_map` / `stage_map`: Assigns deterministic integer codes:
-  - Crops: `Cotton: 0`, `Groundnut: 1`, `Maize: 2`, `Mustard: 3`, `Pulses: 4`, `Rice: 5`, `Sugarcane: 6`, `Wheat: 7`.
-  - Growth Stages: `Initial: 0`, `Maturity: 1`, `Reproductive: 2`, `Vegetative: 3`.
-- `StandardScaler()`: Computes mean $\mu$ and standard deviation $\sigma$ for each feature:
-  $$z = \frac{x - \mu}{\sigma}$$
-  Ensures that distance-based models (KNN) or gradient-based models (Logistic Regression) are not dominated by large-magnitude variables.
-
----
-
-## `step6_7_model_training.py` (Model Selection & Training)
-
-### 1. Purpose & Motivation
-Trains all 10 approved algorithms (5 classifiers, 2 regressors, K-Means, PCA, SMOTE) strictly on genuine engineered features, balancing only the training partition with SMOTE, and serializing evaluation metrics into readable JSON.
-
-### 2. Code Block & Line-by-Line Explanation
-
-```python
-# 1. Stratified Train-Test Split (80% Train, 20% Test)
-X_train, X_test, y_train_c, y_test_c, y_train_def, y_test_def, y_train_p, y_test_p = train_test_split(
-    X, y_class, y_deficit, y_priority, test_size=0.20, random_state=42, stratify=y_class
-)
-
-# 2. SMOTE Applied Exclusively on Training Data
-smote = SMOTE(random_state=42, k_neighbors=3)
-X_train_smote, y_train_c_smote = smote.fit_resample(X_train, y_train_c)
-```
-- `stratify=y_class`: Guarantees that the rare `Severe` stress class is distributed proportionally between training and test sets.
-- `smote.fit_resample(...)`: Synthesizes minority class points solely inside `X_train`, expanding training rows from 1,516 to 4,840. The test set (`X_test`) remains 100% untouched to evaluate true generalizability.
-
-```python
-# 3. Train Classification Models
-clf_models = {
-    "Logistic Regression": LogisticRegression(max_iter=500, random_state=42),
-    "K-Nearest Neighbors (KNN)": KNeighborsClassifier(n_neighbors=5),
-    "Gaussian Naive Bayes": GaussianNB(),
-    "Decision Tree": DecisionTreeClassifier(max_depth=8, random_state=42),
-    "Random Forest": RandomForestClassifier(n_estimators=50, random_state=42)
-}
-for model_name, model in clf_models.items():
-    model.fit(X_train_smote, y_train_c_smote)
-```
-- Fits all 5 classification models on the balanced training data.
-
-```python
-# 4. Train Regression Models
-reg_models = {
-    "Linear Regression": LinearRegression(),
-    "Polynomial Regression (Degree 2)": Pipeline([
-        ("poly", PolynomialFeatures(degree=2)),
-        ("linear", LinearRegression())
-    ])
-}
-for model_name, model in reg_models.items():
-    model.fit(X_train, y_train_p)
-```
-- Trains Linear Regression and Polynomial Regression (Degree 2 with interaction terms) to predict the continuous **Irrigation Priority Index**.
-
-```python
-# 5. Unsupervised Clustering & PCA
-kmeans = KMeans(n_clusters=4, random_state=42, n_init=10).fit(X)
-pca = PCA(n_components=2, random_state=42).fit(X)
-
-pca_coords = pca.transform(X)
-df["cluster_id"] = kmeans.labels_
-df["pca_x"] = np.round(pca_coords[:, 0], 3)
-df["pca_y"] = np.round(pca_coords[:, 1], 3)
-df.to_csv("data/processed/all_india_140_clustered.csv", index=False)
-```
-- Discovers 4 agro-climatic clusters across India and projects the 14-dimensional feature space onto 2 principal components (`pca_x`, `pca_y`) for visualization on the frontend.
-
----
-
-## `step8_model_evaluation.py` (Evaluation Summary Reporter)
-
-### 1. Purpose & Motivation
-Reads `backend/model_evaluation_metrics.json` and prints structured, formatted benchmark tables comparing Accuracy, Precision, Recall, F1, MAE, RMSE, and $R^2$ on the command line in 0.05 seconds.
-
----
-
-## `backend/main.py` (FastAPI Server with In-Memory ML)
-
-### 1. Purpose & Motivation
-Acts as the central API server. It loads the clean processed CSV on startup, fits all Scikit-Learn models in memory, serves seven REST API endpoints, and hosts static frontend files. It contains **zero custom functions (`def`)**, using inline lambda routing.
-
-### 2. Code Block & Line-by-Line Explanation
-
-```python
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
-
-app = FastAPI(title="DiCRA KrishiJal", version="2.1.0")
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-```
-- Initializes the FastAPI app and configures Cross-Origin Resource Sharing (CORS) so web browsers can communicate with the backend from any origin or port.
-
-```python
-# In-Memory Model Fitting on Startup
-df_processed = pd.read_csv("data/processed/all_india_140_districts_processed.csv")
-scaler = StandardScaler()
-X_train_scaled = scaler.fit_transform(df_processed[feature_cols])
-
+# Fit Models in RAM
 model_rf = RandomForestClassifier(n_estimators=40, random_state=42).fit(X_train_scaled, y_train_class)
+model_dt = DecisionTreeClassifier(max_depth=8, random_state=42).fit(X_train_scaled, y_train_class)
+model_knn = KNeighborsClassifier(n_neighbors=5).fit(X_train_scaled, y_train_class)
+model_logreg = LogisticRegression(max_iter=500).fit(X_train_scaled, y_train_class)
+model_nb = GaussianNB().fit(X_train_scaled, y_train_class)
+
 model_poly_priority = Pipeline([("poly", PolynomialFeatures(degree=2)), ("linear", LinearRegression())]).fit(X_train_scaled, y_train_priority)
 model_poly_deficit = Pipeline([("poly", PolynomialFeatures(degree=2)), ("linear", LinearRegression())]).fit(X_train_scaled, y_train_deficit)
 ```
-- Models are trained on startup directly in RAM. No `.joblib` files are read or written.
+- Fits models in computer RAM upon startup in 0.12 seconds. No `.joblib` files are read or written.
 
 ```python
 # Procedural Route Registration (Zero def)
@@ -397,165 +297,45 @@ app.add_api_route("/api/models/evaluation", lambda: evaluation_metrics, methods=
 app.add_api_route("/api/predict/crop-stress", prediction_executor, methods=["POST"])
 app.mount("/app", StaticFiles(directory="frontend", html=True), name="frontend")
 ```
-- Uses `app.add_api_route()` to register endpoints using `lambda` functions.
+- Registers all 7 REST endpoints using functional lambda closures.
 - Mounts the `frontend/` directory at the URL path `/app`.
 
 ---
 
-## `run_local.py` (Server Execution Script)
-A lightweight 22-line runner script that launches `uvicorn` programmatically on host `127.0.0.1` and port `8000`:
-```python
-import uvicorn
-
-if __name__ == "__main__":
-    uvicorn.run("backend.main:app", host="127.0.0.1", port=8000, reload=False)
-```
-
----
-
-## `frontend/index.html` (DiCRA Geospatial Interface Architecture)
-
-### 1. Purpose & Motivation
-Serves as the Single Page Application (SPA) structure for KrishiJal. It is inspired directly by DiCRA (NABARD & UNDP), prioritizing interactive spatial exploration over cumbersome dropdown selection menus.
-
-### 2. Key DOM Components & Elements
-1. **Header & Navigation Bar (`<header class="top-nav">`):**
-   - Brand logo and title: `🌾 KrishiJal: Crop Stress Intelligence`.
-   - Dynamic API Status Badge (`#api-status-pill` & `#api-status-text`): Shows real-time connection status with the FastAPI backend.
-   - Basemap Switcher (`#basemap-select`): Allows toggling between CartoDB Voyager, Dark Matter, and ESRI Satellite World Imagery.
-   - Navigation Tabs: Tab buttons for switching between the primary Geospatial Map view, Nationwide Priority Ranking table, Agro-Climatic Clusters, and Model Evaluation Benchmarks.
-2. **Breadcrumb Bar (`#map-breadcrumb`):**
-   - Renders the hierarchical navigation trail (e.g., `India > Maharashtra > Solapur`).
-   - Clicking `India` triggers an immediate reset to the national boundary view.
-3. **Thematic Layer Selector Pills (`.layer-pill-group`):**
-   - `#layer-stress`: Colors district polygons based on Crop Stress Severity (`Low`, `Moderate`, `High`, `Severe`).
-   - `#layer-priority`: Colors district polygons based on Irrigation Priority Index ($0 - 100$).
-   - `#layer-moisture`: Colors district polygons based on Effective Soil Wetness ($	heta_{eff}$).
-4. **Interactive Map Viewport (`#geospatial-map`):**
-   - Full-bleed container where Leaflet.js renders the Survey of India GeoJSON boundaries.
-5. **DiCRA Geospatial Intelligence Drawer (`#district-drawer`):**
-   - An off-canvas drawer positioned at the right side of the screen (`transform: translateX(100%)`).
-   - When any district polygon is clicked, the drawer slides into view displaying:
-     - District Name, State Name, and Geographic Coordinates.
-     - 4 Real-time Agro-Hydrological KPI Cards: Stress Level Badge, Irrigation Priority Meter, Effective Soil Wetness, and Daily Water Deficit ($mm/day$).
-     - Agronomic Profile: Primary Crop, Growth Stage, Soil Type, pH, and Organic Carbon.
-     - **Live In-Memory ML Simulator Form (`#live-simulator-form`):** Interactive sliders and input boxes allowing examiners to adjust Temperature, Rainfall, Humidity, Soil Moisture, and select among all 5 classification models. Clicking **"Run In-Memory Prediction"** triggers an instant Scikit-Learn prediction directly in backend RAM.
-6. **Secondary Views:**
-   - `#priority-section`: Comprehensive all-India ranking table with sortable columns and action thresholds.
-   - `#clusters-section`: Cards summarizing the 4 K-Means regional agro-climatic clusters.
-   - `#evaluation-section`: Comparative benchmark tables detailing Accuracy, Precision, Recall, F1, MAE, and $R^2$.
-
----
-
-## `frontend/style.css` (Design System, Glassmorphism & Animations)
-
-### 1. Design System & Color Palette
-The styling implements a modern, high-tech dark geospatial aesthetic using CSS custom properties:
-- `--bg-primary: #0a0e17`: Deep cosmic black canvas.
-- `--bg-secondary: #111827`: Slate card container backgrounds.
-- `--bg-drawer: #0f172a`: Midnight slate for the off-canvas drawer.
-- `--accent-emerald: #10b981`: Represents healthy vegetation, low stress, and connected status.
-- `--accent-cyan: #06b6d4`: Telemetry highlights, temperature values, and chart elements.
-- `--accent-amber: #f59e0b`: Warning states (Moderate stress, Medium priority).
-- `--accent-crimson: #ef4444`: Severe stress, drought emergency alerts.
-
-### 2. Glassmorphism & Micro-Interactions
-- `backdrop-filter: blur(12px)` and translucent backgrounds (`rgba(17, 24, 39, 0.75)`) give floating breadcrumbs, headers, and metric cards an elegant frosted-glass appearance.
-- Subtle neon border glows (`box-shadow: 0 0 15px rgba(16, 185, 129, 0.2)`).
-- Drawer sliding animation:
-  ```css
-  #district-drawer {
-    transform: translateX(100%);
-    transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
-  }
-  #district-drawer.open {
-    transform: translateX(0);
-  }
-  ```
-- Hardware-accelerated hover transformations on interactive buttons (`transform: translateY(-2px)`).
-
----
-
-## `frontend/app.js` (Spatial Navigation & Live Inference Logic)
-
-### 1. Purpose & Architecture
-Acts as the client-side controller. It manages Leaflet map rendering, state-to-district zoom transitions, GeoJSON boundary styling, asynchronous REST API communication, and live in-memory prediction updates.
-
-### 2. Core JavaScript Functions Walkthrough
-1. **`checkBackendHealth()`:** Issues an asynchronous `fetch('${API_BASE}/')`. Updates `#api-status-pill` to emerald and displays connected states/models, or turns crimson if the server is offline.
-2. **`initMap()`:** Instantiates the Leaflet map object centered at $[22.8, 80.5]$ with initial zoom level $4.8$. Disables default zoom buttons to keep the interface clean and attaches the tile layer.
-3. **`fetchInitialData()`:** Dispatches parallel `Promise.all()` requests to `/api/districts`, `/api/irrigation/priority`, `/api/models/evaluation`, and `/api/clusters/regions`, populating internal dictionary lookups.
-4. **`loadOfficialBoundaries()`:** Fetches official Survey of India vector boundary files: `india_states_official.geojson` and `india_districts_official.geojson`.
-5. **`renderStatesLayer()`:** Creates SVG vector polygons for all 36 States and UTs. Attaches hover highlight effects (`highlightFeature`) and click event listeners.
-6. **`zoomToState(stateName, stateBounds)`:** The primary spatial navigation handler:
-   - Invokes `map.flyToBounds(stateBounds, {duration: 1.2, padding: [20, 20]})` to smoothly animate into the selected state.
-   - Updates breadcrumb text to `India > StateName`.
-   - Clears national state boundaries and invokes `renderDistrictsForState(stateName)`.
-7. **`renderDistrictsForState(stateName)`:** Filters district GeoJSON features for the active state. Evaluates the active layer mode (`stress`, `priority`, or `moisture`) and colors each district polygon dynamically.
-8. **`openDistrictDrawer(districtData)`:** Triggered when any district polygon is clicked. Populates drawer KPI cards with district data, sets the live simulator sliders, and adds the `.open` CSS class to slide the drawer into view.
-9. **`runLiveSimulator()`:** Reads user-adjusted values from the drawer sliders, constructs a JSON payload, issues a `POST` request to `/api/predict/crop-stress`, and displays the returned stress tier, priority score, and irrigation depth advisory in under 50 ms.
-10. **`resetToAllIndiaView()`:** Clears district polygons, flies camera back to all-India overview, closes the drawer, and re-renders state polygons.
-
----
-
 ## `tests/test_project.py` (Automated 8-Stage Verification Suite)
-
-### 1. Purpose & Motivation
-Provides an automated regression test suite ensuring complete integrity across all 16 project stages. It verifies that data files exist, agronomic physics bounds are strictly respected, models produce valid outputs, and backend REST APIs return 200 OK.
-
-### 2. The 8 Automated Test Suites
-1. **`test_1_dataset_loading()`:** Asserts that both raw and processed CSV datasets exist, load cleanly with Pandas, and contain the expected number of records across all districts.
-2. **`test_2_data_preprocessing_and_bounds()`:** Asserts 0 null values across all columns and enforces strict agronomic physics: $CWSI \in [0, 1]$, $NDVI \in [0.10, 1.0]$, $IPI \in [0, 100]$, and $	ext{Water Deficit} \ge 0$.
-3. **`test_3_models_and_artifacts()`:** Verifies that model pipelines, scalers, and transformers are properly initialized.
-4. **`test_4_model_predictions()`:** Injects synthetic agro-meteorological feature vectors into all classification and regression models, verifying that outputs match expected categories and numerical ranges.
-5. **`test_5_api_endpoints()`:** Uses FastAPI `TestClient` to perform automated HTTP GET and POST requests against all 7 REST endpoints, asserting HTTP 200 OK status codes and valid JSON structures.
-6. **`test_6_invalid_inputs_and_edge_cases()`:** Injects unseen crop varieties (e.g., `ExoticDragonFruit`) to verify graceful fallback label encoding, and invalid data types to verify FastAPI Pydantic schema validation (HTTP 422).
-7. **`test_7_irrigation_priority_logic()`:** Asserts that district priority records are strictly sorted in descending order of Irrigation Priority Index from Rank #1 to #N.
-8. **`test_8_frontend_integrity()`:** Verifies that `index.html`, `style.css`, and `app.js` exist and contain all necessary DOM element IDs, form bindings, and Leaflet handler functions.
+Provides an automated test suite verifying the master dataset, physical bounds, model inferences, and API routes.
+- `test_1_master_dataset_loading()`: Asserts that `krishijal_master_dataset.csv` contains 6,654 rows, 48 columns, and 0 duplicates.
+- `test_2_data_preprocessing_and_bounds()`: Asserts 0 null values in core columns, no negative soil moisture anomalies (Lakshadweep cleaned), $CWSI \in [0, 1]$, and $IPI \in [0, 100]$.
+- `test_3_in_memory_models()`: Asserts that all models and scalers are loaded in RAM.
+- `test_4_model_predictions()`: Tests inference with sample feature vectors.
+- `test_5_api_endpoints()`: Uses FastAPI `TestClient` to verify that all 7 REST routes return HTTP 200 OK.
+- `test_6_invalid_inputs_and_edge_cases()`: Verifies graceful handling of unseen categories and schema validation (HTTP 422).
+- `test_7_irrigation_priority_logic()`: Asserts strict descending rank order of irrigation priority scores.
+- `test_8_frontend_integrity()`: Confirms HTML, CSS, JS, and GeoJSON files exist with required bindings.
 
 ---
 
-## `requirements.txt` (Python Dependencies & Runtime Environment)
-
-### 1. Purpose & Motivation
-Declares exact Python package dependencies and version requirements to guarantee 100% reproducible execution across macOS, Linux, and Windows systems.
-
-### 2. Package-by-Package Walkthrough
-- `pandas>=2.0.0`: Essential for reading CSV files, handling missing values, grouping by district, and managing tabular feature matrices.
-- `numpy>=1.24.0`: High-performance multi-dimensional array operations, clipping (`np.clip`), and square-root calculations in FAO-56 formulas.
-- `scikit-learn>=1.3.0`: Machine learning library providing Logistic Regression, KNN, Naive Bayes, Decision Trees, Random Forests, Linear Regression, Polynomial Features, K-Means, PCA, and StandardScaler.
-- `imbalanced-learn>=0.11.0`: Supplies SMOTE (Synthetic Minority Over-sampling Technique) to synthetically balance minority agricultural stress classes (`Severe` and `High`) exclusively on training data.
-- `matplotlib>=3.7.0`: Core graphing engine used to render and export distribution and correlation plots to `eda/plots/`.
-- `seaborn>=0.12.0`: High-level statistical visualization library used for correlation heatmaps and styled histograms.
-- `fastapi>=0.100.0`: Modern, high-performance web framework for developing asynchronous REST APIs with automatic OpenAPI schema documentation and Pydantic validation.
-- `uvicorn>=0.23.0`: Production-grade Asynchronous Server Gateway Interface (ASGI) server that powers the FastAPI application.
-- `requests>=2.31.0`: Clean HTTP client library used for testing backend connectivity and downloading remote GeoJSON assets.
-
----
-
-## `README.md` (Academic Project Documentation & Guide)
-
-### 1. Purpose & Motivation
-Serves as the public project landing page and documentation portal on GitHub (`https://github.com/ruthvik-08/SDC-project.git`).
-
-### 2. Key Sections
-- **Executive Summary:** Overview of the Indian agricultural water crisis and DiCRA inspiration.
-- **The 16 Completed Project Stages:** Comprehensive checklist detailing progression from problem formulation to live deployment.
-- **System Architecture & Key Features:** Zero-def design, in-memory ML, and Survey of India boundary integration.
-- **Quickstart Execution Commands:** One-line commands to install dependencies, run the test suite, launch the backend, and open the web portal.
-- **Benchmark Model Performance Table:** Clear summary of classification and regression scores.
+## `frontend/index.html`, `style.css` & `app.js` (Geospatial Portal)
+- **`index.html`**: Structures the DiCRA-inspired web portal. Contains the Leaflet map container (`#geospatial-map`), floating breadcrumbs (`#map-breadcrumb`), thematic layer buttons, the slide-in **DiCRA Geospatial Intelligence Drawer** (`#district-drawer`), and the live ML simulator form (`#sim-form`).
+- **`style.css`**: Provides high-contrast, modern dark-mode styling (`#0a0e17` background, emerald accents `#10b981`, cyan data text `#06b6d4`, glassmorphism blur effects, and smooth CSS transitions).
+- **`app.js`**: Operates Leaflet.js:
+  - Fetches and renders official Survey of India GeoJSON boundaries.
+  - Implements the spatial state click-to-zoom (`map.flyToBounds`).
+  - Colors district polygons dynamically based on active layer (Crop Stress, Irrigation Priority, Soil Moisture).
+  - Populates the slide-in drawer when any district polygon is clicked.
+  - Sends asynchronous POST requests to `/api/predict/crop-stress` and displays real-time predictions in under 10 ms.
 
 \newpage
 
 # Machine Learning Algorithms In-Depth
 
-To ensure high scores in university examination panels, this section clearly categorizes all algorithms implemented in KrishiJal, distinguishing **predictive models** from **data balancing and dimensionality reduction techniques**.
+To ensure complete conceptual clarity, this section clearly categorizes all algorithms implemented in KrishiJal, distinguishing **predictive models** from **data balancing and dimensionality reduction techniques**.
 
 ```
                          KrishiJal Machine Learning System
-                                        │
-        ┌───────────────────────────────┼───────────────────────────────┐
-        ▼                               ▼                               ▼
+                                        |
+        +-------------------------------+-------------------------------+
+        v                               v                               v
 1. Predictive Models            2. Class Balancing             3. Dimensionality
 (Classification & Regression)   (Preprocessing)                Reduction
   • Logistic Regression           • SMOTE                        • PCA
@@ -572,269 +352,185 @@ To ensure high scores in university examination panels, this section clearly cat
 ## 1. Classification Predictive Models
 
 ### A. Logistic Regression
-
-#### 1. Definition in Simple English
-Logistic Regression is a supervised learning algorithm used for classification. Despite the name "regression", it predicts the probability that a given observation belongs to a particular category (e.g., is crop stress Low, Moderate, High, or Severe?).
-
-#### 2. Step-by-Step Mechanism
-1. It computes a linear weighted sum of the input features:
-   $$z = w_1 x_1 + w_2 x_2 + \dots + w_n x_n + b$$
-2. It passes this linear score $z$ through a non-linear activation function. For binary classification, it uses the Sigmoid function; for multi-class classification (as in KrishiJal with 4 classes), it uses the **Softmax function**:
-   $$P(Y = k | X) = \frac{e^{z_k}}{\sum_{j=1}^{K} e^{z_j}}$$
-3. The model assigns the sample to the class with the highest computed probability.
-
-#### 3. Mathematical Intuition
-Linear regression outputs values anywhere from $-\infty$ to $+\infty$, which cannot represent probability. The Sigmoid/Softmax function squashes any continuous real number into a strict probability range between $0$ and $1$.
-
-#### 4. Selection Justification in KrishiJal
-Provides an essential linear baseline classifier to determine whether crop stress can be separated using linear decision boundaries before deploying complex tree ensembles.
-
-#### 5. Code Implementation
-- Location: `step6_7_model_training.py` (Line 72) and `backend/main.py` (Line 83).
-```python
-model_logreg = LogisticRegression(max_iter=500, random_state=42).fit(X_train_scaled, y_train_class)
-```
-
-#### 6. Advantages & Disadvantages
-- **Advantages:** Fast training; highly interpretable coefficients showing feature influence.
-- **Disadvantages:** Assumes linear boundary; underperforms on complex non-linear meteorological interactions.
-
-#### 7. Real-World Analogy
-Like an agricultural loan officer who adds up positive factors (good rainfall, high soil carbon) and subtracts risk factors (high temperature, low moisture) to compute a single percentage score determining whether a loan is approved.
+1. **Definition:** A supervised classification algorithm that estimates the probability that an observation belongs to a specific category using the logistic sigmoid function.
+2. **How it Works Step by Step:**
+   - Computes a linear combination of input features: $z = w_0 + w_1 x_1 + \dots + w_n x_n$.
+   - Passes $z$ through the sigmoid function: $\sigma(z) = \frac{1}{1 + e^{-z}}$, mapping any value to $(0, 1)$.
+   - Applies One-vs-Rest (OvR) to output class probabilities across the 4 stress classes.
+3. **Mathematical Formulation:**
+   $$\sigma(z) = \frac{1}{1 + e^{-z}}$$
+   Loss function (Log-Loss):
+   $$J(w) = -\frac{1}{m} \sum_{i=1}^{m} \left[ y^{(i)} \log(\hat{y}^{(i)}) + (1 - y^{(i)}) \log(1 - \hat{y}^{(i)}) \right]$$
+4. **Why Selected:** Serves as a transparent linear baseline. Fast and highly interpretable.
+5. **Code Location:** `models/classification/train_classification.py` and `backend/main.py`.
+6. **Advantages & Disadvantages:**
+   - *Advantages:* Fast training (0.01s), low memory usage, outputs calibrated probabilities.
+   - *Disadvantages:* Cannot model non-linear interactions without polynomial expansion.
+7. **Real-World Analogy:** Like a doctor calculating a patient's risk of fever based on body temperature and white blood cell count.
 
 ---
 
 ### B. K-Nearest Neighbors (KNN)
-
-#### 1. Definition in Simple English
-KNN is a non-parametric, distance-based algorithm that classifies a new district observation by looking at the $K$ most similar districts in historical training data and taking a majority vote.
-
-#### 2. Step-by-Step Mechanism
-1. The user inputs new weather and soil readings.
-2. The algorithm calculates the distance between this input vector and every single observation stored in memory using the **Euclidean Distance formula**:
+1. **Definition:** An instance-based non-parametric classifier that assigns a label based on the majority vote of its $k$ closest neighbors in feature space.
+2. **How it Works Step by Step:**
+   - Calculates the Euclidean distance between the target observation and all training points.
+   - Identifies the $k$ closest points (we use $k=5$).
+   - Assigns the class label that appears most frequently among the $k$ neighbors.
+3. **Mathematical Formulation:**
    $$d(p, q) = \sqrt{\sum_{i=1}^{n} (p_i - q_i)^2}$$
-3. It identifies the $K$ closest data points (in KrishiJal, $k=5$).
-4. The most frequent class among these 5 neighbors is selected as the prediction.
-
-#### 3. Mathematical Intuition
-Points that are close together in standardized agro-climatic feature space experience similar physiological crop conditions. If 4 out of 5 historical records near the current reading suffered from "High Stress", the current field is also predicted as "High Stress".
-
-#### 4. Selection Justification in KrishiJal
-Demonstrates instance-based learning without parametric assumptions. It tests whether spatial/meteorological proximity in feature space translates to stress severity.
-
-#### 5. Code Implementation
-- Location: `step6_7_model_training.py` (Line 73) and `backend/main.py` (Line 82).
-```python
-model_knn = KNeighborsClassifier(n_neighbors=5).fit(X_train_scaled, y_train_class)
-```
-
-#### 6. Advantages & Disadvantages
-- **Advantages:** Simple to explain; zero training time (memorizes training set).
-- **Disadvantages:** Sensitive to irrelevant features; computationally slow for large datasets; requires strict feature scaling so large numbers don't distort distances.
-
-#### 7. Real-World Analogy
-Like asking your 5 closest neighboring farmers what happened to their crops when weather conditions were identical to today.
+4. **Why Selected:** Agronomic conditions are spatially and climatologically continuous. Districts with similar temperatures, soil types, and rainfall exhibit similar crop stress.
+5. **Code Location:** `models/classification/train_classification.py` and `backend/main.py`.
+6. **Advantages & Disadvantages:**
+   - *Advantages:* Simple, zero training phase, captures complex non-linear boundaries.
+   - *Disadvantages:* Slow inference on large datasets; sensitive to irrelevant features (mitigated by `StandardScaler`).
+7. **Real-World Analogy:** Like guessing a student's grade by looking at the grades of the 5 students who study with them.
 
 ---
 
 ### C. Gaussian Naive Bayes
-
-#### 1. Definition in Simple English
-Gaussian Naive Bayes is a probabilistic classifier based on **Bayes' Theorem**. It calculates the probability of each stress level occurring given the observed weather features, assuming that all weather features are completely independent of one another.
-
-#### 2. Step-by-Step Mechanism
-1. It applies Bayes' Rule:
-   $$P(C_k | X) = \frac{P(C_k) \cdot P(X | C_k)}{P(X)}$$
-2. It makes the "naive" assumption that features are conditionally independent:
-   $$P(X | C_k) = \prod_{i=1}^{n} P(x_i | C_k)$$
-3. Since features are continuous physical variables, it models $P(x_i | C_k)$ using the **Gaussian (Normal) Distribution**:
-   $$P(x_i | C_k) = \frac{1}{\sqrt{2\pi\sigma_k^2}} \exp\left( -\frac{(x_i - \mu_k)^2}{2\sigma_k^2} \right)$$
-4. The class with the maximum posterior probability is chosen.
-
-#### 3. Selection Justification in KrishiJal
-Provides an extremely lightweight probabilistic benchmark that performs remarkably well even on small datasets with moderate sample counts.
-
-#### 4. Code Implementation
-- Location: `step6_7_model_training.py` (Line 74) and `backend/main.py` (Line 84).
-```python
-model_nb = GaussianNB().fit(X_train_scaled, y_train_class)
-```
-
-#### 5. Advantages & Disadvantages
-- **Advantages:** Blazing fast training and inference; handles continuous data well; immune to the curse of dimensionality.
-- **Disadvantages:** The independence assumption is violated in agriculture (e.g., high temperature is physically correlated with high solar radiation and low humidity).
-
-#### 6. Real-World Analogy
-A doctor who checks symptoms independently (fever, cough, fatigue) and multiplies their separate probabilities together to estimate whether a patient has the flu.
+1. **Definition:** A probabilistic classifier based on Bayes' Theorem assuming conditional independence between features given the class label.
+2. **How it Works Step by Step:**
+   - Calculates the prior probability $P(y)$ for each stress level.
+   - Models continuous features using a Gaussian normal distribution $P(x_i | y) = \mathcal{N}(\mu, \sigma^2)$.
+   - Multiplies likelihoods across all features and chooses the class maximizing the posterior probability.
+3. **Mathematical Formulation:**
+   $$P(y | x_1, \dots, x_n) \propto P(y) \prod_{i=1}^{n} P(x_i | y)$$
+   $$P(x_i | y) = \frac{1}{\sqrt{2\pi \sigma_y^2}} \exp\left( -\frac{(x_i - \mu_y)^2}{2\sigma_y^2} \right)$$
+4. **Why Selected:** Serves as a fast probabilistic baseline. Performs reliably even when data is sparse.
+5. **Code Location:** `models/classification/train_classification.py` and `backend/main.py`.
+6. **Advantages & Disadvantages:**
+   - *Advantages:* Extremely fast, requires minimal training data, robust to noise.
+   - *Disadvantages:* Independence assumption rarely holds in climate data (temperature and $ET_0$ are correlated).
+7. **Real-World Analogy:** A weather forecaster predicting rain based on humidity and cloud cover independently.
 
 ---
 
 ### D. Decision Tree Classifier (CART)
-
-#### 1. Definition in Simple English
-A Decision Tree is an intuitive flowchart-like model that splits the dataset into subsets using a sequence of simple binary `if-else` questions on feature values until it reaches a leaf node that assigns a stress class.
-
-#### 2. Step-by-Step Mechanism
-1. Evaluates all candidate features and split thresholds.
-2. Selects the split that minimizes **Gini Impurity**:
-   $$I_G(p) = 1 - \sum_{k=1}^{K} p_k^2$$
-3. Recursively partitions data into purer child nodes.
-4. Stops splitting when `max_depth` (set to 8 in KrishiJal) is reached to prevent overfitting.
-
-#### 3. Selection Justification in KrishiJal
-Agronomists and canal officers think in terms of thresholds (e.g., "If soil wetness < 0.38 and temperature > 34°C, release irrigation"). Decision trees directly mirror human decision-making.
-
-#### 4. Code Implementation
-- Location: `step6_7_model_training.py` (Line 75) and `backend/main.py` (Line 81).
-```python
-model_dt = DecisionTreeClassifier(max_depth=8, random_state=42).fit(X_train_scaled, y_train_class)
-```
-
-#### 5. Advantages & Disadvantages
-- **Advantages:** 100% white-box model; easy to inspect and visualize; captures non-linear relationships.
-- **Disadvantages:** Single trees are prone to overfitting and high variance on noisy data.
-
-#### 6. Real-World Analogy
-A standard triage flowchart used by agricultural extension officers: "Is rainfall < 1 mm? Yes -> Is soil wetness < 0.40? Yes -> High Stress."
+1. **Definition:** A non-parametric supervised learning algorithm that partitions feature space into homogenous regions using a tree-like hierarchy of if-else decision rules.
+2. **How it Works Step by Step:**
+   - Evaluates every feature and split threshold to find the division that maximizes Gini Impurity reduction.
+   - Recursively splits the data until the maximum depth (`max_depth=8`) is reached.
+   - Assigns the majority class of leaf nodes to incoming samples.
+3. **Mathematical Formulation:**
+   $$\text{Gini}(D) = 1 - \sum_{i=1}^{C} p_i^2$$
+   Information Gain:
+   $$\Delta \text{Gini} = \text{Gini}(D) - \frac{|D_L|}{|D|} \text{Gini}(D_L) - \frac{|D_R|}{|D|} \text{Gini}(D_R)$$
+4. **Why Selected:** Matches agricultural extension guidelines (e.g., "If soil moisture $< 0.35$ and $T_{max} > 38^\circ\text{C}$, then stress is High"). Highly transparent for academic defense.
+5. **Code Location:** `models/classification/train_classification.py` and `backend/main.py`.
+6. **Advantages & Disadvantages:**
+   - *Advantages:* Human-interpretable rules, handles non-linear relationships, requires no feature scaling.
+   - *Disadvantages:* Prone to overfitting (mitigated by setting `max_depth=8`).
+7. **Real-World Analogy:** An agricultural officer's printed diagnostic flowchart for identifying plant diseases.
 
 ---
 
 ### E. Random Forest Classifier
-
-#### 1. Definition in Simple English
-Random Forest is an ensemble learning method that constructs a large collection of de-correlated Decision Trees during training and outputs the majority class vote across all individual trees.
-
-#### 2. Step-by-Step Mechanism
-1. **Bootstrap Aggregating (Bagging):** Creates $N$ random subsets (in KrishiJal, `n_estimators=50`) of the training data sampled with replacement.
-2. **Feature Randomness:** At each split, only a random subset of features (typically $\sqrt{\text{total features}}$) is considered.
-3. Each tree grows independently without pruning.
-4. For inference, all 50 trees cast a vote; the majority vote wins:
-   $$\hat{y} = \text{mode}\{T_1(x), T_2(x), \dots, T_{50}(x)\}$$
-
-#### 3. Selection Justification in KrishiJal
-Random Forest is the **champion classification model** in KrishiJal, achieving **100% test accuracy** due to its ability to eliminate variance while capturing complex non-linear agronomic thresholds.
-
-#### 4. Code Implementation
-- Location: `step6_7_model_training.py` (Line 76) and `backend/main.py` (Line 80).
-```python
-model_rf = RandomForestClassifier(n_estimators=50, random_state=42).fit(X_train_scaled, y_train_class)
-```
-
-#### 5. Advantages & Disadvantages
-- **Advantages:** Highest accuracy; robust to outliers and noise; does not overfit easily.
-- **Disadvantages:** Slower inference than a single tree; acts as a "black-box" ensemble.
-
-#### 6. Real-World Analogy
-Consulting 50 independent agricultural scientists from different states and taking the consensus decision.
+1. **Definition:** An ensemble learning method that constructs a multitude of decision trees (50 trees) at training time and outputs the mode of their class predictions (Bagging / Bootstrap Aggregating).
+2. **How it Works Step by Step:**
+   - Generates 50 bootstrap samples of the training data with replacement.
+   - Trains a decision tree on each sample, selecting a random subset of features ($\sqrt{n}$) at each split.
+   - Aggregates the 50 predictions by majority voting.
+3. **Mathematical Formulation:**
+   $$\hat{y} = \text{mode}\left( \{ T_1(x), T_2(x), \dots, T_B(x) \} \right)$$
+   Variance reduction:
+   $$\text{Var}(\bar{X}) = \rho \sigma^2 + \frac{1 - \rho}{B} \sigma^2$$
+4. **Why Selected:** **Top-performing classification model** in our project (**99.40% Accuracy**). Drastically reduces decision tree variance and avoids overfitting.
+5. **Code Location:** `models/classification/train_classification.py` and `backend/main.py`.
+6. **Advantages & Disadvantages:**
+   - *Advantages:* High accuracy, robust to outliers and noise, provides feature importance rankings.
+   - *Disadvantages:* Slower inference than a single tree, requires more memory.
+7. **Real-World Analogy:** A panel of 50 agronomists independently assessing a crop field and voting on the diagnosis.
 
 ---
 
 ## 2. Regression Predictive Models
 
 ### A. Linear Regression (Ordinary Least Squares)
-
-#### 1. Definition in Simple English
-Linear Regression models the relationship between numeric input features and a continuous agricultural target variable (the Irrigation Priority Index) by fitting a straight hyperplane through the data.
-
-#### 2. Step-by-Step Mechanism
-1. Formulates the prediction equation:
-   $$\hat{y} = \beta_0 + \beta_1 x_1 + \beta_2 x_2 + \dots + \beta_n x_n$$
-2. Finds coefficients $\beta$ that minimize the **Residual Sum of Squares (RSS)**:
-   $$\text{RSS} = \sum_{i=1}^{n} (y_i - \hat{y}_i)^2$$
-3. In matrix form, computes the closed-form normal equation:
-   $$\beta = (X^T X)^{-1} X^T y$$
-
-#### 3. Selection Justification in KrishiJal
-Provides an interpretable baseline for continuous water deficit and irrigation priority estimation.
-
-#### 4. Code Implementation
-- Location: `step6_7_model_training.py` (Line 96).
-```python
-model_lin = LinearRegression().fit(X_train, y_train_p)
-```
+1. **Definition:** A linear model that estimates a continuous target by finding the optimal hyperplane minimizing the sum of squared differences between observed and predicted targets.
+2. **How it Works Step by Step:**
+   - Expresses the target as a linear equation: $\hat{y} = \beta_0 + \sum_{i=1}^{n} \beta_i x_i$.
+   - Calculates the closed-form normal equation: $\beta = (X^T X)^{-1} X^T y$.
+3. **Mathematical Formulation:**
+   $$J(\beta) = \sum_{i=1}^{m} (y_i - \hat{y}_i)^2 = \| y - X\beta \|^2$$
+4. **Why Selected:** Baseline regression benchmark to measure whether crop water deficit and irrigation priority can be explained by linear relationships.
+5. **Code Location:** `models/regression/train_regression.py` and `backend/main.py`.
+6. **Advantages & Disadvantages:**
+   - *Advantages:* Fast computation, mathematically transparent, closed-form solution.
+   - *Disadvantages:* Cannot model non-linear meteorological phenomena ($R^2 = 0.8059$ vs $0.9393$ for polynomial).
+7. **Real-World Analogy:** Estimating monthly electricity cost directly proportional to hours of air conditioner usage.
 
 ---
 
 ### B. Polynomial Regression (Degree 2)
-
-#### 1. Definition in Simple English
-Polynomial Regression extends linear regression by creating squared terms and interaction terms between features (e.g., $x_1^2, x_2^2, x_1 \cdot x_2$), allowing the model to fit curved, non-linear relationships.
-
-#### 2. Step-by-Step Mechanism
-1. Takes the 14 linear features.
-2. Uses Scikit-Learn's `PolynomialFeatures(degree=2)` to generate all quadratic combinations:
-   $$[x_1, x_2] \implies [1, x_1, x_2, x_1^2, x_1 x_2, x_2^2]$$
-3. Fits Ordinary Least Squares on the expanded polynomial feature matrix.
-
-#### 3. Selection Justification in KrishiJal
-Crop water stress is inherently non-linear. As temperature rises and soil moisture falls below the wilting point, crop water stress accelerates exponentially. Polynomial Regression achieves an outstanding **$R^2 = 0.9994$** on unseen test data.
-
-#### 4. Code Implementation
-- Location: `step6_7_model_training.py` (Lines 97-100) and `backend/main.py` (Lines 87-88).
-```python
-model_poly_priority = Pipeline([
-    ("poly", PolynomialFeatures(degree=2)),
-    ("linear", LinearRegression())
-]).fit(X_train_scaled, y_train_priority)
-```
+1. **Definition:** A form of regression where the relationship between feature variables and the target is modeled as an $n^{\text{th}}$-degree polynomial (Degree 2 in KrishiJal).
+2. **How it Works Step by Step:**
+   - Expands the feature vector into quadratic terms ($x_i^2$) and pairwise interaction products ($x_i x_j$).
+   - Fits standard Ordinary Least Squares on the expanded feature matrix.
+3. **Mathematical Formulation:**
+   $$\hat{y} = \beta_0 + \sum_{i=1}^{n} \beta_i x_i + \sum_{i=1}^{n} \sum_{j \ge i}^{n} \beta_{ij} x_i x_j$$
+4. **Why Selected:** **Top-performing regression model** (**$R^2 = 0.9393$** for Priority Index, **$R^2 = 0.8501$** for Deficit). Accurately captures non-linear physics like Hargreaves $ET_0 \propto \sqrt{T_{max} - T_{min}}$ and interaction between soil moisture and evapotranspiration.
+5. **Code Location:** `models/regression/train_regression.py` and `backend/main.py`.
+6. **Advantages & Disadvantages:**
+   - *Advantages:* Models curved physical functions without neural networks, high accuracy.
+   - *Disadvantages:* Increases feature dimensions from 14 to 119 interaction terms.
+7. **Real-World Analogy:** Calculating the braking distance of a tractor, which grows quadratically with speed ($d \propto v^2$).
 
 ---
 
 ## 3. Unsupervised Clustering & Preprocessing Techniques
 
 ### A. K-Means Clustering ($k=4$)
-
-#### 1. Definition in Simple English
-An unsupervised learning algorithm that partitions 158 Indian districts into 4 distinct agro-climatic zones based on feature similarities without using any target labels.
-
-#### 2. Step-by-Step Mechanism
-1. Initializes $k=4$ random cluster centroids: $\mu_1, \mu_2, \mu_3, \mu_4$.
-2. **Assignment Step:** Assigns each district to its nearest centroid based on Euclidean distance.
-3. **Update Step:** Recomputes each centroid by calculating the mean of all points assigned to that cluster:
-   $$\mu_j = \frac{1}{|S_j|} \sum_{x_i \in S_j} x_i$$
-4. Repeats until centroids stop shifting (convergence).
-
-#### 3. Agro-Climatic Clusters Discovered in KrishiJal
-- **Cluster 0 (High-Evaporation Central/Western Zone):** High temperatures ($>32^\circ\text{C}$), moderate soil moisture.
-- **Cluster 1 (Humid Coastal & Floodplain Belt):** High relative humidity ($>75\%$), abundant rainfall, low irrigation priority.
-- **Cluster 2 (Arid & Semi-Arid Moisture-Deficit Belt):** Low rainfall, sandy soils, high water stress (Rajasthan, Marathwada).
-- **Cluster 3 (Cool Mountain & Sub-Himalayan Plateau):** Lower temperature, mountain soils, stable moisture (J&K, Himachal, Northeast).
+1. **Definition:** An unsupervised partition-based clustering algorithm that groups $n$ observations into $k$ distinct, non-overlapping clusters based on Euclidean distance to cluster centroids.
+2. **How it Works Step by Step:**
+   - Initializes 4 centroids at random (`k-means++` initialization).
+   - Assigns each district to its nearest centroid.
+   - Recalculates centroids by computing the mean of all points assigned to that cluster.
+   - Repeats assignment and update steps until centroids stabilize (convergence).
+3. **Mathematical Formulation:**
+   $$\text{Inertia} = \sum_{j=1}^{k} \sum_{x_i \in C_j} \| x_i - \mu_j \|^2$$
+4. **Why Selected:** Automatically segments India's 159 districts into 4 distinct agro-climatic zones based on temperature, rainfall, and soil moisture without human bias.
+5. **Code Location:** `models/clustering/train_clustering.py` and `preprocessing/master_dataset.py`.
+6. **Advantages & Disadvantages:**
+   - *Advantages:* Fast, scalable, groups districts with similar climate risks.
+   - *Disadvantages:* Assumes spherical cluster geometry; requires pre-specifying $k=4$.
+7. **Real-World Analogy:** Grouping farmers into 4 training batches based on their land size and water access.
 
 ---
 
 ### B. Principal Component Analysis (PCA)
-
-#### 1. Definition in Simple English
-PCA is an unsupervised linear dimensionality reduction technique. It compresses 14 correlated agricultural features down into 2 orthogonal dimensions ($PC_1, PC_2$) while retaining the maximum possible variance of the original dataset.
-
-#### 2. Step-by-Step Mechanism
-1. Centers the feature matrix by subtracting column means.
-2. Computes the $14 \times 14$ Covariance Matrix:
-   $$\Sigma = \frac{1}{n-1} X^T X$$
-3. Computes the **eigenvalues ($\lambda$) and eigenvectors ($v$)** of $\Sigma$:
+1. **Definition:** An unsupervised linear dimensionality reduction technique that transforms correlated features into a smaller set of uncorrelated variables called Principal Components.
+2. **How it Works Step by Step:**
+   - Standardizes the 10 numerical climate features using `StandardScaler`.
+   - Computes the $10 \times 10$ feature covariance matrix $\Sigma = \frac{1}{m} X^T X$.
+   - Calculates the eigenvalues and eigenvectors of $\Sigma$.
+   - Projects data points onto the top 2 eigenvectors ($PC_1$ and $PC_2$) to create 2D map coordinates.
+3. **Mathematical Formulation:**
    $$\Sigma v = \lambda v$$
-4. Selects the top 2 eigenvectors corresponding to the largest eigenvalues.
-5. Projects the original data onto these two orthogonal principal axes:
-   $$Z = X \cdot V_2$$
-
-#### 3. Selection Justification in KrishiJal
-Allows the 14-dimensional agricultural feature space of all 158 districts to be plotted on an interactive 2D scatter plot in the web portal, explaining **58.23%** of the total variance.
+   $$\text{Coordinates: } Z = X W_2$$
+4. **Why Selected:** Allows high-dimensional agro-climatic data (10 dimensions) to be projected onto an interactive 2D scatter plot on the web portal while retaining **56.90% of total variance**.
+5. **Code Location:** `models/clustering/train_clustering.py` and `preprocessing/master_dataset.py`.
+6. **Advantages & Disadvantages:**
+   - *Advantages:* Removes collinearity, enables 2D visualization, preserves maximum data variance.
+   - *Disadvantages:* Principal components are linear combinations and lose direct physical units ($^\circ\text{C}$ or $mm$).
+7. **Real-World Analogy:** Photographing a 3D tractor from the side to capture its length and height in a 2D image.
 
 ---
 
 ### C. SMOTE (Synthetic Minority Over-sampling Technique)
-
-#### 1. Definition in Simple English
-SMOTE is a class balancing technique used in preprocessing. In agriculture, severe drought is rare compared to normal weather, causing severe class imbalance. SMOTE synthesizes realistic artificial samples for the minority classes (`High` and `Severe` stress) so classifiers do not ignore them.
-
-#### 2. Step-by-Step Mechanism
-1. For every minority class sample $x_i$, finds its $k$-nearest minority neighbors ($k=3$).
-2. Chooses one random neighbor $x_{zi}$.
-3. Generates a new synthetic point along the straight line joining the sample and its neighbor:
-   $$x_{new} = x_i + \lambda \cdot (x_{zi} - x_i) \quad \text{where } \lambda \sim \text{Uniform}(0, 1)$$
-
-#### 3. Vital Distinction: Preprocessing vs. Predictive Model
-SMOTE is **NOT** a machine learning predictive model. It does not make predictions. It is an **oversampling preprocessing algorithm** applied exclusively to training data (`X_train`) to balance class representation.
+1. **Definition:** An advanced data balancing technique that synthesizes new examples for minority classes by interpolating between neighboring instances in feature space.
+2. **How it Works Step by Step:**
+   - Identifies minority class samples (`Severe` and `High` stress).
+   - For each minority point, finds its $k$ nearest minority neighbors ($k=5$).
+   - Creates synthetic points along the line segment joining the point and its neighbors:
+     $$x_{new} = x + \lambda (x_{neighbor} - x), \quad \lambda \in [0, 1]$$
+3. **Mathematical Formulation:**
+   $$x_{\text{synthetic}} = x_i + \text{rand}(0, 1) \times (x_{zi} - x_i)$$
+4. **Why Selected:** Genuine agricultural drought data has extreme class imbalance (`Low`: 4,984 records, `Severe`: 194 records). Without SMOTE, classifiers would ignore severe drought events.
+5. **Code Location:** Applied strictly to training data in `models/classification/train_classification.py` and `step6_7_model_training.py`.
+6. **Advantages & Disadvantages:**
+   - *Advantages:* Mitigates class imbalance without simple duplication, prevents model neglect of drought events.
+   - *Disadvantages:* Must **never be applied to the test set** to prevent data leakage.
+7. **Real-World Analogy:** Creating realistic mock exam questions similar to rare, difficult questions from past exam papers.
 
 \newpage
 
@@ -883,6 +579,7 @@ This section provides complete mathematical descriptions of every formula implem
   - Maize: $K_c = 1.00$
   - Wheat: $K_c = 0.95$
   - Groundnut: $K_c = 0.90$
+  - Barley: $K_c = 0.90$
   - Pulses / Mustard: $K_c = 0.85$
 - **Purpose:** Different crops have different leaf areas, stomatal conductances, and rooting depths. $K_c$ scales the climate demand ($ET_0$) to the specific crop.
 
@@ -912,10 +609,11 @@ This section provides complete mathematical descriptions of every formula implem
 # Model Training, Validation & Performance Evaluation
 
 ## 1. Experimental Methodology
-- **Total Records:** 1,896 monthly records covering 158 districts across all 36 Indian States & UTs.
-- **Partition:** 80% Training ($N=1,516$) and 20% Testing ($N=380$) using stratified sampling.
-- **Data Balancing:** SMOTE applied strictly to `X_train`, balancing minority classes (`Severe` and `High`) to prevent class neglect.
-- **No Data Leakage:** Scalers and SMOTE are fit solely on training data. The 380 test records remain unseen until final scoring.
+- **Single Master Dataset Source:** `data/processed/krishijal_master_dataset.csv`.
+- **Total Records:** 6,654 records covering 159 districts across all 37 Indian States and Union Territories.
+- **Partition:** 80% Training ($N=5,323$) and 20% Testing ($N=1,331$) using stratified sampling on crop stress class.
+- **Data Balancing:** SMOTE applied strictly to `X_train`, balancing minority classes (`Severe` and `High`) from 5,323 to 15,948 samples.
+- **Zero Data Leakage:** Scalers and SMOTE are fit solely on training data. The 1,331 test records remain unseen until final scoring.
 
 ---
 
@@ -923,45 +621,47 @@ This section provides complete mathematical descriptions of every formula implem
 
 The following numbers represent the exact values stored in `backend/model_evaluation_metrics.json`:
 
-### A. Classification Performance on Unseen Test Set ($N=380$)
+### A. Classification Performance on Unseen Test Set ($N=1,331$)
 
 | Algorithm | Accuracy | Precision (Weighted) | Recall (Weighted) | F1-Score (Weighted) | Academic Status |
 | :--- | :---: | :---: | :---: | :---: | :---: |
-| **Random Forest** | **100.00%** | **1.0000** | **1.0000** | **1.0000** | **Top Performer** |
-| **Decision Tree** | **99.74%** | **0.9976** | **0.9974** | **0.9974** | **High Precision** |
-| **Logistic Regression** | **96.58%** | **0.9695** | **0.9658** | **0.9668** | **Strong Linear Baseline** |
-| **Gaussian Naive Bayes** | **93.95%** | **0.9527** | **0.9395** | **0.9428** | **Probabilistic Baseline** |
-| **K-Nearest Neighbors (KNN)** | **90.26%** | **0.9250** | **0.9026** | **0.9092** | **Instance-based** |
+| **Random Forest** | **99.40%** | **0.9941** | **0.9940** | **0.9940** | **Top Performer** |
+| **Decision Tree** | **98.80%** | **0.9883** | **0.9880** | **0.9881** | **High Precision** |
+| **Logistic Regression** | **96.09%** | **0.9651** | **0.9609** | **0.9621** | **Strong Linear Baseline** |
+| **K-Nearest Neighbors (KNN)** | **92.79%** | **0.9362** | **0.9279** | **0.9307** | **Instance-based** |
+| **Gaussian Naive Bayes** | **81.14%** | **0.8526** | **0.8114** | **0.8267** | **Probabilistic Baseline** |
 
-#### Confusion Matrix for Random Forest ($N=380$):
+#### Confusion Matrix for Random Forest ($N=1,331$ Unseen Test Records):
 ```
 Actual / Predicted   Low (0)   Moderate (1)   High (2)   Severe (3)
-Low (0)                304          0             0          0
-Moderate (1)             0         59             0          0
-High (2)                 0          0            13          0
-Severe (3)               0          0             0          4
+Low (0)                993          4             0          0
+Moderate (1)             0        179             3          0
+High (2)                 0          0           113          0
+Severe (3)               0          0             1         38
 ```
 
 ---
 
-### B. Regression Performance (Irrigation Priority Index, $0 - 100$)
+### B. Regression Performance
 
-| Model Algorithm | MAE | MSE | RMSE | $R^2$ Score | Evaluation Summary |
-| :--- | :---: | :---: | :---: | :---: | :--- |
-| **Polynomial Regression (Degree 2)** | **0.26** | **0.14** | **0.37** | **0.9994** | **Near-perfect fit on non-linear physics** |
-| **Linear Regression** | **0.46** | **0.46** | **0.68** | **0.9978** | **Strong linear explanatory power** |
+| Target Parameter | Model Algorithm | MAE | MSE | RMSE | $R^2$ Score | Evaluation Summary |
+| :--- | :--- | :---: | :---: | :---: | :---: | :--- |
+| **Irrigation Priority Index (0 - 100)** | **Polynomial Regression (Deg 2)** | **2.60** | **11.60** | **3.41** | **0.9393** | **Top Performer on non-linear physics** |
+| | **Linear Regression** | **4.87** | **37.09** | **6.09** | **0.8059** | Strong linear baseline |
+| **Water Deficit (mm/day)** | **Polynomial Regression (Deg 2)** | **0.15** | **0.05** | **0.23** | **0.8501** | **Captures parabolic shortfall** |
+| | **Linear Regression** | **0.26** | **0.15** | **0.39** | **0.5855** | Baseline linear model |
 
 ---
 
 ### C. Unsupervised Clustering & PCA Metrics
 - **K-Means ($k=4$ Clusters):**
-  - **Inertia:** $13,698.76$
-  - **Silhouette Score:** $0.2538$ (Indicates consistent, non-overlapping cluster boundaries).
-  - **Davies-Bouldin Index:** $1.1639$ (Lower is better; confirms good cluster compactness).
+  - **Inertia:** $37,413.65$
+  - **Silhouette Score:** $0.2180$ (Confirms consistent separation between climate zones).
+  - **Davies-Bouldin Index:** $1.5211$ (Lower is better; confirms good cluster compactness).
 - **Principal Component Analysis (PCA):**
-  - $PC_1$ Explained Variance: **38.14%**
-  - $PC_2$ Explained Variance: **20.09%**
-  - **Total 2D Explained Variance:** **58.23%**
+  - $PC_1$ Explained Variance: **39.12%**
+  - $PC_2$ Explained Variance: **17.77%**
+  - **Total 2D Explained Variance:** **56.90%**
 
 ---
 
@@ -989,41 +689,42 @@ Severe (3)               0          0             0          4
 ## 1. End-to-End System Architecture
 
 ```
-                    ┌────────────────────────────────────────────────────────┐
-                    │               DATA SOURCING LAYER                      │
-                    │  • NASA POWER API (1,896 Monthly Climate Records)      │
-                    │  • National Soil Health Card (DAC&FW Soil Chemistry)   │
-                    │  • Survey of India Official GeoJSON Boundaries         │
-                    └───────────────────────────┬────────────────────────────┘
-                                                │
-                                                ▼
-                    ┌────────────────────────────────────────────────────────┐
-                    │          PROCEDURAL ETL & PREPROCESSING PIPELINE       │
-                    │  • step2_data_collection.py                            │
-                    │  • step3_data_preprocessing.py (FAO-56 ET0, ETc, CWSI) │
-                    │  • step5_feature_engineering.py (StandardScaler)       │
-                    └───────────────────────────┬────────────────────────────┘
-                                                │
-                                                ▼
-                    ┌────────────────────────────────────────────────────────┐
-                    │         FASTAPI BACKEND SERVER (backend/main.py)       │
-                    │  • In-Memory Model Fitting on Startup (0.11s)          │
-                    │  • Random Forest, Decision Tree, Logistic, KNN, NB     │
-                    │  • Polynomial Regression & Linear Regression           │
-                    │  • Zero-def Procedural Lambda Route Handlers           │
-                    └───────────────▲────────────────────────┬───────────────┘
-                                    │                        │
-                      JSON Requests │                        │ JSON Responses
-                     (Form Inputs)  │                        │ (Predictions & GeoJSON)
-                                    │                        ▼
-                    ┌────────────────────────────────────────────────────────┐
-                    │      DiCRA GEOSPATIAL FRONTEND (frontend/index.html)   │
-                    │  • Leaflet.js Interactive Vector Map of India          │
-                    │  • Spatial State Click-to-Zoom (flyToBounds)           │
-                    │  • 732 Survey of India Official District Polygons      │
-                    │  • Slide-in Geospatial Intelligence Drawer             │
-                    │  • Interactive In-Memory Machine Learning Simulator    │
-                    └────────────────────────────────────────────────────────┘
+                    +--------------------------------------------------------+
+                    |               DATA SOURCING LAYER                      |
+                    |  • NASA POWER API (Agro-Climatology Observations)      |
+                    |  • National Soil Health Card (DAC&FW Soil Chemistry)   |
+                    |  • Survey of India Official GeoJSON Boundaries         |
+                    +---------------------------+----------------------------+
+                                                |
+                                                v
+                    +--------------------------------------------------------+
+                    |          MASTER DATASET PIPELINE                       |
+                    |  • preprocessing/master_dataset.py                     |
+                    |  • Generates data/processed/krishijal_master_dataset.csv|
+                    |  • Cleans NASA anomalies, combines 6,654 records       |
+                    +---------------------------+----------------------------+
+                                                |
+                                                v
+                    +--------------------------------------------------------+
+                    |         FASTAPI BACKEND SERVER (backend/main.py)       |
+                    |  • In-Memory Model Fitting on Startup (0.12s)          |
+                    |  • Loads krishijal_master_dataset.csv in RAM           |
+                    |  • Random Forest, Decision Tree, Logistic, KNN, NB     |
+                    |  • Polynomial Regression & Linear Regression           |
+                    |  • Zero-def Procedural Lambda Route Handlers           |
+                    +---------------^------------------------+---------------+
+                                    |                        |
+                      JSON Requests |                        | JSON Responses
+                     (Form Inputs)  |                        | (Predictions & GeoJSON)
+                                    |                        v
+                    +--------------------------------------------------------+
+                    |      DiCRA GEOSPATIAL FRONTEND (frontend/index.html)   |
+                    |  • Leaflet.js Interactive Vector Map of India          |
+                    |  • Spatial State Click-to-Zoom (flyToBounds)           |
+                    |  • 732 Survey of India Official District Polygons      |
+                    |  • Slide-in Geospatial Intelligence Drawer             |
+                    |  • Interactive In-Memory Machine Learning Simulator    |
+                    +--------------------------------------------------------+
 ```
 
 ---
@@ -1032,60 +733,63 @@ Severe (3)               0          0             0          4
 
 | HTTP Method | API Path | Request Payload | Response Schema | Purpose |
 | :--- | :--- | :--- | :--- | :--- |
-| `GET` | `/` | None | `{project, developer_level, model_status, states_covered, districts_covered}` | API health check & metadata |
+| `GET` | `/` | None | `{project, master_dataset, total_records, states_covered, districts_covered}` | API health check & metadata |
 | `GET` | `/api/dataset/info` | None | `{total_records, total_districts, total_states, national_averages, distributions}` | High-level nationwide statistics |
-| `GET` | `/api/districts` | None | `{total_districts, districts: [{district, state, lat, lon, crop, soil, ipi, stress}]}` | Complete 158-district directory |
+| `GET` | `/api/districts` | None | `{total_districts, districts: [{district, state, lat, lon, crop, soil, ipi, stress}]}` | Complete 159-district directory |
 | `GET` | `/api/clusters/regions` | None | `{clusters_summary: {0..3}, districts_clustered: [{district, state, cluster_id, pca_x, pca_y}]}` | K-Means & PCA cluster coordinates |
 | `GET` | `/api/irrigation/priority` | None | `{title, total_districts, ranked_districts: [{rank, district, state, ipi, depth}]}` | Nationwide irrigation ranking table |
 | `GET` | `/api/models/evaluation` | None | `{classification: {...}, regression: {...}, clustering: {...}}` | Live benchmark metrics |
-| `POST` | `/api/predict/crop-stress` | `{temperature, rainfall, effective_soil_wetness, selected_model}` | `{crop_stress_level, predicted_water_deficit_mm_per_day, irrigation_priority_index, urgency_color, recommendation}` | Real-time ML inference |
+| `POST` | `/api/predict/crop-stress` | `{temperature, rainfall, effective_soil_wetness, selected_model}` | `{crop_stress_level, predicted_water_deficit_mm_per_day, irrigation_priority_index, recommendation}` | Real-time ML inference |
 
 ---
 
 ## 3. Client-Server Communication Workflow
+
 1. When the browser loads `http://127.0.0.1:8000/app/`, `app.js` issues asynchronous `fetch()` requests to `/api/dataset/info` and `/api/districts`.
 2. The browser loads the official Survey of India GeoJSON file (`data/india_states_official.geojson`) and renders national state boundaries with Leaflet.js.
 3. When the user clicks a state (e.g., Maharashtra), `map.flyToBounds()` zooms smoothly into that state, hides national boundaries, and renders the 36 district boundaries of Maharashtra.
 4. When the user clicks a district (e.g., Solapur), the slide-in drawer opens, showing the pre-calculated agro-climatology and priority meter.
 5. In the drawer, if the user adjusts the temperature slider to $40^\circ\text{C}$ and clicks **"Run In-Memory Prediction"**, `app.js` issues a POST request to `/api/predict/crop-stress`.
-6. FastAPI extracts the input, scales it with `StandardScaler`, runs `model_rf.predict()` in memory, and returns the updated stress level and advisory in milliseconds.
+6. FastAPI extracts the input, scales it with `StandardScaler`, runs `model_rf.predict()` in memory, and returns the updated stress level and advisory in under 10 milliseconds.
 
 \newpage
 
 # Comprehensive Glossary of Technical & Agronomic Terms
 
-1. **Agro-Meteorology:** The study of weather and climate variables (temperature, solar radiation, humidity, rainfall) and their direct interactions with agricultural crop production.
-2. **Climatology:** Long-term statistical averages (typically 30 years) of meteorological conditions for every month of the year.
-3. **Reference Evapotranspiration ($ET_0$):** The rate at which water would evaporate and transpire from an extensive surface of 0.12 m tall cool-season green grass under unlimited water availability.
-4. **Crop Evapotranspiration ($ET_c$):** The potential water demanded by a specific crop when disease-free, well-fertilized, and grown in large fields under non-limiting water conditions ($ET_c = K_c \cdot ET_0$).
-5. **Actual Evapotranspiration ($ET_a$):** The actual amount of water consumed and evaporated by crops under real-world, moisture-limited soil conditions ($ET_a = K_s \cdot ET_c$).
-6. **Crop Coefficient ($K_c$):** An experimentally determined multiplier that accounts for crop characteristics, canopy roughness, and growth stage.
-7. **Water Stress Coefficient ($K_s$):** A fractional multiplier ($0.0 - 1.0$) that reduces crop transpiration when soil moisture drops below the readily available water threshold.
-8. **Crop Water Stress Index ($CWSI$):** A normalized index ($0.0 - 1.0$) measuring the relative shortfall between actual and potential crop transpiration.
-9. **Water Deficit:** The daily volumetric shortfall ($mm/day$) between crop demand and the sum of actual transpiration plus natural precipitation.
-10. **Irrigation Priority Index (IPI):** A composite multi-criteria metric ($0 - 100$) combining $CWSI$, soil reservoir depletion, and daily water deficit to rank water allocation urgency.
-11. **Normalized Difference Vegetation Index (NDVI):** A satellite-derived index ($0.15 - 0.88$) reflecting plant canopy chlorophyll concentration, greenness, and biomass vigor.
-12. **Supervised Learning:** Machine learning tasks where the algorithm learns a mapping function from input features ($X$) to known target ground-truth labels ($y$).
-13. **Unsupervised Learning:** Algorithms (like K-Means and PCA) that identify hidden structures, clusters, or lower-dimensional representations without target labels.
-14. **Overfitting:** When a machine learning model memorizes training noise and performs poorly on unseen test data. Prevented in KrishiJal using `max_depth=8` in Decision Trees and 50 bagging estimators in Random Forest.
-15. **Underfitting:** When a model is too simplistic to capture underlying physical relationships (e.g., using linear regression on highly non-linear meteorological phenomena).
-16. **Data Leakage:** An evaluation flaw where information from the test set leaks into the training pipeline (e.g., fitting scalers or SMOTE on the entire dataset). Strictly prevented in KrishiJal.
-17. **StandardScaler:** Normalizes features to zero mean ($\mu=0$) and unit variance ($\sigma=1$).
-18. **SMOTE:** Synthetic Minority Over-sampling Technique, which creates synthetic examples along feature lines connecting minority instances.
-19. **Ensemble Learning:** Combining predictions from multiple individual models (e.g., 50 decision trees in Random Forest) to produce superior accuracy and stability.
-20. **Ordinary Least Squares (OLS):** The mathematical method of finding coefficients in linear regression by minimizing the sum of squared differences between observed and predicted targets.
-21. **Inertia:** The sum of squared Euclidean distances of samples to their closest K-Means cluster centroid; a measure of cluster internal compactness.
-22. **Silhouette Score:** A clustering validation metric ranging from $-1.0$ (incorrect clustering) to $+1.0$ (dense, well-separated clusters).
-23. **FastAPI:** A modern, high-performance Python web framework for building REST APIs based on standard Python type hints.
-24. **In-Memory Inference:** Performing machine learning predictions using model objects loaded in RAM rather than reading serialized disk files during each request.
-25. **GeoJSON:** An open-standard geospatial data interchange format based on JSON for representing geographical boundaries, points, polygons, and their properties.
-26. **DiCRA:** Data in Climate Resilient Agriculture, a digital public good initiated by UNDP and NABARD to inform agricultural climate adaptation in India.
+1. **Master Dataset:** A consolidated, authoritative single data repository (`krishijal_master_dataset.csv`) that brings together historical time-series observations and nationwide climatological data under a single harmonized schema.
+2. **Data Granularity:** The level of detail represented in a data table. KrishiJal explicitly harmonizes two granularities: high-frequency daily observations and monthly climatological normals.
+3. **Missing Value Imputation:** Replacing unobserved entries with statistically defensible estimates (such as district-wise medians) rather than dropping rows.
+4. **Agro-Meteorology:** The study of weather and climate variables (temperature, solar radiation, humidity, rainfall) and their direct interactions with agricultural crop production.
+5. **Climatology:** Long-term statistical averages (typically 30 years) of meteorological conditions for every month of the year.
+6. **Reference Evapotranspiration ($ET_0$):** The rate at which water would evaporate and transpire from an extensive surface of 0.12 m tall cool-season green grass under unlimited water availability.
+7. **Crop Evapotranspiration ($ET_c$):** The potential water demanded by a specific crop when disease-free, well-fertilized, and grown in large fields under non-limiting water conditions ($ET_c = K_c \cdot ET_0$).
+8. **Actual Evapotranspiration ($ET_a$):** The actual amount of water consumed and evaporated by crops under real-world, moisture-limited soil conditions ($ET_a = K_s \cdot ET_c$).
+9. **Crop Coefficient ($K_c$):** An experimentally determined multiplier that accounts for crop characteristics, canopy roughness, and growth stage.
+10. **Water Stress Coefficient ($K_s$):** A fractional multiplier ($0.0 - 1.0$) that reduces crop transpiration when soil moisture drops below the readily available water threshold.
+11. **Crop Water Stress Index ($CWSI$):** A normalized index ($0.0 - 1.0$) measuring the relative shortfall between actual and potential crop transpiration.
+12. **Water Deficit:** The daily volumetric shortfall ($mm/day$) between crop demand and the sum of actual transpiration plus natural precipitation.
+13. **Irrigation Priority Index (IPI):** A composite multi-criteria metric ($0 - 100$) combining $CWSI$, soil reservoir depletion, and daily water deficit to rank water allocation urgency.
+14. **Normalized Difference Vegetation Index (NDVI):** A satellite-derived index ($0.15 - 0.88$) reflecting plant canopy chlorophyll concentration, greenness, and biomass vigor.
+15. **Supervised Learning:** Machine learning tasks where the algorithm learns a mapping function from input features ($X$) to known target ground-truth labels ($y$).
+16. **Unsupervised Learning:** Algorithms (like K-Means and PCA) that identify hidden structures, clusters, or lower-dimensional representations without target labels.
+17. **Overfitting:** When a machine learning model memorizes training noise and performs poorly on unseen test data. Prevented in KrishiJal using `max_depth=8` in Decision Trees and 50 bagging estimators in Random Forest.
+18. **Underfitting:** When a model is too simplistic to capture underlying physical relationships (e.g., using linear regression on highly non-linear meteorological phenomena).
+19. **Data Leakage:** An evaluation flaw where information from the test set leaks into the training pipeline (e.g., fitting scalers or SMOTE on the entire dataset). Strictly prevented in KrishiJal.
+20. **StandardScaler:** Normalizes features to zero mean ($\mu=0$) and unit variance ($\sigma=1$).
+21. **SMOTE:** Synthetic Minority Over-sampling Technique, which creates synthetic examples along feature lines connecting minority instances.
+22. **Ensemble Learning:** Combining predictions from multiple individual models (e.g., 50 decision trees in Random Forest) to produce superior accuracy and stability.
+23. **Ordinary Least Squares (OLS):** The mathematical method of finding coefficients in linear regression by minimizing the sum of squared differences between observed and predicted targets.
+24. **Inertia:** The sum of squared Euclidean distances of samples to their closest K-Means cluster centroid; a measure of cluster internal compactness.
+25. **Silhouette Score:** A clustering validation metric ranging from $-1.0$ (incorrect clustering) to $+1.0$ (dense, well-separated clusters).
+26. **FastAPI:** A modern, high-performance Python web framework for building REST APIs based on standard Python type hints.
+27. **In-Memory Inference:** Performing machine learning predictions using model objects loaded in RAM rather than reading serialized disk files during each request.
+28. **GeoJSON:** An open-standard geospatial data interchange format based on JSON for representing geographical boundaries, points, polygons, and their properties.
 
 \newpage
 
 # Academic Viva Voce Question & Answer Bank
 
-This section provides 36 questions and detailed answers designed for academic review panels.
+This section provides 38 questions and detailed answers designed for academic review panels.
 
 ---
 
@@ -1104,158 +808,131 @@ This section provides 36 questions and detailed answers designed for academic re
 > **Answer:** Real-world geospatial intelligence platforms avoid dropdowns because spatial navigation is more natural and intuitive. In KrishiJal, clicking any state polygon smoothly animates the camera (`flyToBounds`) into that state and displays its district boundaries.
 
 #### Q5: What makes this project suitable for a 1st-Year B.Tech student presentation?
-> **Answer:** The code contains zero custom functions (`def`), uses basic procedural Python syntax, fits models directly in memory without complicated binary files, and implements syllabus-approved Scikit-Learn algorithms with clear physical formulas.
+> **Answer:** The code contains zero custom functions (`def`) in execution scripts, uses basic procedural Python syntax, fits models directly in memory without complicated binary files, and implements syllabus-approved Scikit-Learn algorithms with clear physical formulas.
 
 ---
 
-### Category B: Data Sourcing & Preprocessing
+### Category B: Master Dataset Sourcing & Preprocessing
 
-#### Q6: What are the primary data sources for this project?
-> **Answer:** 
-> 1. NASA POWER Agroclimatology API for monthly temperature, precipitation, solar radiation, and relative humidity.
-> 2. National Soil Health Card Portal (DAC&FW) for soil texture, pH, and organic carbon.
-> 3. Official Survey of India GeoJSON boundaries for nationwide vector mapping.
+#### Q6: Why did we restructure the project into ONE Master Dataset?
+> **Answer:** Previously, six separate processed CSV files were generated, making it difficult to maintain consistent feature versions across models. By creating `data/processed/krishijal_master_dataset.csv`, we established a single, authoritative source of truth (6,654 records, 48 features) to which all classification, regression, clustering, and backend services connect.
 
-#### Q7: How many districts and states are covered in the dataset?
-> **Answer:** Exactly 158 representative agricultural districts covering all 28 Indian States (minimum 5 districts per state) and all 8 Union Territories, comprising 1,896 monthly records.
+#### Q7: How many districts, states, and records are covered in the Master Dataset?
+> **Answer:** Exactly 6,654 records covering 159 districts across all 37 States and Union Territories (including NCT Delhi), incorporating both 1,896 monthly climatological summaries and 4,758 daily observations.
 
-#### Q8: How did you handle missing values in the dataset?
-> **Answer:** Missing numerical values were imputed using column-wise **median replacement** (`df[col].fillna(df[col].median())`). In agricultural data, median is preferred over mean because it is robust against extreme weather outliers such as flash floods or heatwaves.
+#### Q8: How did you combine daily and monthly data without creating incorrect records?
+> **Answer:** In `preprocessing/master_dataset.py`, we implemented a dual-granularity schema with a `granularity` tracker (`'monthly'` vs `'daily'`). Daily records retain exact date fields (`date`, `day`, `day_of_year`), while monthly records leave those fields as legitimate `NaN` rather than inventing false daily dates.
 
-#### Q9: How were duplicate records handled?
-> **Answer:** Duplicate records were identified and dropped using Pandas `df.drop_duplicates()` during Step 3 data preprocessing.
+#### Q9: What data quality issue did you discover in the NASA POWER dataset, and how was it solved?
+> **Answer:** In `all_india_140_districts_raw.csv`, NASA POWER reported `-999.0` for `root_zone_soil_moisture` in Lakshadweep across all 12 months because satellite radar soil sensors lack land resolution over tiny coral atolls. This resulted in an erroneous `effective_soil_wetness = -599.0`, misclassifying Lakshadweep as experiencing severe drought. In `preprocessing/master_dataset.py`, we identified and cleaned this anomaly, replacing `-999.0` with valid coastal sandy soil moisture ($0.42$), correctly recalculating $CWSI$ and restoring Lakshadweep to "Low" stress.
 
-#### Q10: How were categorical features like Crop Type and Growth Stage converted to numbers?
-> **Answer:** Deterministic integer label encoding was applied: Crops (e.g., `Cotton: 0`, `Rice: 5`, `Wheat: 7`) and Growth Stages (`Initial: 0`, `Vegetative: 3`, `Reproductive: 2`, `Maturity: 1`).
+#### Q10: How did you handle missing values in numerical columns?
+> **Answer:** Missing numerical values were imputed using column-wise median replacement (`df[col].fillna(df[col].median())`). In agricultural data, median is preferred over mean because it is robust against extreme weather outliers such as flash floods or heatwaves.
 
-#### Q11: What is StandardScaler and why is it necessary?
-> **Answer:** `StandardScaler` standardizes features to have mean $\mu = 0$ and variance $\sigma^2 = 1$ ($z = \frac{x - \mu}{\sigma}$). It is necessary because distance-based models (KNN) and gradient-based models (Logistic Regression) would otherwise be dominated by large-scale features like solar radiation ($20\text{ MJ}$) while ignoring small-scale features like soil moisture ($0.35$).
+#### Q11: How were duplicate records handled?
+> **Answer:** Duplicate records were identified and dropped based on `(granularity, state, district, month, date)`. The final master dataset contains exactly 0 duplicate records.
 
-#### Q12: Why did you ensure the Survey of India map extends to $37.05^\circ	ext{ N}$?
-> **Answer:** Many international GeoJSON repositories truncate the northern territories of Jammu & Kashmir and Ladakh along the Line of Control. In India, displaying an incomplete map violates Survey of India regulations. We integrated official boundaries extending to $37.05^\circ\text{ N}$ (Indira Col, Siachen, and Aksai Chin).
+#### Q12: How were categorical features like Crop Type and Growth Stage converted to numbers?
+> **Answer:** Deterministic integer label encoding was applied: Crops (`Barley: 0` to `Wheat: 8`) and Growth Stages (`Initial: 0`, `Maturity: 1`, `Reproductive: 2`, `Vegetative: 3`).
 
 ---
 
 ### Category C: Mathematical & Agricultural Physics Formulas
 
-#### Q13: What is the difference between $ET_0, ET_c$, and $ET_a$?
-> **Answer:**
-> - $ET_0$ (Reference Evapotranspiration): Evaporative demand of the atmosphere over green grass under unlimited water.
-> - $ET_c$ (Potential Crop Demand): Maximum water needed by a specific crop under ideal conditions ($ET_c = K_c \cdot ET_0$).
-> - $ET_a$ (Actual Transpiration): Real water consumed under moisture-limited soil conditions ($ET_a = K_s \cdot ET_c$).
-
-#### Q14: What is the Hargreaves formula used to calculate $ET_0$?
-> **Answer:**
+#### Q13: What is Reference Evapotranspiration ($ET_0$), and what formula was used?
+> **Answer:** $ET_0$ represents atmospheric evaporative demand for a standard grass reference crop. We implemented the UN FAO Hargreaves formula:
 > $$ET_0 = 0.0023 \times (T_{mean} + 17.8) \times \sqrt{T_{max} - T_{min}} \times (0.408 \times R_s)$$
-> It calculates evapotranspiration in $mm/day$ using mean temperature, daily temperature range, and surface solar radiation.
 
-#### Q15: What is the Crop Water Stress Index ($CWSI$)?
-> **Answer:**
-> $$CWSI = 1.0 - \frac{ET_a}{ET_c}$$
-> It measures plant transpiration deficit on a scale of $0.0$ (no stress) to $1.0$ (complete cessation of transpiration / permanent wilting point).
+#### Q14: What is Crop Evapotranspiration ($ET_c$) and Crop Coefficient ($K_c$)?
+> **Answer:** $ET_c = K_c \times ET_0$. The crop coefficient $K_c$ accounts for crop canopy roughness, leaf area, and growth stage, scaling atmospheric evaporative demand to the specific biological water requirement of crops like Rice ($K_c = 1.15$) or Cotton ($K_c = 1.05$).
 
-#### Q16: How is Daily Crop Water Deficit calculated?
-> **Answer:**
-> $$\text{Water Deficit} = \max(ET_c - ET_a - \text{Rainfall}, 0.0)$$
-> It calculates the net daily water shortage ($mm/day$) after crediting natural rainfall against crop demand.
+#### Q15: How is Effective Soil Moisture ($\theta_{eff}$) calculated?
+> **Answer:** As a depth-weighted combination of surface moisture and root-zone moisture: $\theta_{eff} = 0.4 \times \theta_{surface} + 0.6 \times \theta_{root\_zone}$, reflecting that deep root zones buffer crops against rapid topsoil desiccation.
 
-#### Q17: How is the Irrigation Priority Index ($IPI$) computed?
+#### Q16: What is the difference between $ET_0$, $ET_c$, and $ET_a$?
 > **Answer:**
-> $$IPI = 45 \times CWSI + 35 \times (1 - \theta_{eff}) + 20 \times \left(\frac{\text{Deficit}}{10}\right)$$
-> It combines plant physiological stress (45%), soil reservoir depletion (35%), and volumetric deficit (20%) on a scale of $0$ to $100$.
+> - $ET_0$: Baseline evaporative demand of green grass under unlimited water.
+> - $ET_c$: Potential water demand of a specific crop under non-limiting water conditions ($ET_c = K_c \times ET_0$).
+> - $ET_a$: *Actual* water consumed by the crop under moisture-limited soil conditions ($ET_a = K_s \times ET_c$, where $K_s \le 1.0$).
 
-#### Q18: What are the four Irrigation Priority categories?
-> **Answer:**
-> - **Low Priority ($IPI < 35$):** Routine monitoring; soil moisture is adequate.
-> - **Medium Priority ($35 \le IPI < 50$):** Irrigate within 48–72 hours; depth $25-35\text{ mm}$.
-> - **High Priority ($50 \le IPI < 70$):** Emergency canal water release; depth $40-50\text{ mm}$.
-> - **Critical Priority ($IPI \ge 70$):** Severe drought; immediate water release required.
+#### Q17: What is Crop Water Stress Index ($CWSI$)?
+> **Answer:** $CWSI = 1 - \frac{ET_a}{ET_c}$. It ranges from $0.0$ (no stress, optimal transpiration) to $1.0$ (severe stress, complete stomatal closure).
+
+#### Q18: What is the Irrigation Priority Index ($IPI$), and how is it weighted?
+> **Answer:** $IPI = 45 \times CWSI + 35 \times (1 - \theta_{eff}) + 20 \times (\text{Deficit} / 10)$. It places 45% weight on plant stress, 35% on soil reservoir depletion, and 20% on volumetric water deficit to produce a single actionable priority score ($0 - 100$).
 
 ---
 
 ### Category D: Machine Learning Algorithms & Training
 
-#### Q19: Which classification algorithms did you evaluate?
-> **Answer:** Logistic Regression, K-Nearest Neighbors (KNN), Gaussian Naive Bayes, Decision Tree Classifier, and Random Forest Classifier.
+#### Q19: Which machine learning algorithms are implemented in KrishiJal?
+> **Answer:**
+> - **Classification:** Random Forest, Decision Tree, Logistic Regression, KNN, Gaussian Naive Bayes.
+> - **Regression:** Linear Regression, Polynomial Regression (Degree 2).
+> - **Clustering & Dimensionality:** K-Means ($k=4$), PCA (2 components).
+> - **Data Balancing:** SMOTE.
 
-#### Q20: Which model performed best for crop stress classification?
-> **Answer:** **Random Forest Classifier**, achieving **100.00% accuracy** on the test set, followed by Decision Tree with **99.74% accuracy**.
+#### Q20: Why is Random Forest the top classification performer?
+> **Answer:** Random Forest uses 50 bootstrapped decision trees and feature bagging. Aggregating diverse trees cancels out individual errors, yielding **99.40% accuracy** on unseen test data without overfitting.
 
-#### Q21: Why does Random Forest outperform a single Decision Tree?
-> **Answer:** A single Decision Tree can overfit noisy training samples. Random Forest uses bagging (50 trees) and feature subspace randomization, averaging predictions across all trees to cancel out individual tree variance.
+#### Q21: Why does Polynomial Regression outperform Linear Regression for priority prediction?
+> **Answer:** Agricultural physics involves non-linear relationships (e.g., solar radiation and temperature interact multiplicatively, and temperature difference enters through a square root). Polynomial Regression includes interaction terms ($x_i x_j$) and quadratic powers ($x_i^2$), increasing $R^2$ from $0.8059$ to **$0.9393$**.
 
-#### Q22: What is the difference between Linear and Polynomial Regression?
-> **Answer:** Linear Regression fits a straight line/hyperplane, assuming constant proportional change. Polynomial Regression generates degree-2 quadratic and interaction terms ($x_1^2, x_1 x_2$), allowing it to model non-linear accelerated water stress ($R^2 = 0.9994$).
+#### Q22: What is SMOTE, and why is it applied only to training data?
+> **Answer:** SMOTE creates synthetic minority class examples by interpolating between neighboring instances in feature space. Applying SMOTE to the test set causes **data leakage**; it must only balance `X_train` so that test evaluation reflects genuine real-world class distributions.
 
-#### Q23: What is SMOTE and why was it applied ONLY on training data?
-> **Answer:** Synthetic Minority Over-sampling Technique generates synthetic points for minority classes (`Severe` and `High` stress). It was applied exclusively on `X_train` to prevent **data leakage**. Applying SMOTE to the test set would artificially duplicate test samples, corrupting evaluation integrity.
+#### Q23: Why do we use StandardScaler before training KNN and Logistic Regression?
+> **Answer:** KNN relies on Euclidean distance, and Logistic Regression uses gradient descent. Unscaled features with large numerical values (like solar radiation at $25\text{ MJ}$) would dominate features with small ranges (like soil moisture at $0.35$). `StandardScaler` standardizes all features to mean $\mu = 0$ and variance $\sigma^2 = 1$.
 
-#### Q24: What is K-Means Clustering and what do its clusters represent?
-> **Answer:** An unsupervised algorithm that groups districts into $k=4$ regional agro-climatic zones based on weather and soil attributes: High-Evaporation Central/West, Humid Coastal, Arid Moisture-Deficit, and Cool Mountain zones.
-
-#### Q25: What is Principal Component Analysis (PCA)?
-> **Answer:** An unsupervised dimensionality reduction technique that computes orthogonal eigenvectors of the covariance matrix, compressing 14 features into 2 principal components while retaining **58.23%** of the total variance for 2D visualization.
-
-#### Q26: Why are there NO `.joblib` files in your project?
-> **Answer:** In first-year B.Tech, binary serialization (`joblib`, `pickle`) is not taught. Furthermore, binary files can act as unapproved black boxes. KrishiJal trains its models directly in memory from clean CSV data upon server startup in 0.11 seconds, ensuring 100% transparency.
+#### Q24: How was data leakage strictly prevented during scaling?
+> **Answer:** The scaler was fit exclusively on the training split: `scaler.fit_transform(X_train)`. The test set was transformed using the training parameters: `scaler.transform(X_test)`.
 
 ---
 
-### Category E: Model Evaluation & Performance
+### Category E: Model Evaluation & Benchmark Results
 
-#### Q27: What is the difference between Precision and Recall in this project?
-> **Answer:**
-> - **Precision:** When the model predicts a district has `Severe Stress`, how often is it correct? High precision prevents wasting emergency canal releases.
-> - **Recall:** Of all districts truly experiencing `Severe Stress`, how many did the model detect? High recall prevents crops from dying undetected.
+#### Q25: What are the evaluation results for Random Forest on the unseen test set?
+> **Answer:** On $N=1,331$ test records, Random Forest achieved **99.40% Accuracy**, **0.9941 Precision**, **0.9940 Recall**, and **0.9940 F1-Score**.
 
-#### Q28: What is F1-Score?
-> **Answer:** The harmonic mean of Precision and Recall ($F_1 = 2 \cdot \frac{P \cdot R}{P + R}$). It is the primary metric for imbalanced classification.
+#### Q26: What is a Confusion Matrix, and what did ours show?
+> **Answer:** A matrix comparing actual ground-truth classes with predicted classes. For Random Forest ($N=1,331$), 993 Low, 179 Moderate, 113 High, and 38 Severe stress records were correctly classified, with only 8 total minor misclassifications.
 
-#### Q29: What are MAE, MSE, and RMSE in regression?
-> **Answer:**
-> - **MAE (Mean Absolute Error):** Average magnitude of errors ($0.26$ priority points in Polynomial Regression).
-> - **MSE (Mean Squared Error):** Average of squared errors ($0.14$).
-> - **RMSE (Root Mean Squared Error):** Square root of MSE ($0.37$), expressed in the same units as the target.
+#### Q27: What is the difference between MAE and RMSE in regression?
+> **Answer:** MAE measures the average magnitude of absolute errors linearly. RMSE squares errors before averaging, penalizing large outliers heavily. In our priority model, MAE was $2.60$ and RMSE was $3.41$.
 
-#### Q30: What does an $R^2$ score of $0.9994$ mean?
-> **Answer:** It means that $99.94\%$ of the total variance in the Irrigation Priority Index across Indian districts is accurately explained by the polynomial agro-meteorological features.
+#### Q28: What is $R^2$ score?
+> **Answer:** The coefficient of determination ($0.0 - 1.0$), representing the proportion of variance in the target variable explained by the model. Our Polynomial model achieved **$R^2 = 0.9393$** (93.93% variance explained).
 
-#### Q31: What is the Silhouette Score in K-Means?
-> **Answer:** It measures how similar an object is to its own cluster compared to neighboring clusters, ranging from $-1$ to $+1$. KrishiJal achieved a score of $0.2538$, confirming well-separated agro-climatic zones.
+#### Q29: What do Silhouette Score and Inertia tell us about K-Means?
+> **Answer:** Inertia ($37,413.65$) measures internal cluster compactness (sum of squared distances to centroid). Silhouette Score ($0.2180$) measures how well-separated clusters are from neighboring clusters.
 
 ---
 
-### Category F: Backend, Frontend & Deployment
+### Category F: Architecture, Implementation & Defense
 
-#### Q32: How did you implement FastAPI without using the `def` keyword?
-> **Answer:** Standard FastAPI uses `def endpoint_name():`. KrishiJal uses procedural routing via `app.add_api_route(path, lambda: payload, methods=[...])` and assigns Pydantic type annotations to inline lambda functions (`prediction_executor.__annotations__ = {...}`).
+#### Q30: Why does the backend train models in memory instead of loading `.joblib` files?
+> **Answer:** In-memory fitting on startup takes only 0.12 seconds on the clean master dataset, eliminating external binary dependencies and guaranteeing complete transparency for academic examiners.
 
-#### Q33: How does the frontend communicate with the backend?
-> **Answer:** Through asynchronous JavaScript `fetch()` calls exchanging JSON payloads with FastAPI REST endpoints at `http://127.0.0.1:8000`.
+#### Q31: How does the client frontend communicate with the backend?
+> **Answer:** Through asynchronous REST API calls using JavaScript `fetch()`. The frontend requests GeoJSON and district metrics via GET endpoints and issues POST requests to `/api/predict/crop-stress` for real-time inference.
 
-#### Q34: What happens when a user clicks a district on the map?
-> **Answer:** The district polygon is highlighted in cyan. The slide-in drawer opens, displaying the district's live stress badge, IPI progress meter, weather metrics, soil profile, and water release advisory.
+#### Q32: What automated testing did you implement?
+> **Answer:** An 8-stage automated test suite in `tests/test_project.py` verifying dataset loading, physical bounds, in-memory models, predictions, all 7 API endpoints, edge cases, descending priority ranking, and frontend static assets with a **100% pass rate**.
 
-#### Q35: How does the live in-memory simulator in the drawer work?
-> **Answer:** The user adjusts temperature, rainfall, or soil wetness sliders and clicks "Run In-Memory Prediction". JavaScript sends a POST request with the new values to `/api/predict/crop-stress`, and the backend returns the updated stress prediction in milliseconds.
-
-#### Q36: What are the main limitations and future improvements of KrishiJal?
-> **Answer:**
-> - **Limitations:** Currently uses monthly NASA climatology rather than real-time daily IoT soil sensors.
-> - **Future Improvements:** Integration of Sentinel-1 radar soil moisture, mobile app notifications for farmers in regional languages, and automated canal sluice gate IoT actuation.
+---
 
 \newpage
 
 # Project Limitations, Assumptions & Future Roadmap
 
 ## 1. Underlying Assumptions
-1. **Climatological Generalization:** Monthly NASA POWER agroclimatology represents baseline seasonal patterns. Extreme micro-climate weather anomalies (such as cloudbursts or sudden unseasonal hail) require real-time weather radar ingestion.
-2. **Crop Growth Stage Distribution:** Growth stages are mapped to calendar months based on standard Indian agronomic cycles (Kharif, Rabi, Zaid). In reality, staggered sowing dates can shift growth stages by 2–4 weeks.
-3. **Soil Wetness Uniformity:** Root-zone wetness is modeled as a uniform layer over the district centroid coordinates.
+1. **Atmospheric Radiation Approximation:** Where in-situ solar pyranometers were absent, solar radiation ($R_s$) was derived from satellite-based all-sky downwelling shortwave flux (NASA POWER).
+2. **Crop Growth Stage Modeling:** Growth stages are modeled based on standard Indian agronomic cycles (Kharif, Rabi, Zaid). In field practice, staggered sowing dates can shift growth stages by 2–4 weeks.
+3. **Soil Wetness Uniformity:** Root-zone wetness is modeled as a uniform layer over district centroid coordinates.
 
 ## 2. Limitations
-1. **Absence of Real-time IoT Ingestion:** The current academic prototype does not interface with in-situ LoRaWAN soil moisture probes.
-2. **Simplified Crop Coverage:** Models are calibrated for 8 major Indian staple and cash crops (Rice, Wheat, Cotton, Sugarcane, Maize, Pulses, Groundnut, Mustard). Horticultural crops (like mangoes or apples in J&K) are currently approximated using baseline vegetative coefficients.
+1. **Absence of Real-time IoT Ingestion:** The current academic prototype relies on satellite climatology rather than real-time in-situ LoRaWAN soil moisture probes.
+2. **Crop Coverage Scope:** Models are calibrated for 9 major Indian staple and cash crops (Rice, Wheat, Cotton, Sugarcane, Maize, Pulses, Groundnut, Mustard, Barley). Horticultural crops are currently approximated using baseline vegetative coefficients.
 
 ## 3. Future Expansion Roadmap
 1. **Satellite SAR Ingestion (Sentinel-1):** Ingest 10-meter resolution Synthetic Aperture Radar (SAR) backscatter data to map soil surface moisture daily regardless of cloud cover.
@@ -1263,7 +940,6 @@ This section provides 36 questions and detailed answers designed for academic re
 3. **Automated IoT Sluice Gate Control:** Link the FastAPI Irrigation Priority Index directly to SCADA / microcontroller systems to automate canal water distribution without human delay.
 
 ---
-\vspace{2cm}
 \begin{center}
-\textbf{--- End of Comprehensive Academic Project Guide ---}
+\textbf{— End of Comprehensive Academic Project Guide —}
 \end{center}
