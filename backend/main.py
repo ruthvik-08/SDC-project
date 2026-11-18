@@ -107,12 +107,12 @@ cluster_profiles_info = {
 # 3. ROOT STATUS ROUTE (ZERO DEF)
 # ------------------------------------------------------------------------------
 home_payload = {
-    "project": "KrishiJal - All-India Crop Stress & Irrigation Priority System",
+    "project": "DiCRA KrishiJal - All-India Crop Stress & Irrigation Priority System",
     "developer_level": "First-Year B.Tech Student (No custom functions)",
     "model_status": "Trained in-memory on startup (Zero .joblib files)",
     "status": "Online and Operational",
-    "states_covered": 28,
-    "districts_covered": 140,
+    "states_covered": int(df_all["state"].nunique()),
+    "districts_covered": int(df_all["district"].nunique()),
     "api_documentation": "/docs",
     "web_app": "/app/"
 }
