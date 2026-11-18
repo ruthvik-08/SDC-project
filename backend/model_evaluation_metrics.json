@@ -1,192 +1,207 @@
 {
-    "classification": {
-        "Logistic Regression": {
-            "accuracy": 0.9658,
-            "precision": 0.9695,
-            "recall": 0.9658,
-            "f1_score": 0.9668,
-            "confusion_matrix": [
-                [
-                    295,
-                    9,
-                    0,
-                    0
-                ],
-                [
-                    0,
-                    56,
-                    2,
-                    1
-                ],
-                [
-                    0,
-                    0,
-                    13,
-                    0
-                ],
-                [
-                    0,
-                    0,
-                    1,
-                    3
-                ]
-            ]
-        },
-        "K-Nearest Neighbors (KNN)": {
-            "accuracy": 0.9026,
-            "precision": 0.925,
-            "recall": 0.9026,
-            "f1_score": 0.9092,
-            "confusion_matrix": [
-                [
-                    277,
-                    26,
-                    1,
-                    0
-                ],
-                [
-                    3,
-                    52,
-                    4,
-                    0
-                ],
-                [
-                    0,
-                    2,
-                    11,
-                    0
-                ],
-                [
-                    0,
-                    0,
-                    1,
-                    3
-                ]
-            ]
-        },
-        "Gaussian Naive Bayes": {
-            "accuracy": 0.9395,
-            "precision": 0.9527,
-            "recall": 0.9395,
-            "f1_score": 0.9428,
-            "confusion_matrix": [
-                [
-                    284,
-                    20,
-                    0,
-                    0
-                ],
-                [
-                    0,
-                    56,
-                    3,
-                    0
-                ],
-                [
-                    0,
-                    0,
-                    13,
-                    0
-                ],
-                [
-                    0,
-                    0,
-                    0,
-                    4
-                ]
-            ]
-        },
-        "Decision Tree": {
-            "accuracy": 0.9974,
-            "precision": 0.9976,
-            "recall": 0.9974,
-            "f1_score": 0.9974,
-            "confusion_matrix": [
-                [
-                    304,
-                    0,
-                    0,
-                    0
-                ],
-                [
-                    0,
-                    58,
-                    1,
-                    0
-                ],
-                [
-                    0,
-                    0,
-                    13,
-                    0
-                ],
-                [
-                    0,
-                    0,
-                    0,
-                    4
-                ]
-            ]
-        },
-        "Random Forest": {
-            "accuracy": 1.0,
-            "precision": 1.0,
-            "recall": 1.0,
-            "f1_score": 1.0,
-            "confusion_matrix": [
-                [
-                    304,
-                    0,
-                    0,
-                    0
-                ],
-                [
-                    0,
-                    59,
-                    0,
-                    0
-                ],
-                [
-                    0,
-                    0,
-                    13,
-                    0
-                ],
-                [
-                    0,
-                    0,
-                    0,
-                    4
-                ]
-            ]
-        }
+  "dataset_source": "data/processed/krishijal_master_dataset.csv",
+  "total_records": 6654,
+  "train_records": 5323,
+  "test_records": 1331,
+  "classification": {
+    "Random Forest": {
+      "accuracy": 0.994,
+      "precision": 0.9941,
+      "recall": 0.994,
+      "f1_score": 0.994,
+      "confusion_matrix": [
+        [
+          993,
+          4,
+          0,
+          0
+        ],
+        [
+          0,
+          179,
+          3,
+          0
+        ],
+        [
+          0,
+          0,
+          113,
+          0
+        ],
+        [
+          0,
+          0,
+          1,
+          38
+        ]
+      ]
     },
-    "regression": {
-        "Linear Regression": {
-            "mae": 0.46,
-            "mse": 0.46,
-            "rmse": 0.68,
-            "r2_score": 0.9978
-        },
-        "Polynomial Regression (Degree 2)": {
-            "mae": 0.26,
-            "mse": 0.14,
-            "rmse": 0.37,
-            "r2_score": 0.9994
-        }
+    "Decision Tree": {
+      "accuracy": 0.988,
+      "precision": 0.9883,
+      "recall": 0.988,
+      "f1_score": 0.9881,
+      "confusion_matrix": [
+        [
+          988,
+          9,
+          0,
+          0
+        ],
+        [
+          2,
+          179,
+          1,
+          0
+        ],
+        [
+          0,
+          2,
+          110,
+          1
+        ],
+        [
+          0,
+          0,
+          1,
+          38
+        ]
+      ]
     },
-    "clustering": {
-        "K-Means (k=4)": {
-            "inertia": 13698.76,
-            "silhouette_score": 0.2538,
-            "davies_bouldin_score": 1.1639
-        },
-        "PCA (2D Projection)": {
-            "explained_variance_ratio": [
-                0.3814,
-                0.2009
-            ],
-            "total_explained_variance": 0.5823
-        }
+    "Logistic Regression": {
+      "accuracy": 0.9609,
+      "precision": 0.9651,
+      "recall": 0.9609,
+      "f1_score": 0.9621,
+      "confusion_matrix": [
+        [
+          963,
+          34,
+          0,
+          0
+        ],
+        [
+          1,
+          172,
+          9,
+          0
+        ],
+        [
+          0,
+          4,
+          105,
+          4
+        ],
+        [
+          0,
+          0,
+          0,
+          39
+        ]
+      ]
+    },
+    "Gaussian Naive Bayes": {
+      "accuracy": 0.8114,
+      "precision": 0.8526,
+      "recall": 0.8114,
+      "f1_score": 0.8267,
+      "confusion_matrix": [
+        [
+          868,
+          119,
+          10,
+          0
+        ],
+        [
+          13,
+          121,
+          48,
+          0
+        ],
+        [
+          7,
+          22,
+          63,
+          21
+        ],
+        [
+          0,
+          0,
+          11,
+          28
+        ]
+      ]
+    },
+    "KNN": {
+      "accuracy": 0.9279,
+      "precision": 0.9362,
+      "recall": 0.9279,
+      "f1_score": 0.9307,
+      "confusion_matrix": [
+        [
+          944,
+          53,
+          0,
+          0
+        ],
+        [
+          9,
+          157,
+          16,
+          0
+        ],
+        [
+          1,
+          10,
+          97,
+          5
+        ],
+        [
+          0,
+          0,
+          2,
+          37
+        ]
+      ]
     }
+  },
+  "regression_irrigation_priority": {
+    "Linear Regression": {
+      "mae": 4.8661,
+      "mse": 37.0918,
+      "rmse": 6.0903,
+      "r2_score": 0.8059
+    },
+    "Polynomial Regression (Deg 2)": {
+      "mae": 2.5953,
+      "mse": 11.603,
+      "rmse": 3.4063,
+      "r2_score": 0.9393
+    }
+  },
+  "regression_water_deficit": {
+    "Linear Regression": {
+      "mae": 0.264,
+      "mse": 0.1484,
+      "rmse": 0.3852,
+      "r2_score": 0.5855
+    },
+    "Polynomial Regression (Deg 2)": {
+      "mae": 0.1539,
+      "mse": 0.0537,
+      "rmse": 0.2317,
+      "r2_score": 0.8501
+    }
+  },
+  "clustering": {
+    "n_clusters": 4,
+    "inertia": 37413.65,
+    "silhouette_score": 0.218,
+    "davies_bouldin_index": 1.5211
+  },
+  "pca": {
+    "pc1_explained_variance_ratio": 0.3912,
+    "pc2_explained_variance_ratio": 0.1777,
+    "total_2d_explained_variance_ratio": 0.569
+  }
 }

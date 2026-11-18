@@ -46,9 +46,11 @@ app.add_middleware(
 # ------------------------------------------------------------------------------
 # 2. LOAD DATASET AND FIT MODELS IN MEMORY (NO JOBLIB NEEDED)
 # ------------------------------------------------------------------------------
-# Load genuine processed dataset covering 140 districts across 28 states
-df_processed = pd.read_csv("data/processed/all_india_140_districts_processed.csv")
-df_all = pd.read_csv("data/processed/all_india_140_clustered.csv")
+# Load single consolidated master dataset covering all Indian States & UTs
+master_dataset_path = "data/processed/krishijal_master_dataset.csv"
+df_master = pd.read_csv(master_dataset_path)
+df_processed = df_master
+df_all = df_master
 
 # Create simple categorical integer code maps for crops and stages
 crop_categories = sorted(df_processed["crop_type"].unique().tolist())
@@ -109,6 +111,8 @@ cluster_profiles_info = {
 home_payload = {
     "project": "DiCRA KrishiJal - All-India Crop Stress & Irrigation Priority System",
     "developer_level": "First-Year B.Tech Student (No custom functions)",
+    "master_dataset": "data/processed/krishijal_master_dataset.csv",
+    "total_records": len(df_all),
     "model_status": "Trained in-memory on startup (Zero .joblib files)",
     "status": "Online and Operational",
     "states_covered": int(df_all["state"].nunique()),

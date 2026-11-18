@@ -61,9 +61,7 @@ SDC-project/
 │   │   ├── india_districts.csv                # 158 districts metadata (36 States & UTs)
 │   │   └── all_india_140_districts_raw.csv    # 1,896 monthly climate records
 │   └── processed/
-│       ├── all_india_140_districts_processed.csv # Cleaned data with FAO-56 formulas
-│       ├── all_india_140_engineered_features.csv # Scaled & encoded feature matrix
-│       └── all_india_140_clustered.csv        # K-Means clusters & 2D PCA coords
+│       └── krishijal_master_dataset.csv       # Unified Master Dataset (6,654 records, 48 features)
 ├── backend/
 │   ├── main.py                                # FastAPI backend (Zero def, in-memory ML)
 │   └── model_evaluation_metrics.json          # Benchmark evaluation metrics

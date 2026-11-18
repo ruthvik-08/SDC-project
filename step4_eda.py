@@ -17,8 +17,8 @@ print("=" * 70)
 print("STEP 4: EXPLORATORY DATA ANALYSIS (EDA)")
 print("=" * 70)
 
-# Load clean processed dataset
-data_file = "data/processed/all_india_140_districts_processed.csv"
+# Load master processed dataset
+data_file = "data/processed/krishijal_master_dataset.csv"
 print(f"Loading data from: {data_file}")
 df = pd.read_csv(data_file)
 
