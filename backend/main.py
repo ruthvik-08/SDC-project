@@ -179,7 +179,14 @@ for d_name, grp in df_all.groupby("district"):
         "priority_category": "High Priority" if mean_ipi >= 50.0 else ("Medium Priority" if mean_ipi >= 35.0 else "Low Priority"),
         "stress_level": "Severe" if mean_ipi >= 60.0 else ("High" if mean_ipi >= 45.0 else ("Moderate" if mean_ipi >= 30.0 else "Low")),
         "cluster_id": c_id,
-        "cluster_name": c_info["name"]
+        "cluster_name": c_info["name"],
+        "state_lgd_code": int(grp["state_lgd_code"].iloc[0]) if "state_lgd_code" in grp else 0,
+        "district_lgd_code": int(grp["district_lgd_code"].iloc[0]) if "district_lgd_code" in grp else 0,
+        "nitrogen_status": str(grp["nitrogen_status"].iloc[0]) if "nitrogen_status" in grp else "Optimal (Medium N)",
+        "soil_ph_character": str(grp["soil_ph_character"].iloc[0]) if "soil_ph_character" in grp else "Neutral / Balanced",
+        "soil_health_index": round(float(grp["soil_health_index"].iloc[0]), 1) if "soil_health_index" in grp else 50.0,
+        "soil_nitrogen_low_share": round(float(grp["shc_macro_nitrogen_low_share_2024_25"].iloc[0]), 3) if "shc_macro_nitrogen_low_share_2024_25" in grp else 0.0,
+        "soil_ph_neutral_share": round(float(grp["shc_macro_soil_ph_neutral_share_2024_25"].iloc[0]), 3) if "shc_macro_soil_ph_neutral_share_2024_25" in grp else 1.0
     })
 
 app.add_api_route("/api/districts", lambda: {"total_districts": len(districts_summary), "districts": districts_summary}, methods=["GET"])

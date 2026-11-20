@@ -471,6 +471,12 @@ function handleDistrictClick(districtName, stateName, data, layerTarget) {
   document.getElementById("m-soil-type").innerText = profile.soil_type;
   document.getElementById("m-ph").innerText = profile.soil_ph;
   document.getElementById("m-oc").innerText = profile.soil_organic_carbon;
+  if (document.getElementById("m-shc-nitrogen")) {
+    document.getElementById("m-shc-nitrogen").innerText = profile.nitrogen_status || "Optimal (Medium N)";
+  }
+  if (document.getElementById("m-shc-index")) {
+    document.getElementById("m-shc-index").innerText = (profile.soil_health_index ? profile.soil_health_index + " / 100" : "50.0 / 100");
+  }
 
   // Advisory Box
   const waterDepth = ipiVal >= 50 ? "40–50 mm" : (ipiVal >= 35 ? "25–35 mm" : "Routine / Nil");

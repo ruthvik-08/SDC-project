@@ -42,7 +42,9 @@ def test_1_master_dataset_loading():
     
     df = pd.read_csv(master_path)
     assert len(df) == 6654, f"Expected 6,654 rows, got {len(df)}"
-    assert len(df.columns) == 48, f"Expected 48 columns, got {len(df.columns)}"
+    assert len(df.columns) == 72, f"Expected 72 columns (48 master + 24 SHC 2025 features), got {len(df.columns)}"
+    assert "shc_macro_nitrogen_low_share_2024_25" in df.columns, "Missing Soil Health Card features"
+    assert "soil_health_index" in df.columns, "Missing soil_health_index"
     assert df["district"].nunique() >= 158, f"Expected >= 158 districts, got {df['district'].nunique()}"
     assert df["state"].nunique() >= 36, f"Expected >= 36 states/UTs, got {df['state'].nunique()}"
     assert "granularity" in df.columns, "Missing 'granularity' column in master dataset"
@@ -63,7 +65,8 @@ def test_2_data_preprocessing_and_bounds():
         "temperature", "temp_max", "temp_min", "rainfall", "humidity",
         "surface_soil_moisture", "root_zone_soil_moisture", "solar_radiation",
         "effective_soil_wetness", "et0", "etc", "cwsi", "water_deficit", "ndvi",
-        "irrigation_priority_index", "stress_level", "stress_level_code"
+        "irrigation_priority_index", "stress_level", "stress_level_code",
+        "shc_macro_nitrogen_low_share_2024_25", "soil_health_index"
     ]
     for col in core_cols:
         null_count = df[col].isnull().sum()

@@ -5,21 +5,21 @@
   "test_records": 1331,
   "classification": {
     "Random Forest": {
-      "accuracy": 0.994,
-      "precision": 0.9941,
-      "recall": 0.994,
-      "f1_score": 0.994,
+      "accuracy": 0.9955,
+      "precision": 0.9956,
+      "recall": 0.9955,
+      "f1_score": 0.9955,
       "confusion_matrix": [
         [
-          993,
-          4,
+          994,
+          3,
           0,
           0
         ],
         [
           0,
-          179,
-          3,
+          180,
+          2,
           0
         ],
         [
@@ -69,14 +69,14 @@
       ]
     },
     "Logistic Regression": {
-      "accuracy": 0.9609,
-      "precision": 0.9651,
-      "recall": 0.9609,
-      "f1_score": 0.9621,
+      "accuracy": 0.9594,
+      "precision": 0.964,
+      "recall": 0.9594,
+      "f1_score": 0.9607,
       "confusion_matrix": [
         [
-          963,
-          34,
+          961,
+          36,
           0,
           0
         ],
@@ -167,41 +167,41 @@
   },
   "regression_irrigation_priority": {
     "Linear Regression": {
-      "mae": 4.8661,
-      "mse": 37.0918,
-      "rmse": 6.0903,
-      "r2_score": 0.8059
+      "mae": 4.8669,
+      "mse": 37.1909,
+      "rmse": 6.0984,
+      "r2_score": 0.8055
     },
     "Polynomial Regression (Deg 2)": {
-      "mae": 2.5953,
-      "mse": 11.603,
-      "rmse": 3.4063,
-      "r2_score": 0.9393
+      "mae": 2.5952,
+      "mse": 11.5902,
+      "rmse": 3.4044,
+      "r2_score": 0.9394
     }
   },
   "regression_water_deficit": {
     "Linear Regression": {
-      "mae": 0.264,
-      "mse": 0.1484,
-      "rmse": 0.3852,
-      "r2_score": 0.5855
+      "mae": 0.2637,
+      "mse": 0.1483,
+      "rmse": 0.3851,
+      "r2_score": 0.5858
     },
     "Polynomial Regression (Deg 2)": {
-      "mae": 0.1539,
-      "mse": 0.0537,
-      "rmse": 0.2317,
-      "r2_score": 0.8501
+      "mae": 0.1544,
+      "mse": 0.0534,
+      "rmse": 0.2311,
+      "r2_score": 0.8509
     }
   },
   "clustering": {
     "n_clusters": 4,
-    "inertia": 37413.65,
-    "silhouette_score": 0.218,
-    "davies_bouldin_index": 1.5211
+    "inertia": 37403.38,
+    "silhouette_score": 0.2174,
+    "davies_bouldin_index": 1.5201
   },
   "pca": {
-    "pc1_explained_variance_ratio": 0.3912,
-    "pc2_explained_variance_ratio": 0.1777,
-    "total_2d_explained_variance_ratio": 0.569
+    "pc1_explained_variance_ratio": 0.3919,
+    "pc2_explained_variance_ratio": 0.1779,
+    "total_2d_explained_variance_ratio": 0.5698
   }
 }

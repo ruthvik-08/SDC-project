@@ -74,6 +74,26 @@ PRIORITY_ENCODING = {
     "Low": 0, "Medium": 1, "High": 2, "Critical": 3
 }
 
+# Mapping 16 historical / alternate district spellings to official 2025 LGD names
+DISTRICT_NAME_MAPPING = {
+    "ahmednagar": "ahilyanagar",
+    "anantapur": "ananthapuramu",
+    "banaskantha": "banas kantha",
+    "bardez": "north goa",
+    "tiswadi": "north goa",
+    "salcete": "south goa",
+    "burdwan": "purba bardhaman",
+    "geyzing": "gyalshing",
+    "lakshadweep": "lakshadweep district",
+    "leh": "leh ladakh",
+    "north & middle andaman": "north and middle andaman",
+    "south andaman": "south andamans",
+    "north delhi": "north",
+    "south west delhi": "south west",
+    "pantnagar": "udham singh nagar",
+    "ri-bhoi": "ri bhoi"
+}
+
 def load_and_preprocess_140_districts():
     """Loads and computes FAO-56 metrics for the 158-district monthly dataset (1,896 records)."""
     raw_path = os.path.join(RAW_DIR, "all_india_140_districts_raw.csv")
@@ -282,6 +302,73 @@ def load_and_preprocess_agricultural_daily():
     
     return df
 
+def enrich_with_soil_health_card_data(master_df):
+    """
+    Enriches the master dataset with Government of India Soil Health Card (SHC) 2024-25
+    district-level soil nutrient indicators from data/raw/india_district_month_master_2025.csv.
+    Adds official LGD codes, macro NPK shares, pH neutrality, organic carbon, and micro-nutrients.
+    """
+    shc_raw_path = os.path.join(RAW_DIR, "india_district_month_master_2025.csv")
+    if not os.path.exists(shc_raw_path):
+        print(f"Warning: SHC 2025 dataset not found at {shc_raw_path}. Skipping SHC enrichment.")
+        return master_df
+
+    print("\nEnriching master dataset with Government of India Soil Health Card (SHC) 2024-25...")
+    shc_df = pd.read_csv(shc_raw_path)
+    
+    # Static district-level profile (drop 12-month duplicates per district)
+    shc_district = shc_df.drop_duplicates(subset=["district_name"]).copy()
+    shc_district["match_key"] = shc_district["district_name"].astype(str).str.strip().str.lower()
+    
+    master_df["match_key"] = master_df["district"].astype(str).str.strip().str.lower().map(
+        lambda d: DISTRICT_NAME_MAPPING.get(d, d)
+    )
+    
+    shc_cols = [
+        "state_lgd_code", "district_lgd_code",
+        "shc_macro_nitrogen_low_share_2024_25", "shc_macro_nitrogen_medium_share_2024_25", "shc_macro_nitrogen_high_share_2024_25",
+        "shc_macro_phosphorus_low_share_2024_25", "shc_macro_phosphorus_medium_share_2024_25", "shc_macro_phosphorus_high_share_2024_25",
+        "shc_macro_potassium_low_share_2024_25", "shc_macro_potassium_medium_share_2024_25", "shc_macro_potassium_high_share_2024_25",
+        "shc_macro_organic_carbon_low_share_2024_25", "shc_macro_organic_carbon_medium_share_2024_25", "shc_macro_organic_carbon_high_share_2024_25",
+        "shc_macro_soil_ph_acidic_share_2024_25", "shc_macro_soil_ph_neutral_share_2024_25", "shc_macro_soil_ph_alkaline_share_2024_25",
+        "shc_macro_electrical_conductivity_saline_share_2024_25",
+        "shc_micro_zinc_deficient_share_2024_25", "shc_micro_iron_deficient_share_2024_25", "shc_micro_boron_deficient_share_2024_25"
+    ]
+    
+    merged = master_df.merge(shc_district[["match_key"] + shc_cols], on="match_key", how="left")
+    merged.drop(columns=["match_key"], inplace=True)
+    master_df.drop(columns=["match_key"], inplace=True, errors="ignore")
+    
+    # Impute missing numeric SHC values using state median then national median
+    num_shc = [c for c in shc_cols if c not in ["state_lgd_code", "district_lgd_code"]]
+    for col in num_shc:
+        merged[col] = merged.groupby("state")[col].transform(lambda s: s.fillna(s.median()))
+        merged[col] = merged[col].fillna(merged[col].median()).round(4)
+        
+    merged["state_lgd_code"] = merged["state_lgd_code"].fillna(0).astype(int)
+    merged["district_lgd_code"] = merged["district_lgd_code"].fillna(0).astype(int)
+    
+    # Friendly agronomic classification columns
+    merged["nitrogen_status"] = np.where(
+        merged["shc_macro_nitrogen_low_share_2024_25"] >= 0.50, "Deficient (Low N)",
+        np.where(merged["shc_macro_nitrogen_high_share_2024_25"] >= 0.35, "Rich (High N)", "Optimal (Medium N)")
+    )
+    merged["soil_ph_character"] = np.where(
+        merged["shc_macro_soil_ph_acidic_share_2024_25"] >= 0.40, "Acidic Soil Belt",
+        np.where(merged["shc_macro_soil_ph_alkaline_share_2024_25"] >= 0.40, "Alkaline Soil Belt", "Neutral / Balanced")
+    )
+    raw_health_score = (
+        30.0 * merged["shc_macro_soil_ph_neutral_share_2024_25"] +
+        25.0 * (1.0 - merged["shc_macro_nitrogen_low_share_2024_25"]) +
+        20.0 * (1.0 - merged["shc_macro_phosphorus_low_share_2024_25"]) +
+        15.0 * (1.0 - merged["shc_macro_potassium_low_share_2024_25"]) +
+        10.0 * (1.0 - merged["shc_macro_electrical_conductivity_saline_share_2024_25"])
+    )
+    merged["soil_health_index"] = raw_health_score.clip(0.0, 100.0).round(1)
+    
+    print(f"  -> SHC Enrichment complete! Added 24 new soil chemistry & LGD features (Total columns: {len(merged.columns)}).")
+    return merged
+
 def generate_master_dataset():
     """Combines raw inputs and computes K-Means and PCA for the unified master dataset."""
     print("=" * 70)
@@ -352,6 +439,9 @@ def generate_master_dataset():
         
     dup_count = master_df.duplicated(subset=["granularity", "state", "district", "month", "date"]).sum()
     print(f"Duplicate records check: {dup_count} duplicates found.")
+    
+    # Enrich with Government of India Soil Health Card (SHC) 2024-25 Data
+    master_df = enrich_with_soil_health_card_data(master_df)
     
     os.makedirs(PROCESSED_DIR, exist_ok=True)
     master_df.to_csv(MASTER_CSV_PATH, index=False)

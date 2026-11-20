@@ -32,7 +32,7 @@ header-includes:
 This document serves as the complete, authoritative, and beginner-friendly reference for **KrishiJal** (All-India Crop Stress and Irrigation Priority System). The project is specifically engineered for a first-year Bachelor of Technology (B.Tech) student in Computer Science / Agricultural Data Science. 
 
 To ensure complete conceptual clarity, compliance with undergraduate academic evaluation standards, and ease of explanation during project vivas:
-1. **Unified Single Master Dataset Architecture:** The data pipeline consolidates all historical observations and nationwide climatological records into **one master CSV file** (`data/processed/krishijal_master_dataset.csv`) comprising **6,654 records and 48 features** across **159 districts in all 36 Indian States and Union Territories**.
+1. **Unified Single Master Dataset Architecture:** The data pipeline consolidates all historical observations, nationwide climatological records, and official Government of India Soil Health Card (SHC) 2024–25 data into **one master CSV file** (`data/processed/krishijal_master_dataset.csv`) comprising **6,654 records and 72 features** across **159 districts in all 37 Indian States and Union Territories**.
 2. **Zero-`def` Python Backend & Pure Procedural Logic:** The core data execution and FastAPI backend routes are built without unnecessary functional indirection. Routes use inline lambda handlers, allowing a beginner student to read and explain the entire system linearly from top to bottom.
 3. **In-Memory Model Training (Zero `.joblib` Dependency):** Unlike industrial workflows that rely on opaque binary serialized files (`.joblib` or `.pkl`), KrishiJal trains its Scikit-Learn models directly in computer RAM upon application startup in approximately 0.12 seconds using the clean master dataset. This eliminates black-box dependencies and guarantees complete transparency during academic evaluation.
 4. **Authentic Geospatial Boundaries:** The application integrates the **official Survey of India political boundary GeoJSON**, ensuring the entire northern territory of Ladakh and Jammu & Kashmir extends to its legal boundary at $37.05^\circ\text{ N}$ (Indira Col, Siachen Glacier, Gilgit-Baltistan, and Aksai Chin).
@@ -66,10 +66,11 @@ SDC-project/
 |   +-- raw/
 |   |   +-- all_india_140_districts_raw.csv    # NASA POWER monthly climatology (158 districts)
 |   |   +-- all_india_agricultural_raw.csv     # NASA POWER daily observations (26 districts)
+|   |   +-- india_district_month_master_2025.csv # Govt Soil Health Card 2024-25 & LGD directory
 |   |   +-- india_districts.csv                # 158 districts geographical metadata directory
 |   |
 |   +-- processed/
-|       +-- krishijal_master_dataset.csv       # Single Master Dataset (6,654 rows, 48 columns)
+|       +-- krishijal_master_dataset.csv       # Single Master Dataset (6,654 rows, 72 columns)
 |
 +-- preprocessing/
 |   +-- master_dataset.py                      # Master dataset generation pipeline from raw
@@ -120,8 +121,8 @@ Previously, the project generated six separate processed CSV files. This fragmen
 - `sklearn.preprocessing.StandardScaler`: Standardizes clustering features to zero mean and unit variance.
 
 ### 3. Inputs & Outputs
-- **Inputs:** `data/raw/all_india_140_districts_raw.csv`, `data/raw/all_india_agricultural_raw.csv`, and `data/raw/india_districts.csv`.
-- **Output:** `data/processed/krishijal_master_dataset.csv` (6,654 rows, 48 columns).
+- **Inputs:** `data/raw/all_india_140_districts_raw.csv`, `data/raw/all_india_agricultural_raw.csv`, `data/raw/india_district_month_master_2025.csv`, and `data/raw/india_districts.csv`.
+- **Output:** `data/processed/krishijal_master_dataset.csv` (6,654 rows, 72 columns).
 
 ### 4. Key Functions Walkthrough
 - `load_and_preprocess_140_districts()`:
@@ -134,9 +135,15 @@ Previously, the project generated six separate processed CSV files. This fragmen
   - Reads `all_india_agricultural_raw.csv` (4,758 daily records across 26 districts).
   - Cleans dates, standardizes district names, and computes the same FAO-56 indices for daily time-series records.
   - Sets `granularity = 'daily'` and generates unique IDs `KMD_D_0001` to `KMD_D_4758`.
+- `enrich_with_soil_health_card_data()`:
+  - Reads official Government of India Soil Health Card (SHC) cycle records from `data/raw/india_district_month_master_2025.csv`.
+  - Harmonizes 16 alternate district spellings (e.g. *Ahilyanagar* for *Ahmednagar*, *Ananthapuramu* for *Anantapur*, *North Goa* for *Bardez* and *Tiswadi*).
+  - Appends official Local Government Directory (LGD) codes (`state_lgd_code`, `district_lgd_code`), macro-nutrient shares (Nitrogen, Phosphorus, Potassium NPK, pH neutrality, Organic Carbon), and micro-nutrients (Zinc, Iron, Boron).
+  - Engineers human-readable agronomic categories: `nitrogen_status`, `soil_ph_character`, and a composite `soil_health_index` ($0-100$).
 - `generate_master_dataset()`:
-  - Aligns both datasets into 48 canonical columns.
+  - Aligns both daily and monthly datasets into canonical columns.
   - Runs K-Means ($k=4$) and PCA (2 components) across all 6,654 records to assign `cluster_id`, `pca_x`, and `pca_y`.
+  - Enriches the merged table with Government Soil Health Card data.
   - Asserts that zero duplicate records exist across `(granularity, state, district, month, date)`.
   - Saves the final table to `data/processed/krishijal_master_dataset.csv`.
 
@@ -304,7 +311,7 @@ app.mount("/app", StaticFiles(directory="frontend", html=True), name="frontend")
 
 ## `tests/test_project.py` (Automated 8-Stage Verification Suite)
 Provides an automated test suite verifying the master dataset, physical bounds, model inferences, and API routes.
-- `test_1_master_dataset_loading()`: Asserts that `krishijal_master_dataset.csv` contains 6,654 rows, 48 columns, and 0 duplicates.
+- `test_1_master_dataset_loading()`: Asserts that `krishijal_master_dataset.csv` contains 6,654 rows, 72 columns (including 24 Govt Soil Health Card features), and 0 duplicates.
 - `test_2_data_preprocessing_and_bounds()`: Asserts 0 null values in core columns, no negative soil moisture anomalies (Lakshadweep cleaned), $CWSI \in [0, 1]$, and $IPI \in [0, 100]$.
 - `test_3_in_memory_models()`: Asserts that all models and scalers are loaded in RAM.
 - `test_4_model_predictions()`: Tests inference with sample feature vectors.
@@ -815,7 +822,7 @@ This section provides 38 questions and detailed answers designed for academic re
 ### Category B: Master Dataset Sourcing & Preprocessing
 
 #### Q6: Why did we restructure the project into ONE Master Dataset?
-> **Answer:** Previously, six separate processed CSV files were generated, making it difficult to maintain consistent feature versions across models. By creating `data/processed/krishijal_master_dataset.csv`, we established a single, authoritative source of truth (6,654 records, 48 features) to which all classification, regression, clustering, and backend services connect.
+> **Answer:** Previously, six separate processed CSV files were generated, making it difficult to maintain consistent feature versions across models. By creating `data/processed/krishijal_master_dataset.csv`, we established a single, authoritative source of truth (6,654 records, 72 features) to which all classification, regression, clustering, and backend services connect.
 
 #### Q7: How many districts, states, and records are covered in the Master Dataset?
 > **Answer:** Exactly 6,654 records covering 159 districts across all 37 States and Union Territories (including NCT Delhi), incorporating both 1,896 monthly climatological summaries and 4,758 daily observations.
@@ -825,6 +832,9 @@ This section provides 38 questions and detailed answers designed for academic re
 
 #### Q9: What data quality issue did you discover in the NASA POWER dataset, and how was it solved?
 > **Answer:** In `all_india_140_districts_raw.csv`, NASA POWER reported `-999.0` for `root_zone_soil_moisture` in Lakshadweep across all 12 months because satellite radar soil sensors lack land resolution over tiny coral atolls. This resulted in an erroneous `effective_soil_wetness = -599.0`, misclassifying Lakshadweep as experiencing severe drought. In `preprocessing/master_dataset.py`, we identified and cleaned this anomaly, replacing `-999.0` with valid coastal sandy soil moisture ($0.42$), correctly recalculating $CWSI$ and restoring Lakshadweep to "Low" stress.
+
+#### Q10: How did you enrich the master dataset with Government of India Soil Health Card (SHC) 2024–25 data?
+> **Answer:** We ingested `data/raw/india_district_month_master_2025.csv`, which holds nationwide Soil Health Card nutrient shares (NPK, pH, organic carbon) across 783 districts. We harmonized 16 historical/administrative name variations (such as Maharashtra's official renaming of Ahmednagar to Ahilyanagar, and Anantapur to Ananthapuramu) and joined 24 soil chemistry and LGD attributes into our 159 districts, upgrading the dataset from 48 to 72 features with zero missing values.
 
 #### Q10: How did you handle missing values in numerical columns?
 > **Answer:** Missing numerical values were imputed using column-wise median replacement (`df[col].fillna(df[col].median())`). In agricultural data, median is preferred over mean because it is robust against extreme weather outliers such as flash floods or heatwaves.
