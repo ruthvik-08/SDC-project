@@ -69,7 +69,8 @@ async function checkBackendHealth() {
       const data = await res.json();
       pill.style.borderColor = "rgba(16, 185, 129, 0.4)";
       pill.style.background = "rgba(16, 185, 129, 0.12)";
-      text.innerText = `API Connected (In-Memory ML • ${data.states_covered || 36} States & UTs)`;
+      const envTag = API_BASE.includes("ngrok") ? "Ngrok Public" : (API_BASE.includes("onrender.com") ? "Render Cloud" : "Local Host");
+      text.innerText = `API Connected (${envTag} • ${data.states_covered || 37} States & UTs)`;
     } else {
       throw new Error("HTTP error");
     }

@@ -347,13 +347,96 @@ In Postman, set the collection variable `base_url` to `https://<your-id>.ngrok-f
 
 ---
 
-## 11. Automated Test Suite Verification
+## 11. Cloud Deployment on Render (24/7 Independent Cloud Hosting)
+
+In addition to local + Ngrok deployment, KrishiJal supports automated cloud deployment via **Render** using the included [render.yaml](file:///Users/p.ruthvik/Desktop/sdc_project/render.yaml) blueprint:
+
+### Quick Render Deployment Steps:
+1. Push your code to GitHub: `https://github.com/ruthvik-08/SDC-project`
+2. Log in to [Render Dashboard](https://dashboard.render.com).
+3. Click **New +** &rarr; **Blueprint** &rarr; Connect repository `ruthvik-08/SDC-project`.
+4. Render detects `render.yaml` and executes:
+   - **Build Command:** `pip install -r requirements.txt`
+   - **Start Command:** `uvicorn backend.main:app --host 0.0.0.0 --port $PORT`
+   - **Health Check Path:** `/health`
+5. Once live, access:
+   - **Cloud Web Application:** `https://<service-name>.onrender.com/app/`
+   - **Cloud Swagger UI:** `https://<service-name>.onrender.com/docs`
+   - **Cloud Health Check:** `https://<service-name>.onrender.com/health`
+
+*Detailed step-by-step instructions for both Ngrok and Render are documented in [DEPLOYMENT.md](file:///Users/p.ruthvik/Desktop/sdc_project/DEPLOYMENT.md).*
+
+---
+
+## 12. Automated Test Suite Verification
 
 To verify all system components, data bounds, model serialization, and API endpoints:
 ```bash
 python3 tests/test_project.py
 ```
-**Results:** 8/8 test stages pass with 100% pass rate.
+Or using pytest:
+```bash
+pytest tests/test_project.py
+```
+**Results:** 8/8 test stages pass with 100% pass rate:
+- Test 1: Master Dataset Loading & Schema Integrity (6,654 rows, 159 districts, 37 States & UTs)
+- Test 2: Data Preprocessing & Agronomic Physical Bounds (zero anomalies, zero -999 nulls)
+- Test 3: Persistent Scikit-Learn Model Deserialization & Scaler Verification
+- Test 4: Model Inferences (Classification, Regression, Multiclass boundaries)
+- Test 5: FastAPI REST Endpoints (`/`, `/health`, `/docs`, `/redoc`, `/predict`, `/api/...`)
+- Test 6: Edge Cases, Type Safety, and HTTP 422 Validation
+- Test 7: Irrigation Priority Ranking Logic (Strict descending order)
+- Test 8: Frontend Assets & Official Survey of India GeoJSON Integrity
+
+---
+
+## 13. Project Directory Structure
+
+```
+sdc_project/
+├── DEPLOYMENT.md                       # Comprehensive Dual Deployment Manual (Ngrok & Render)
+├── README.md                           # Master Academic Documentation
+├── render.yaml                         # Render Cloud Infrastructure Blueprint
+├── requirements.txt                    # Project-wide Python dependencies
+├── run_local.py                        # Unified Local & Cloud Server Runner
+├── backend/
+│   ├── main.py                         # Production FastAPI application & ML inference pipeline
+│   ├── model_evaluation_metrics.json   # Benchmarks (Accuracy, F1, R², MAE, RMSE)
+│   └── requirements.txt                # Faculty-compliant minimal dependencies
+├── data/
+│   ├── collect_data.py                 # NASA POWER & Soil Health Card acquisition
+│   ├── preprocess_data.py              # FAO-56 Penman-Monteith physical calculators
+│   ├── processed/
+│   │   ├── krishijal_master_dataset.csv# Clean consolidated master dataset (6,654 rows)
+│   │   └── krishijal_ml_clean.csv      # Clean feature matrix
+│   └── raw/                            # Original raw agricultural data
+├── docs/
+│   ├── KrishiJal_Complete_Project_Explanation.md
+│   └── KrishiJal_Complete_Project_Explanation.pdf
+├── eda/                                # Exploratory data analysis scripts and generated plots
+│   ├── eda_analysis.py
+│   └── plots/
+├── frontend/
+│   ├── app.js                          # Dynamic API client, Leaflet map, ML simulator logic
+│   ├── index.html                      # Interactive geospatial UI (NABARD/UNDP inspired)
+│   ├── style.css                       # Responsive glassmorphism styling
+│   └── data/                           # Official Survey of India GeoJSON boundaries
+├── models/
+│   ├── crop_stress_classifier.pkl      # Tuned Random Forest Classifier (14 pure features)
+│   ├── crop_stress_classifier.joblib
+│   ├── irrigation_priority_regressor.pkl# Tuned Random Forest Regressor (R² = 0.9954)
+│   ├── irrigation_priority_regressor.joblib
+│   ├── feature_scaler.pkl              # StandardScaler fitted on 14 physical features
+│   ├── feature_scaler.joblib
+│   ├── model_metadata.json             # Hyperparameters, metrics, and feature lists
+│   └── saved_models/                   # Mirror backup of persistent model weights
+├── notebooks/
+│   └── krishijal_complete_pipeline.ipynb # Complete procedural pipeline (0 comments, 0 defs)
+├── postman/
+│   └── KrishiJal_Postman_Collection.json# Faculty API evaluation test suite
+└── tests/
+    └── test_project.py                 # Comprehensive 8-stage automated test suite
+```
 
 ---
 
