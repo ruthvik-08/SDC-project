@@ -30,6 +30,7 @@ let statesGeoJsonData = null;
 let districtsGeoJsonData = null;
 let stateLayerGroup = null;
 let districtLayerGroup = null;
+let currentDistrictGeoJsonLayer = null;
 
 let allDistrictsList = [];
 let districtsLookup = {};
@@ -40,10 +41,10 @@ let activeDistrictFeature = null;
 
 let allPriorityRecords = [];
 
-// Basemap URL configurations
+// Basemap URL configurations (Free & Unwatermarked)
 const BASEMAP_TILES = {
-  voyager: "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",
-  dark: "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
+  voyager: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+  dark: "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}",
   satellite: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
 };
 
@@ -99,7 +100,7 @@ function initMap() {
 
   // Set default basemap
   tileLayer = L.tileLayer(BASEMAP_TILES.voyager, {
-    attribution: '&copy; CartoDB &copy; OpenStreetMap contributors',
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
     maxZoom: 19
   }).addTo(mapInstance);
 
@@ -314,6 +315,7 @@ function renderDistrictsForState(stateName) {
     }
   });
 
+  currentDistrictGeoJsonLayer = layer;
   districtLayerGroup.addLayer(layer);
 }
 
@@ -415,6 +417,21 @@ function findDistrictData(districtName, stateName) {
   return null;
 }
 
+function resetActiveDistrictStyle() {
+  if (activeDistrictFeature) {
+    if (currentDistrictGeoJsonLayer && typeof currentDistrictGeoJsonLayer.resetStyle === "function") {
+      try {
+        currentDistrictGeoJsonLayer.resetStyle(activeDistrictFeature);
+      } catch (err) {}
+    } else if (typeof activeDistrictFeature.setStyle === "function" && activeDistrictFeature.feature) {
+      const dName = activeDistrictFeature.feature.properties.district || activeDistrictFeature.feature.properties.District || activeDistrictFeature.feature.properties.dt_name;
+      const data = findDistrictData(dName, selectedStateName);
+      activeDistrictFeature.setStyle(getDistrictPolygonStyle(data));
+    }
+    activeDistrictFeature = null;
+  }
+}
+
 // ------------------------------------------------------------------------------
 // 10. HANDLE DISTRICT CLICK & OPEN DiCRA INTELLIGENCE DRAWER
 // ------------------------------------------------------------------------------
@@ -428,15 +445,15 @@ function handleDistrictClick(districtName, stateName, data, layerTarget) {
   distCrumb.innerText = districtName;
 
   // Highlight selected polygon
-  if (activeDistrictFeature) {
-    districtLayerGroup.resetStyle(activeDistrictFeature);
-  }
+  resetActiveDistrictStyle();
   activeDistrictFeature = layerTarget;
-  layerTarget.setStyle({
-    weight: 3.5,
-    color: "#00f0ff",
-    fillOpacity: 0.75
-  });
+  if (layerTarget && typeof layerTarget.setStyle === "function") {
+    layerTarget.setStyle({
+      weight: 3.5,
+      color: "#00f0ff",
+      fillOpacity: 0.75
+    });
+  }
 
   // Open Drawer
   const drawer = document.getElementById("district-drawer");
@@ -538,13 +555,13 @@ function generateDistrictProfile(dName, sName) {
 // 11. CLOSE DRAWER & RESET CAMERA
 // ------------------------------------------------------------------------------
 function closeDrawer() {
-  document.getElementById("district-drawer").classList.remove("open");
-  if (activeDistrictFeature) {
-    districtLayerGroup.resetStyle(activeDistrictFeature);
-    activeDistrictFeature = null;
-  }
-  document.getElementById("crumb-sep2").style.display = "none";
-  document.getElementById("crumb-district").style.display = "none";
+  const drawer = document.getElementById("district-drawer");
+  if (drawer) drawer.classList.remove("open");
+  resetActiveDistrictStyle();
+  const sep = document.getElementById("crumb-sep2");
+  if (sep) sep.style.display = "none";
+  const distCrumb = document.getElementById("crumb-district");
+  if (distCrumb) distCrumb.style.display = "none";
 }
 
 function resetToNationalView() {
@@ -622,7 +639,9 @@ function setBasemap(type) {
     mapInstance.removeLayer(tileLayer);
   }
   tileLayer = L.tileLayer(BASEMAP_TILES[type], {
-    attribution: '&copy; CartoDB &copy; OpenStreetMap contributors',
+    attribution: type === "voyager"
+      ? '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+      : 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community',
     maxZoom: 19
   }).addTo(mapInstance);
 }
