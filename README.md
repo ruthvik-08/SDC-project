@@ -95,14 +95,19 @@ jupyter notebook krishijal_complete_pipeline.ipynb
 - `feature_scaler.pkl` / `feature_scaler.joblib`
 - `model_metadata.json`
 
-### Option B: Using the Modular Notebooks
-Navigate to `notebooks/`:
-- `01_data_exploration.ipynb`
-- `02_data_preprocessing.ipynb`
-- `03_eda.ipynb`
-- `04_model_training.ipynb`
-- `05_model_evaluation.ipynb`
-- `06_predictions_and_model_saving.ipynb`
+### Complete Unified Machine Learning Pipeline:
+Execute the unified Jupyter Notebook from the project root or `notebooks/` directory:
+```bash
+jupyter notebook krishijal_complete_pipeline.ipynb
+```
+This single notebook runs the entire end-to-end pipeline:
+1. Data loading and validation across 159 Indian districts
+2. Agro-climatic preprocessing and feature scaling
+3. Exploratory Data Analysis (EDA) visualizations
+4. Algorithm training (Random Forest, Decision Tree, Logistic Regression, Linear Regression)
+5. `GridSearchCV` hyperparameter tuning (3-fold cross-validation)
+6. Model evaluation benchmarks ($100\%$ accuracy, $R^2 = 0.9950$)
+7. Final model serialization (`.pkl` / `.joblib`) for FastAPI deployment
 
 ---
 
