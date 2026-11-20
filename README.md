@@ -23,40 +23,47 @@ The project combines authentic agro-meteorological observations from **NASA POWE
 To avoid unnecessary complexity, we selected the smallest set of relevant algorithms strictly from **Scikit-learn**:
 
 ### A. Classification Algorithms (Target: `stress_level`)
-| Algorithm | Role | Test Accuracy | Status |
-| :--- | :--- | :--- | :--- |
-| **Logistic Regression** | Baseline linear model | 91.21% | Evaluated |
-| **Decision Tree Classifier** | Non-linear rule-based tree | 99.47% | Evaluated |
-| **Random Forest Classifier** | Bagging ensemble (100 estimators) | **100.0%** (Tuned) | **Selected Final Model** |
+| Algorithm | Role | Test Accuracy | Test Weighted F1 | Status |
+| :--- | :--- | :--- | :--- | :--- |
+| **Logistic Regression** | Baseline linear model | 95.94% | 0.9607 | Evaluated |
+| **KNN (k=5)** | Non-parametric neighbor voting | 92.79% | 0.9307 | Evaluated |
+| **Gaussian Naive Bayes** | Probabilistic baseline | 81.14% | 0.8267 | Evaluated |
+| **Decision Tree Classifier** | Non-linear rule-based tree | 98.80% | 0.9881 | Evaluated |
+| **Random Forest Classifier** | Bagging ensemble (GridSearchCV tuned) | **99.62%** | **0.9963** | **Selected Final Model** |
 
 ### B. Regression Algorithms (Target: `irrigation_priority_index`)
-| Algorithm | Role | Test $R^2$ Score | Test MAE | Status |
-| :--- | :--- | :--- | :--- | :--- |
-| **Linear Regression** | Parametric linear baseline | 0.9421 | 3.12 | Evaluated |
-| **Decision Tree Regressor** | Non-linear tree regression | 0.9884 | 1.15 | Evaluated |
-| **Random Forest Regressor** | Bagging ensemble ($N=80$, Depth=8) | **0.9950** (Tuned) | **0.45** | **Selected Final Model** |
+| Algorithm | Role | Test $R^2$ Score | Test MAE | Test RMSE | Status |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **Linear Regression** | Parametric linear baseline | 0.8055 | 4.87 | 6.10 | Evaluated |
+| **Polynomial Regression (Deg 2)** | Quadratic non-linear baseline | 0.9394 | 2.60 | 3.40 | Evaluated |
+| **Decision Tree Regressor** | Non-linear tree regression | 0.9888 | 0.85 | 1.46 | Evaluated |
+| **Random Forest Regressor** | Bagging ensemble (GridSearchCV tuned) | **0.9954** | **0.43** | **0.94** | **Selected Final Model** |
 
-### Why Random Forest Was Selected:
-- **Zero Variance & Overfitting:** Averages predictions across multiple decision trees to generalize reliably on unseen weather patterns.
-- **Handles Non-Linear Agronomic Interactions:** Captures complex multi-variable relationships between soil wetness, temperature, and crop evapotranspiration.
-- **Physical Consistency:** Accurately respects agronomic boundaries without producing negative priority scores or out-of-bound stress levels.
+### Elimination of Target Data Leakage:
+- **No Target Leakage:** Previous versions accepted `cwsi` (Crop Water Stress Index) and `water_deficit` as model inputs. Because `stress_level` is mathematically calculated from `cwsi`, passing `cwsi` constituted direct target leakage.
+- **Physics-Based Authentic Features:** Models are trained strictly on 14 observable agro-meteorological, soil, and phenological features. Even when `cwsi` or `water_deficit` are supplied by legacy clients, they are safely ignored in the ML feature pipeline.
 
 ---
 
 ## 3. Input Features and Prediction Outputs
 
-The model uses 9 predictive agronomic features:
+The model uses 14 observable physical features:
 | Feature Name | Description | Physical Range / Units |
 | :--- | :--- | :--- |
-| `cwsi` | Crop Water Stress Index ($1 - ET_a/ET_c$) | $0.0 \text{ to } 1.0$ |
-| `effective_soil_wetness` | Combined root-zone and surface soil moisture | $0.0 \text{ to } 1.0$ |
-| `water_deficit` | Crop evapotranspiration water deficit | $\text{mm/day}$ |
-| `ndvi` | Normalized Difference Vegetation Index | $-0.1 \text{ to } 1.0$ |
+| `temperature` | Ambient air temperature | $^\circ\text{C}$ (e.g. $10.0 \text{ to } 48.0$) |
+| `temp_max` | Daily maximum temperature | $^\circ\text{C}$ |
+| `temp_min` | Daily minimum temperature | $^\circ\text{C}$ |
+| `rainfall` | Daily precipitation | $\text{mm/day}$ |
+| `humidity` | Relative humidity | $\%$ ($0 \text{ to } 100$) |
+| `effective_soil_wetness` | Dimensionless soil moisture index | $0.0 \text{ to } 1.0$ |
+| `solar_radiation` | All-sky surface solar radiation | $\text{MJ/m}^2/\text{day}$ |
+| `soil_ph` | Soil acidity / alkalinity | $4.5 \text{ to } 9.5$ |
+| `soil_organic_carbon` | Soil organic carbon content | $\%$ ($0.1 \text{ to } 2.5$) |
+| `ndvi` | Normalized Difference Vegetation Index | $0.1 \text{ to } 0.9$ |
 | `et0` | Reference Evapotranspiration (FAO-56) | $\text{mm/day}$ |
 | `etc` | Crop Evapotranspiration under standard conditions | $\text{mm/day}$ |
-| `temperature` | Mean air temperature | $^\circ\text{C}$ |
-| `rainfall` | Precipitation / rainfall | $\text{mm/day}$ |
-| `humidity` | Relative humidity | $\%$ |
+| `crop_code` | Integer-encoded crop type (e.g., Cotton, Rice) | Integer index |
+| `stage_code` | Integer-encoded growth phenology stage | Integer index |
 
 ---
 
@@ -184,53 +191,84 @@ python3 -m uvicorn backend.main:app --reload --port 8000
 }
 ```
 
-### 3. `POST /predict` — Live Machine Learning Prediction
-**Request Body (JSON):**
+### 3. `POST /predict` — Unified Machine Learning Prediction
+Supports either the 14 authentic physical agro-meteorological features or backward-compatible 9-feature payloads:
+
+**Option A: 14 Physical Features Payload (Recommended):**
 ```json
 {
-  "cwsi": 0.35,
+  "temperature": 32.0,
+  "temp_max": 38.0,
+  "temp_min": 24.0,
+  "rainfall": 0.0,
+  "humidity": 45.0,
+  "effective_soil_wetness": 0.35,
+  "solar_radiation": 21.0,
+  "soil_ph": 7.5,
+  "soil_organic_carbon": 0.45,
+  "crop_type": "Cotton",
+  "growth_stage": "Reproductive"
+}
+```
+
+**Option B: Legacy 9-Feature Payload (Backward Compatibility):**
+```json
+{
+  "temperature": 30.0,
+  "rainfall": 0.0,
+  "humidity": 50.0,
   "effective_soil_wetness": 0.40,
-  "water_deficit": 1.50,
   "ndvi": 0.60,
   "et0": 4.80,
   "etc": 5.20,
-  "temperature": 30.0,
-  "rainfall": 0.0,
-  "humidity": 50.0
+  "cwsi": 0.35,
+  "water_deficit": 1.50
 }
 ```
+*(Note: `cwsi` and `water_deficit` are safely ignored by the ML pipeline to prevent target leakage).*
 
 **Response (HTTP 200 OK):**
 ```json
 {
   "status": "success",
   "input_features": {
-    "cwsi": 0.35,
-    "effective_soil_wetness": 0.4,
-    "water_deficit": 1.5,
-    "ndvi": 0.6,
-    "et0": 4.8,
-    "etc": 5.2,
-    "temperature": 30.0,
+    "temperature": 32.0,
+    "temp_max": 38.0,
+    "temp_min": 24.0,
     "rainfall": 0.0,
-    "humidity": 50.0
+    "humidity": 45.0,
+    "effective_soil_wetness": 0.35,
+    "solar_radiation": 21.0,
+    "soil_ph": 7.5,
+    "soil_organic_carbon": 0.45,
+    "ndvi": 0.62,
+    "et0": 6.21,
+    "etc": 6.83,
+    "crop_code": 1.0,
+    "stage_code": 2.0
   },
   "crop_stress_prediction": {
     "stress_level_code": 1,
     "stress_level": "Moderate",
     "stress_probabilities": {
-      "Low": 0.0,
-      "Moderate": 0.5169,
-      "High": 0.4831,
-      "Severe": 0.0
+      "Low": 0.0872,
+      "Moderate": 0.4822,
+      "High": 0.3739,
+      "Severe": 0.0568
     },
-    "condition_summary": "Mild to moderate stress, early signs of water limitation."
+    "condition_summary": "High stress, significant water deficit impacting crop growth."
   },
   "irrigation_priority_prediction": {
-    "irrigation_priority_index": 22.8,
-    "priority_category": "Low Priority",
-    "recommended_irrigation_depth": "Routine / Nil",
-    "actionable_farmer_advisory": "ADEQUATE: Moisture levels optimal. Continue standard crop monitoring."
+    "irrigation_priority_index": 46.9,
+    "priority_category": "High Priority",
+    "recommended_irrigation_depth": "35–45 mm",
+    "actionable_farmer_advisory": "HIGH: Rapid soil moisture depletion observed. Schedule irrigation within 24–48 hours."
+  },
+  "calculated_agronomic_indicators": {
+    "daily_water_deficit_mm": 4.44,
+    "reference_et0_mm": 6.21,
+    "crop_etc_mm": 6.83,
+    "vegetation_ndvi": 0.62
   },
   "models_used": {
     "classifier": "Tuned RandomForestClassifier (.pkl)",

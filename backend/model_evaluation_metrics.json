@@ -3,12 +3,29 @@
   "total_records": 6654,
   "train_records": 5323,
   "test_records": 1331,
+  "feature_names": [
+    "temperature",
+    "temp_max",
+    "temp_min",
+    "rainfall",
+    "humidity",
+    "effective_soil_wetness",
+    "solar_radiation",
+    "soil_ph",
+    "soil_organic_carbon",
+    "ndvi",
+    "et0",
+    "etc",
+    "crop_code",
+    "stage_code"
+  ],
+  "n_features": 14,
   "classification": {
-    "Random Forest": {
-      "accuracy": 0.9955,
-      "precision": 0.9956,
-      "recall": 0.9955,
-      "f1_score": 0.9955,
+    "Random Forest (Tuned)": {
+      "accuracy": 0.9962,
+      "precision": 0.9963,
+      "recall": 0.9962,
+      "f1_score": 0.9963,
       "confusion_matrix": [
         [
           994,
@@ -31,8 +48,8 @@
         [
           0,
           0,
-          1,
-          38
+          0,
+          39
         ]
       ]
     },
@@ -100,6 +117,38 @@
         ]
       ]
     },
+    "KNN (k=5)": {
+      "accuracy": 0.9279,
+      "precision": 0.9362,
+      "recall": 0.9279,
+      "f1_score": 0.9307,
+      "confusion_matrix": [
+        [
+          944,
+          53,
+          0,
+          0
+        ],
+        [
+          9,
+          157,
+          16,
+          0
+        ],
+        [
+          1,
+          10,
+          97,
+          5
+        ],
+        [
+          0,
+          0,
+          2,
+          37
+        ]
+      ]
+    },
     "Gaussian Naive Bayes": {
       "accuracy": 0.8114,
       "precision": 0.8526,
@@ -131,77 +180,44 @@
           28
         ]
       ]
-    },
-    "KNN": {
-      "accuracy": 0.9279,
-      "precision": 0.9362,
-      "recall": 0.9279,
-      "f1_score": 0.9307,
-      "confusion_matrix": [
-        [
-          944,
-          53,
-          0,
-          0
-        ],
-        [
-          9,
-          157,
-          16,
-          0
-        ],
-        [
-          1,
-          10,
-          97,
-          5
-        ],
-        [
-          0,
-          0,
-          2,
-          37
-        ]
-      ]
     }
   },
-  "regression_irrigation_priority": {
-    "Linear Regression": {
-      "mae": 4.8669,
-      "mse": 37.1909,
-      "rmse": 6.0984,
-      "r2_score": 0.8055
+  "regression": {
+    "Random Forest Regressor (Tuned)": {
+      "mae": 0.4293,
+      "mse": 0.8831,
+      "rmse": 0.9398,
+      "r2_score": 0.9954
+    },
+    "Decision Tree Regressor": {
+      "mae": 0.8521,
+      "mse": 2.145,
+      "rmse": 1.4646,
+      "r2_score": 0.9888
     },
     "Polynomial Regression (Deg 2)": {
       "mae": 2.5952,
       "mse": 11.5902,
       "rmse": 3.4044,
       "r2_score": 0.9394
-    }
-  },
-  "regression_water_deficit": {
-    "Linear Regression": {
-      "mae": 0.2637,
-      "mse": 0.1483,
-      "rmse": 0.3851,
-      "r2_score": 0.5858
     },
-    "Polynomial Regression (Deg 2)": {
-      "mae": 0.1544,
-      "mse": 0.0534,
-      "rmse": 0.2311,
-      "r2_score": 0.8509
+    "Linear Regression": {
+      "mae": 4.8669,
+      "mse": 37.1909,
+      "rmse": 6.0984,
+      "r2_score": 0.8055
     }
   },
   "clustering": {
-    "n_clusters": 4,
-    "inertia": 37403.38,
-    "silhouette_score": 0.2174,
-    "davies_bouldin_index": 1.5201
-  },
-  "pca": {
-    "pc1_explained_variance_ratio": 0.3919,
-    "pc2_explained_variance_ratio": 0.1779,
-    "total_2d_explained_variance_ratio": 0.5698
+    "K-Means (k=4)": {
+      "silhouette_score": 0.2174,
+      "davies_bouldin_score": 1.5201,
+      "inertia": 37403.38
+    },
+    "PCA (2D Projection)": {
+      "total_explained_variance": 0.5698,
+      "pc1_explained_variance_ratio": 0.3919,
+      "pc2_explained_variance_ratio": 0.1779
+    }
   }
 }

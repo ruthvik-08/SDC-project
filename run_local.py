@@ -21,4 +21,4 @@ if __name__ == "__main__":
     print("=" * 75)
     print("Server running locally. Press CTRL+C to terminate.\n")
     
-    uvicorn.run("backend.main:app", host="127.0.0.1", port=8000, reload=False)
+    uvicorn.run("backend.main:app", host="0.0.0.0", port=8000, reload=False)

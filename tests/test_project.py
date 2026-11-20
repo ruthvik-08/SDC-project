@@ -108,7 +108,7 @@ def test_4_model_predictions():
     # Sample synthetic agro-meteorological feature vector (14 features)
     sample_raw = [32.0, 38.0, 24.0, 0.0, 45.0, 0.35, 21.0, 7.8, 0.45, 0.65, 5.2, 5.8, 1, 2]
     features_df = pd.DataFrame([sample_raw], columns=feature_cols)
-    scaled_x = scaler.transform(features_df)
+    scaled_x = pd.DataFrame(scaler.transform(features_df), columns=feature_cols)
     
     # Test classifiers
     pred_rf = model_rf.predict(scaled_x)[0]
@@ -131,13 +131,28 @@ def test_4_model_predictions():
 def test_5_api_endpoints():
     print("\n[Test 5] Testing FastAPI REST Endpoints...")
     
-    # Root Health Route
+    # Root Route
     r0 = client.get("/")
     assert r0.status_code == 200
     res0 = r0.json()
     assert res0["status"] == "Online and Operational"
     assert res0["districts_covered"] >= 158
     assert res0["states_covered"] >= 36
+
+    # Health Check Route (True Model Status)
+    r_health = client.get("/health")
+    assert r_health.status_code == 200
+    res_health = r_health.json()
+    assert res_health["status"] == "healthy"
+    assert res_health["models_loaded"]["crop_stress_classifier"] is True
+    assert res_health["models_loaded"]["irrigation_priority_regressor"] is True
+    assert res_health["models_loaded"]["feature_scaler"] is True
+
+    # Swagger & ReDoc Documentation Routes
+    r_docs = client.get("/docs")
+    assert r_docs.status_code == 200
+    r_redoc = client.get("/redoc")
+    assert r_redoc.status_code == 200
     
     # Dataset Info
     r1 = client.get("/api/dataset/info")
@@ -166,8 +181,54 @@ def test_5_api_endpoints():
     r5 = client.get("/api/models/evaluation")
     assert r5.status_code == 200
     assert "classification" in r5.json()
+
+    # Main ML Prediction POST (/predict) with 14 features
+    pred_payload_14 = {
+        "temperature": 32.0,
+        "temp_max": 38.0,
+        "temp_min": 24.0,
+        "rainfall": 0.0,
+        "humidity": 45.0,
+        "effective_soil_wetness": 0.35,
+        "solar_radiation": 21.0,
+        "soil_ph": 7.5,
+        "soil_organic_carbon": 0.45,
+        "ndvi": 0.62,
+        "et0": 5.0,
+        "etc": 5.5,
+        "crop_type": "Cotton",
+        "growth_stage": "Reproductive"
+    }
+    r_pred14 = client.post("/predict", json=pred_payload_14)
+    assert r_pred14.status_code == 200
+    res_p14 = r_pred14.json()
+    assert res_p14["status"] == "success"
+    assert res_p14["crop_stress_prediction"]["stress_level"] in ["Low", "Moderate", "High", "Severe"]
+    assert 0.0 <= res_p14["irrigation_priority_prediction"]["irrigation_priority_index"] <= 100.0
+
+    # Main ML Prediction POST (/predict) with legacy 9 features (verifying zero target leakage)
+    pred_payload_9 = {
+        "cwsi": 0.35,
+        "effective_soil_wetness": 0.40,
+        "water_deficit": 1.50,
+        "ndvi": 0.60,
+        "et0": 4.80,
+        "etc": 5.20,
+        "temperature": 30.0,
+        "rainfall": 0.0,
+        "humidity": 50.0
+    }
+    r_pred9 = client.post("/predict", json=pred_payload_9)
+    assert r_pred9.status_code == 200
+    res_p9 = r_pred9.json()
+    assert res_p9["status"] == "success"
+    assert res_p9["crop_stress_prediction"]["stress_level"] in ["Low", "Moderate", "High", "Severe"]
+
+    # Verify that GET /predict correctly yields 405 Method Not Allowed (POST-only route)
+    r_pred_get = client.get("/predict")
+    assert r_pred_get.status_code == 405
     
-    # Live ML Prediction POST (Crop Stress)
+    # Live ML Prediction POST (/api/predict/crop-stress)
     payload = {
         "temperature": 34.0,
         "temp_max": 40.0,
@@ -190,7 +251,7 @@ def test_5_api_endpoints():
     assert "predicted_water_deficit_mm_per_day" in res6
     assert "irrigation_priority_index" in res6
 
-    # Live ML Prediction POST (Irrigation Priority)
+    # Live ML Prediction POST (/api/predict/irrigation-priority)
     p_payload = {
         "cwsi": 0.45,
         "effective_soil_wetness": 0.30,
@@ -209,7 +270,7 @@ def test_5_api_endpoints():
     assert "priority_category" in res7
     assert "actionable_farmer_advisory" in res7
     
-    print(f"  -> PASSED: All 8 REST API endpoints returned 200 OK across {res1['total_districts']} districts.")
+    print(f"  -> PASSED: All REST API endpoints (including /predict, /health, /docs) returned 200 OK.")
 
 def test_6_invalid_inputs_and_edge_cases():
     print("\n[Test 6] Testing Edge Cases & Error Handling...")

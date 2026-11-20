@@ -4,8 +4,21 @@
  * Zero dropdowns • Spatial click-and-zoom • Live in-memory ML inference
  */
 
-// Dynamically determine API base URL
-const API_BASE = window.location.origin.includes("http") ? window.location.origin : "http://127.0.0.1:8000";
+// Centralized API Configuration: dynamically detects origin, localStorage override, or default localhost
+const API_BASE = (typeof window !== "undefined" && window.KRISHIJAL_API_BASE)
+  || (typeof localStorage !== "undefined" && localStorage.getItem("KRISHIJAL_API_BASE"))
+  || (window.location.origin && window.location.origin.startsWith("http") && !window.location.origin.includes("file:")
+      ? window.location.origin 
+      : "http://127.0.0.1:8000");
+
+// Helper to configure public/ngrok API URL on the fly
+window.setKrishiJalApiBase = (url) => {
+  if (url) {
+    localStorage.setItem("KRISHIJAL_API_BASE", url.replace(/\/$/, ""));
+    console.log("Updated KrishiJal API Base to:", url);
+    location.reload();
+  }
+};
 
 // Global Application State
 let mapInstance = null;
