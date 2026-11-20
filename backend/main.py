@@ -12,7 +12,6 @@ from sklearn.linear_model import LinearRegression
 
 df_master = pd.read_csv("data/processed/krishijal_master_dataset.csv")
 prefix = "models/saved_models/"
-frontend_dir = "frontend"
 
 scaler = joblib.load(prefix + "feature_scaler.pkl")
 model_rf = joblib.load(prefix + "crop_stress_classifier.pkl")
@@ -599,7 +598,4 @@ evaluation_metrics = {
 }
 app.add_api_route("/api/models/evaluation", lambda: evaluation_metrics, methods=["GET"])
 
-try:
-    app.mount("/app", StaticFiles(directory=frontend_dir, html=True), name="frontend")
-except Exception:
-    pass
+app.mount("/app", StaticFiles(directory="frontend", html=True), name="frontend")
