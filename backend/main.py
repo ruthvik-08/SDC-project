@@ -10,14 +10,9 @@ from sklearn.neighbors import KNeighborsClassifier
 from sklearn.pipeline import Pipeline
 from sklearn.linear_model import LinearRegression
 
-try:
-    df_master = pd.read_csv("data/processed/krishijal_master_dataset.csv")
-    prefix = "models/saved_models/"
-    frontend_dir = "frontend"
-except Exception:
-    df_master = pd.read_csv("../data/processed/krishijal_master_dataset.csv")
-    prefix = "../models/saved_models/"
-    frontend_dir = "../frontend"
+df_master = pd.read_csv("data/processed/krishijal_master_dataset.csv")
+prefix = "models/saved_models/"
+frontend_dir = "frontend"
 
 scaler = joblib.load(prefix + "feature_scaler.pkl")
 model_rf = joblib.load(prefix + "crop_stress_classifier.pkl")
@@ -83,52 +78,36 @@ app.add_middleware(
     allow_headers=["*"]
 )
 
-def build_feature_row(data):
-    temp = float(data.get("temperature") if data.get("temperature") is not None else (data.get("temperature_c") if data.get("temperature_c") is not None else 30.0))
-    tmax = float(data.get("temp_max") if data.get("temp_max") is not None else temp + 5.5)
-    tmin = float(data.get("temp_min") if data.get("temp_min") is not None else temp - 5.5)
-    rain = float(data.get("rainfall") if data.get("rainfall") is not None else (data.get("rainfall_mm") if data.get("rainfall_mm") is not None else 0.0))
-    hum = float(data.get("humidity") if data.get("humidity") is not None else (data.get("humidity_pct") if data.get("humidity_pct") is not None else 50.0))
-    soil = float(data.get("effective_soil_wetness") if data.get("effective_soil_wetness") is not None else (data.get("soil_moisture") if data.get("soil_moisture") is not None else 0.40))
-    
-    if data.get("solar_radiation") is not None:
-        solar = float(data.get("solar_radiation"))
-    else:
-        solar = round(0.16 * np.sqrt(max(tmax - tmin, 1.0)) * 28.0, 1)
-        
-    soil_ph = float(data.get("soil_ph") if data.get("soil_ph") is not None else 7.4)
-    soc = float(data.get("soil_organic_carbon") if data.get("soil_organic_carbon") is not None else 0.48)
-    
-    if data.get("ndvi") is not None:
-        ndvi = float(data.get("ndvi"))
-    else:
-        ndvi = round(float(np.clip(0.55 + (soil * 0.20), 0.15, 0.88)), 3)
-        
-    if data.get("et0") is not None:
-        et0 = float(data.get("et0"))
-    else:
-        et0 = round(0.0023 * (temp + 17.8) * np.sqrt(max(tmax - tmin, 1.0)) * 14.5, 2)
-        
-    if data.get("etc") is not None:
-        etc = float(data.get("etc"))
-    else:
-        etc = round(et0 * 1.10, 2)
-        
-    c_type = data.get("crop_type") or "Cotton"
-    g_stage = data.get("growth_stage") or "Reproductive"
-    
-    if data.get("crop_code") is not None:
-        crop_code = int(data.get("crop_code"))
-    else:
-        crop_code = int(crop_map.get(c_type, 0))
-        
-    if data.get("stage_code") is not None:
-        stage_code = int(data.get("stage_code"))
-    else:
-        stage_code = int(stage_map.get(g_stage, 1))
-        
-    row = [temp, tmax, tmin, rain, hum, soil, solar, soil_ph, soc, ndvi, et0, etc, crop_code, stage_code]
-    return pd.DataFrame([row], columns=feature_cols)
+build_feature_row = lambda d: (
+    lambda temp, rain, hum, soil: (
+        lambda tmax, tmin: (
+            lambda solar, et0: (
+                lambda etc, ndvi, c_code, s_code: pd.DataFrame([[
+                    temp, tmax, tmin, rain, hum, soil, solar,
+                    float(d.get("soil_ph") if d.get("soil_ph") is not None else 7.4),
+                    float(d.get("soil_organic_carbon") if d.get("soil_organic_carbon") is not None else 0.48),
+                    ndvi, et0, etc, c_code, s_code
+                ]], columns=feature_cols)
+            )(
+                float(d.get("etc")) if d.get("etc") is not None else round(et0 * 1.10, 2),
+                float(d.get("ndvi")) if d.get("ndvi") is not None else round(float(np.clip(0.55 + (soil * 0.20), 0.15, 0.88)), 3),
+                int(d.get("crop_code")) if d.get("crop_code") is not None else int(crop_map.get(d.get("crop_type") or "Cotton", 0)),
+                int(d.get("stage_code")) if d.get("stage_code") is not None else int(stage_map.get(d.get("growth_stage") or "Reproductive", 1))
+            )
+        )(
+            float(d.get("solar_radiation")) if d.get("solar_radiation") is not None else round(0.16 * np.sqrt(max(tmax - tmin, 1.0)) * 28.0, 1),
+            float(d.get("et0")) if d.get("et0") is not None else round(0.0023 * (temp + 17.8) * np.sqrt(max(tmax - tmin, 1.0)) * 14.5, 2)
+        )
+    )(
+        float(d.get("temp_max") if d.get("temp_max") is not None else temp + 5.5),
+        float(d.get("temp_min") if d.get("temp_min") is not None else temp - 5.5)
+    )
+)(
+    float(d.get("temperature") if d.get("temperature") is not None else (d.get("temperature_c") if d.get("temperature_c") is not None else 30.0)),
+    float(d.get("rainfall") if d.get("rainfall") is not None else (d.get("rainfall_mm") if d.get("rainfall_mm") is not None else 0.0)),
+    float(d.get("humidity") if d.get("humidity") is not None else (d.get("humidity_pct") if d.get("humidity_pct") is not None else 50.0)),
+    float(d.get("effective_soil_wetness") if d.get("effective_soil_wetness") is not None else (d.get("soil_moisture") if d.get("soil_moisture") is not None else 0.40))
+)
 
 class PredictRequest(BaseModel):
     temperature: float = 30.0
@@ -179,252 +158,251 @@ class IrrigationPriorityRequest(BaseModel):
     et0: float = 4.80
     etc: float = 5.20
 
-@app.get("/")
-def get_root():
-    return {
-        "project": "Crop Stress and Irrigation Priority Decision Support System (KrishiJal)",
-        "project_name": "KrishiJal Decision Support System",
-        "description": "Machine Learning-based decision support system helping Indian farmers identify crop water stress and optimize irrigation scheduling.",
-        "primary_stakeholders": "Farmers",
-        "status": "Online and Operational",
-        "version": "2.2.0",
-        "api_documentation": "/docs",
-        "alternative_documentation": "/redoc",
-        "endpoints": {
-            "root": "GET /",
-            "health_check": "GET /health",
-            "prediction": "POST /predict",
-            "crop_stress_api": "POST /api/predict/crop-stress",
-            "irrigation_priority_api": "POST /api/predict/irrigation-priority",
-            "districts_data": "GET /api/districts",
-            "regional_clusters": "GET /api/clusters/regions",
-            "irrigation_priority_table": "GET /api/irrigation/priority",
-            "model_evaluation": "GET /api/models/evaluation"
-        },
-        "features_required_for_predict": feature_cols,
-        "models_active": {
-            "classification": "Tuned RandomForestClassifier (.pkl)",
-            "regression": "Tuned RandomForestRegressor (.pkl)"
-        },
-        "total_records": len(df_master),
-        "states_covered": int(df_master["state"].nunique()),
-        "districts_covered": int(df_master["district"].nunique()),
-        "web_app": "/app/"
-    }
+root_response = {
+    "project": "Crop Stress and Irrigation Priority Decision Support System (KrishiJal)",
+    "project_name": "KrishiJal Decision Support System",
+    "description": "Machine Learning-based decision support system helping Indian farmers identify crop water stress and optimize irrigation scheduling.",
+    "primary_stakeholders": "Farmers",
+    "status": "Online and Operational",
+    "version": "2.2.0",
+    "api_documentation": "/docs",
+    "alternative_documentation": "/redoc",
+    "endpoints": {
+        "root": "GET /",
+        "health_check": "GET /health",
+        "prediction": "POST /predict",
+        "crop_stress_api": "POST /api/predict/crop-stress",
+        "irrigation_priority_api": "POST /api/predict/irrigation-priority",
+        "districts_data": "GET /api/districts",
+        "regional_clusters": "GET /api/clusters/regions",
+        "irrigation_priority_table": "GET /api/irrigation/priority",
+        "model_evaluation": "GET /api/models/evaluation"
+    },
+    "features_required_for_predict": feature_cols,
+    "models_active": {
+        "classification": "Tuned RandomForestClassifier (.pkl)",
+        "regression": "Tuned RandomForestRegressor (.pkl)"
+    },
+    "total_records": len(df_master),
+    "states_covered": int(df_master["state"].nunique()),
+    "districts_covered": int(df_master["district"].nunique()),
+    "web_app": "/app/"
+}
+app.add_api_route("/", lambda: root_response, methods=["GET"])
 
-@app.get("/health")
-def get_health():
-    return {
-        "status": "healthy" if (model_rf is not None and model_reg is not None and scaler is not None) else "degraded",
-        "api_operational": True,
-        "models_loaded": {
-            "crop_stress_classifier": model_rf is not None,
-            "irrigation_priority_regressor": model_reg is not None,
-            "feature_scaler": scaler is not None,
-            "crop_stress_decision_tree": model_dt is not None,
-            "crop_stress_logistic_regression": model_logreg is not None,
-            "irrigation_decision_tree": model_reg_dt is not None,
-            "irrigation_linear_regression": model_reg_lin is not None
-        },
-        "model_errors": {},
-        "model_types": {
-            "classification": type(model_rf).__name__,
-            "regression": type(model_reg).__name__,
-            "scaler": type(scaler).__name__
-        },
-        "features_required": feature_cols,
-        "dataset_records": len(df_master),
-        "districts_covered": int(df_master["district"].nunique()),
-        "states_covered": int(df_master["state"].nunique())
-    }
+health_response = {
+    "status": "healthy" if (model_rf is not None and model_reg is not None and scaler is not None) else "degraded",
+    "api_operational": True,
+    "models_loaded": {
+        "crop_stress_classifier": model_rf is not None,
+        "irrigation_priority_regressor": model_reg is not None,
+        "feature_scaler": scaler is not None,
+        "crop_stress_decision_tree": model_dt is not None,
+        "crop_stress_logistic_regression": model_logreg is not None,
+        "irrigation_decision_tree": model_reg_dt is not None,
+        "irrigation_linear_regression": model_reg_lin is not None
+    },
+    "model_errors": {},
+    "model_types": {
+        "classification": type(model_rf).__name__,
+        "regression": type(model_reg).__name__,
+        "scaler": type(scaler).__name__
+    },
+    "features_required": feature_cols,
+    "dataset_records": len(df_master),
+    "districts_covered": int(df_master["district"].nunique()),
+    "states_covered": int(df_master["state"].nunique())
+}
+app.add_api_route("/health", lambda: health_response, methods=["GET"])
 
-@app.post("/predict")
-def predict(item: PredictRequest):
-    data = item.model_dump()
-    raw_df = build_feature_row(data)
-    scaled_df = pd.DataFrame(scaler.transform(raw_df), columns=feature_cols)
+predict_handler = lambda item: (
+    lambda raw_df: (
+        lambda scaled_df: (
+            lambda stress_code, raw_priority: (
+                lambda priority_index, etc_val, rain_val, soil_val: {
+                    "status": "success",
+                    "input_features": {col: float(raw_df[col].iloc[0]) for col in feature_cols},
+                    "crop_stress_prediction": {
+                        "stress_level_code": stress_code,
+                        "stress_level": stress_label_map.get(stress_code, "Moderate"),
+                        "stress_probabilities": (
+                            {stress_label_map.get(idx, str(idx)): round(float(p), 4) for idx, p in enumerate(model_rf.predict_proba(scaled_df)[0])}
+                            if hasattr(model_rf, "predict_proba") else {}
+                        ),
+                        "condition_summary": (
+                            "Severe moisture exhaustion, immediate intervention needed." if priority_index >= 60.0 else (
+                                "High stress, significant water deficit impacting crop growth." if priority_index >= 45.0 else (
+                                    "Mild to moderate stress, early signs of water limitation." if priority_index >= 30.0 else (
+                                        "Optimal conditions, crop is healthy."
+                                    )
+                                )
+                            )
+                        )
+                    },
+                    "irrigation_priority_prediction": {
+                        "irrigation_priority_index": priority_index,
+                        "priority_category": (
+                            "Critical Priority" if priority_index >= 60.0 else (
+                                "High Priority" if priority_index >= 45.0 else (
+                                    "Medium Priority" if priority_index >= 30.0 else "Low Priority"
+                                )
+                            )
+                        ),
+                        "recommended_irrigation_depth": (
+                            "45–55 mm" if priority_index >= 60.0 else (
+                                "35–45 mm" if priority_index >= 45.0 else (
+                                    "20–30 mm" if priority_index >= 30.0 else "Routine / Nil"
+                                )
+                            )
+                        ),
+                        "actionable_farmer_advisory": (
+                            "CRITICAL: Severe moisture exhaustion. Immediate canal or tubewell release required." if priority_index >= 60.0 else (
+                                "HIGH: Rapid soil moisture depletion observed. Schedule irrigation within 24–48 hours." if priority_index >= 45.0 else (
+                                    "MODERATE: Soil moisture depleting. Plan irrigation cycle within 3–4 days." if priority_index >= 30.0 else (
+                                        "ADEQUATE: Moisture levels optimal. Continue standard crop monitoring."
+                                    )
+                                )
+                            )
+                        )
+                    },
+                    "calculated_agronomic_indicators": {
+                        "daily_water_deficit_mm": max(0.0, round(etc_val - (rain_val + soil_val * etc_val), 2)),
+                        "reference_et0_mm": float(raw_df["et0"].iloc[0]),
+                        "crop_etc_mm": float(raw_df["etc"].iloc[0]),
+                        "vegetation_ndvi": float(raw_df["ndvi"].iloc[0])
+                    },
+                    "models_used": {
+                        "classifier": "Tuned RandomForestClassifier (.pkl)",
+                        "regressor": "Tuned RandomForestRegressor (.pkl)"
+                    }
+                }
+            )(
+                round(float(np.clip(raw_priority, 0.0, 100.0)), 1),
+                float(raw_df["etc"].iloc[0]),
+                float(raw_df["rainfall"].iloc[0]),
+                float(raw_df["effective_soil_wetness"].iloc[0])
+            )
+        )(
+            int(model_rf.predict(scaled_df)[0]),
+            float(model_reg.predict(scaled_df)[0])
+        )
+    )(pd.DataFrame(scaler.transform(raw_df), columns=feature_cols))
+)(build_feature_row(item.model_dump()))
 
-    stress_code = int(model_rf.predict(scaled_df)[0])
-    stress_label = stress_label_map.get(stress_code, "Moderate")
+predict_handler.__annotations__ = {"item": PredictRequest, "return": dict}
+app.add_api_route("/predict", predict_handler, methods=["POST"])
 
-    probabilities = {}
-    if hasattr(model_rf, "predict_proba"):
-        probs = model_rf.predict_proba(scaled_df)[0]
-        for idx, p in enumerate(probs):
-            probabilities[stress_label_map.get(idx, str(idx))] = round(float(p), 4)
+sim_handler = lambda item: (
+    lambda raw_df: (
+        lambda scaled_df: (
+            lambda chosen_clf, model_tag: (
+                lambda stress_code, raw_priority, raw_deficit: (
+                    lambda priority_index, deficit_val: {
+                        "crop_stress_level": stress_label_map.get(stress_code, "Low"),
+                        "crop_stress_code": stress_code,
+                        "model_used": model_tag,
+                        "predicted_water_deficit_mm_per_day": deficit_val,
+                        "irrigation_priority_index": priority_index,
+                        "irrigation_priority_level": "High Priority" if priority_index >= 50.0 else ("Medium Priority" if priority_index >= 35.0 else "Low Priority"),
+                        "urgency_color": "#d62728" if priority_index >= 50.0 else ("#ff7f0e" if priority_index >= 35.0 else "#2ca02c"),
+                        "recommendation": (
+                            "Severe water stress detected. Apply 35-45 mm irrigation immediately." if priority_index >= 50.0 else (
+                                "Soil moisture is declining. Prepare irrigation within 48-72 hours." if priority_index >= 35.0 else (
+                                    "Moisture is adequate. Continue regular monitoring."
+                                )
+                            )
+                        ),
+                        "calculated_agronomic_indicators": {
+                            "reference_et0_mm": float(raw_df["et0"].iloc[0]),
+                            "crop_etc_mm": float(raw_df["etc"].iloc[0]),
+                            "estimated_ndvi": float(raw_df["ndvi"].iloc[0])
+                        }
+                    }
+                )(
+                    round(float(np.clip(raw_priority, 0.0, 100.0)), 1),
+                    round(float(np.clip(raw_deficit, 0.0, 15.0)), 2)
+                )
+            )(
+                int(chosen_clf.predict(scaled_df)[0]),
+                float(model_reg.predict(scaled_df)[0]),
+                float(model_poly_deficit.predict(scaled_df)[0])
+            )
+        )(
+            model_dt if "Tree" in (item.selected_model or "") else (
+                model_logreg if "Logistic" in (item.selected_model or "") else (
+                    model_knn if "KNN" in (item.selected_model or "") else model_rf
+                )
+            ),
+            "Decision Tree Classifier" if "Tree" in (item.selected_model or "") else (
+                "Logistic Regression" if "Logistic" in (item.selected_model or "") else (
+                    "K-Nearest Neighbors" if "KNN" in (item.selected_model or "") else "Tuned Random Forest Classifier (.pkl)"
+                )
+            )
+        )
+    )(pd.DataFrame(scaler.transform(raw_df), columns=feature_cols))
+)(build_feature_row(item.model_dump()))
 
-    raw_priority = float(model_reg.predict(scaled_df)[0])
-    priority_index = round(float(np.clip(raw_priority, 0.0, 100.0)), 1)
+sim_handler.__annotations__ = {"item": CropStressSimRequest, "return": dict}
+app.add_api_route("/api/predict/crop-stress", sim_handler, methods=["POST"])
 
-    etc_val = float(raw_df["etc"].iloc[0])
-    rain_val = float(raw_df["rainfall"].iloc[0])
-    soil_val = float(raw_df["effective_soil_wetness"].iloc[0])
-    calc_deficit = max(0.0, round(etc_val - (rain_val + soil_val * etc_val), 2))
+priority_handler = lambda item: (
+    lambda raw_df: (
+        lambda scaled_df: (
+            lambda raw_val: (
+                lambda priority_index: {
+                    "irrigation_priority_index": priority_index,
+                    "priority_category": (
+                        "Critical Priority" if priority_index >= 60.0 else (
+                            "High Priority" if priority_index >= 45.0 else (
+                                "Medium Priority" if priority_index >= 30.0 else "Low Priority"
+                            )
+                        )
+                    ),
+                    "recommended_irrigation_depth": (
+                        "45–55 mm" if priority_index >= 60.0 else (
+                            "35–45 mm" if priority_index >= 45.0 else (
+                                "20–30 mm" if priority_index >= 30.0 else "Routine / Nil"
+                            )
+                        )
+                    ),
+                    "actionable_farmer_advisory": (
+                        "CRITICAL: Severe moisture exhaustion. Immediate canal or tubewell release required." if priority_index >= 60.0 else (
+                            "HIGH: Rapid soil moisture depletion observed. Schedule irrigation within 24–48 hours." if priority_index >= 45.0 else (
+                                "MODERATE: Soil wetness is depleting. Schedule irrigation in 48-72 hours." if priority_index >= 30.0 else (
+                                    "ADEQUATE: Moisture levels optimal. Continue standard monitoring."
+                                )
+                            )
+                        )
+                    ),
+                    "model_used": "Tuned Random Forest Regressor (.pkl)"
+                }
+            )(round(float(np.clip(raw_val, 0.0, 100.0)), 1))
+        )(float(model_reg.predict(scaled_df)[0]))
+    )(pd.DataFrame(scaler.transform(raw_df), columns=feature_cols))
+)(build_feature_row(item.model_dump()))
 
-    if priority_index >= 60.0:
-        category = "Critical Priority"
-        water_depth = "45–55 mm"
-        advisory = "CRITICAL: Severe moisture exhaustion. Immediate canal or tubewell release required."
-        condition = "Severe moisture exhaustion, immediate intervention needed."
-    elif priority_index >= 45.0:
-        category = "High Priority"
-        water_depth = "35–45 mm"
-        advisory = "HIGH: Rapid soil moisture depletion observed. Schedule irrigation within 24–48 hours."
-        condition = "High stress, significant water deficit impacting crop growth."
-    elif priority_index >= 30.0:
-        category = "Medium Priority"
-        water_depth = "20–30 mm"
-        advisory = "MODERATE: Soil moisture depleting. Plan irrigation cycle within 3–4 days."
-        condition = "Mild to moderate stress, early signs of water limitation."
-    else:
-        category = "Low Priority"
-        water_depth = "Routine / Nil"
-        advisory = "ADEQUATE: Moisture levels optimal. Continue standard crop monitoring."
-        condition = "Optimal conditions, crop is healthy."
+priority_handler.__annotations__ = {"item": IrrigationPriorityRequest, "return": dict}
+app.add_api_route("/api/predict/irrigation-priority", priority_handler, methods=["POST"])
 
-    input_dict = {}
-    for col in feature_cols:
-        input_dict[col] = float(raw_df[col].iloc[0])
-
-    return {
-        "status": "success",
-        "input_features": input_dict,
-        "crop_stress_prediction": {
-            "stress_level_code": stress_code,
-            "stress_level": stress_label,
-            "stress_probabilities": probabilities,
-            "condition_summary": condition
-        },
-        "irrigation_priority_prediction": {
-            "irrigation_priority_index": priority_index,
-            "priority_category": category,
-            "recommended_irrigation_depth": water_depth,
-            "actionable_farmer_advisory": advisory
-        },
-        "calculated_agronomic_indicators": {
-            "daily_water_deficit_mm": calc_deficit,
-            "reference_et0_mm": float(raw_df["et0"].iloc[0]),
-            "crop_etc_mm": float(raw_df["etc"].iloc[0]),
-            "vegetation_ndvi": float(raw_df["ndvi"].iloc[0])
-        },
-        "models_used": {
-            "classifier": "Tuned RandomForestClassifier (.pkl)",
-            "regressor": "Tuned RandomForestRegressor (.pkl)"
-        }
-    }
-
-@app.post("/api/predict/crop-stress")
-def predict_crop_stress(item: CropStressSimRequest):
-    data = item.model_dump()
-    raw_df = build_feature_row(data)
-    scaled_df = pd.DataFrame(scaler.transform(raw_df), columns=feature_cols)
-
-    chosen_model_name = item.selected_model or "Random Forest"
-    if "Tree" in chosen_model_name:
-        chosen_clf = model_dt
-        model_tag = "Decision Tree Classifier"
-    elif "Logistic" in chosen_model_name:
-        chosen_clf = model_logreg
-        model_tag = "Logistic Regression"
-    elif "KNN" in chosen_model_name:
-        chosen_clf = model_knn
-        model_tag = "K-Nearest Neighbors"
-    else:
-        chosen_clf = model_rf
-        model_tag = "Tuned Random Forest Classifier (.pkl)"
-
-    stress_code = int(chosen_clf.predict(scaled_df)[0])
-    stress_label = stress_label_map.get(stress_code, "Low")
-
-    raw_priority = float(model_reg.predict(scaled_df)[0])
-    priority_index = round(float(np.clip(raw_priority, 0.0, 100.0)), 1)
-
-    raw_deficit = float(model_poly_deficit.predict(scaled_df)[0])
-    deficit_val = round(float(np.clip(raw_deficit, 0.0, 15.0)), 2)
-
-    if priority_index >= 50.0:
-        priority_level = "High Priority"
-        urgency_color = "#d62728"
-        recommendation = "Severe water stress detected. Apply 35-45 mm irrigation immediately."
-    elif priority_index >= 35.0:
-        priority_level = "Medium Priority"
-        urgency_color = "#ff7f0e"
-        recommendation = "Soil moisture is declining. Prepare irrigation within 48-72 hours."
-    else:
-        priority_level = "Low Priority"
-        urgency_color = "#2ca02c"
-        recommendation = "Moisture is adequate. Continue regular monitoring."
-
-    return {
-        "crop_stress_level": stress_label,
-        "crop_stress_code": stress_code,
-        "model_used": model_tag,
-        "predicted_water_deficit_mm_per_day": deficit_val,
-        "irrigation_priority_index": priority_index,
-        "irrigation_priority_level": priority_level,
-        "urgency_color": urgency_color,
-        "recommendation": recommendation,
-        "calculated_agronomic_indicators": {
-            "reference_et0_mm": float(raw_df["et0"].iloc[0]),
-            "crop_etc_mm": float(raw_df["etc"].iloc[0]),
-            "estimated_ndvi": float(raw_df["ndvi"].iloc[0])
-        }
-    }
-
-@app.post("/api/predict/irrigation-priority")
-def predict_irrigation_priority(item: IrrigationPriorityRequest):
-    data = item.model_dump()
-    raw_df = build_feature_row(data)
-    scaled_df = pd.DataFrame(scaler.transform(raw_df), columns=feature_cols)
-
-    raw_val = float(model_reg.predict(scaled_df)[0])
-    priority_index = round(float(np.clip(raw_val, 0.0, 100.0)), 1)
-
-    if priority_index >= 60.0:
-        category = "Critical Priority"
-        depth = "45–55 mm"
-        advisory = "CRITICAL: Severe moisture exhaustion. Immediate canal or tubewell release required."
-    elif priority_index >= 45.0:
-        category = "High Priority"
-        depth = "35–45 mm"
-        advisory = "HIGH: Rapid soil moisture depletion observed. Schedule irrigation within 24–48 hours."
-    elif priority_index >= 30.0:
-        category = "Medium Priority"
-        depth = "20–30 mm"
-        advisory = "MODERATE: Soil wetness is depleting. Schedule irrigation in 48-72 hours."
-    else:
-        category = "Low Priority"
-        depth = "Routine / Nil"
-        advisory = "ADEQUATE: Moisture levels optimal. Continue standard monitoring."
-
-    return {
-        "irrigation_priority_index": priority_index,
-        "priority_category": category,
-        "recommended_irrigation_depth": depth,
-        "actionable_farmer_advisory": advisory,
-        "model_used": "Tuned Random Forest Regressor (.pkl)"
-    }
-
-@app.get("/api/dataset/info")
-def get_dataset_info():
-    return {
-        "total_records": len(df_master),
-        "total_districts": int(df_master["district"].nunique()),
-        "total_states": int(df_master["state"].nunique()),
-        "states_list": sorted(df_master["state"].unique().tolist()),
-        "districts_list": sorted(df_master["district"].unique().tolist()),
-        "crops_covered": sorted(df_master["crop_type"].unique().tolist()),
-        "national_averages": {
-            "mean_temperature_c": round(float(df_master["temperature"].mean()), 2),
-            "mean_rainfall_mm": round(float(df_master["rainfall"].mean()), 2),
-            "mean_humidity_pct": round(float(df_master["humidity"].mean()), 2),
-            "mean_soil_moisture": round(float(df_master["effective_soil_wetness"].mean()), 3),
-            "mean_crop_etc_mm": round(float(df_master["etc"].mean()), 2),
-            "mean_irrigation_priority_index": round(float(df_master["irrigation_priority_index"].mean()), 1)
-        },
-        "stress_level_distribution": df_master["stress_level"].value_counts().to_dict(),
-        "irrigation_priority_distribution": df_master["irrigation_priority"].value_counts().to_dict()
-    }
+dataset_payload = {
+    "total_records": len(df_master),
+    "total_districts": int(df_master["district"].nunique()),
+    "total_states": int(df_master["state"].nunique()),
+    "states_list": sorted(df_master["state"].unique().tolist()),
+    "districts_list": sorted(df_master["district"].unique().tolist()),
+    "crops_covered": sorted(df_master["crop_type"].unique().tolist()),
+    "national_averages": {
+        "mean_temperature_c": round(float(df_master["temperature"].mean()), 2),
+        "mean_rainfall_mm": round(float(df_master["rainfall"].mean()), 2),
+        "mean_humidity_pct": round(float(df_master["humidity"].mean()), 2),
+        "mean_soil_moisture": round(float(df_master["effective_soil_wetness"].mean()), 3),
+        "mean_crop_etc_mm": round(float(df_master["etc"].mean()), 2),
+        "mean_irrigation_priority_index": round(float(df_master["irrigation_priority_index"].mean()), 1)
+    },
+    "stress_level_distribution": df_master["stress_level"].value_counts().to_dict(),
+    "irrigation_priority_distribution": df_master["irrigation_priority"].value_counts().to_dict()
+}
+app.add_api_route("/api/dataset/info", lambda: dataset_payload, methods=["GET"])
 
 districts_summary = []
 for d_name, grp in df_master.groupby("district"):
@@ -467,9 +445,7 @@ for d_name, grp in df_master.groupby("district"):
         "soil_ph_neutral_share": round(float(grp["shc_macro_soil_ph_neutral_share_2024_25"].iloc[0]), 3) if "shc_macro_soil_ph_neutral_share_2024_25" in grp else 1.0
     })
 
-@app.get("/api/districts")
-def get_districts():
-    return {"total_districts": len(districts_summary), "districts": districts_summary}
+app.add_api_route("/api/districts", lambda: {"total_districts": len(districts_summary), "districts": districts_summary}, methods=["GET"])
 
 cluster_list = []
 for d_name, grp in df_master.groupby("district"):
@@ -494,10 +470,7 @@ clusters_response = {
     "clusters_summary": cluster_profiles_info,
     "districts_clustered": cluster_list
 }
-
-@app.get("/api/clusters/regions")
-def get_clusters():
-    return clusters_response
+app.add_api_route("/api/clusters/regions", lambda: clusters_response, methods=["GET"])
 
 ranked_priority_list = []
 for d_name, grp in df_master.groupby("district"):
@@ -539,10 +512,7 @@ priority_response = {
     "total_districts": len(ranked_priority_list),
     "ranked_districts": ranked_priority_list
 }
-
-@app.get("/api/irrigation/priority")
-def get_irrigation_priority():
-    return priority_response
+app.add_api_route("/api/irrigation/priority", lambda: priority_response, methods=["GET"])
 
 evaluation_metrics = {
     "dataset_source": "data/processed/krishijal_master_dataset.csv",
@@ -627,10 +597,7 @@ evaluation_metrics = {
         }
     }
 }
-
-@app.get("/api/models/evaluation")
-def get_model_evaluation():
-    return evaluation_metrics
+app.add_api_route("/api/models/evaluation", lambda: evaluation_metrics, methods=["GET"])
 
 try:
     app.mount("/app", StaticFiles(directory=frontend_dir, html=True), name="frontend")
