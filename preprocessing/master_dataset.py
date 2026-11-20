@@ -12,7 +12,6 @@ Computes UN FAO-56 physical indicators, cleans NASA anomalies (Lakshadweep -999.
 standardizes categories, tracks data granularity, and creates one self-contained master dataset.
 """
 
-import os
 import numpy as np
 import pandas as pd
 from sklearn.cluster import KMeans
@@ -21,9 +20,9 @@ from sklearn.preprocessing import StandardScaler
 
 # Define paths
 DATA_DIR = "data"
-RAW_DIR = os.path.join(DATA_DIR, "raw")
-PROCESSED_DIR = os.path.join(DATA_DIR, "processed")
-MASTER_CSV_PATH = os.path.join(PROCESSED_DIR, "krishijal_master_dataset.csv")
+RAW_DIR = "data/raw"
+PROCESSED_DIR = "data/processed"
+MASTER_CSV_PATH = "data/processed/krishijal_master_dataset.csv"
 
 # Standard ICAR Agro-Climatic Zone mapping across all 36 Indian States and UTs
 STATE_TO_ZONE = {
@@ -96,7 +95,7 @@ DISTRICT_NAME_MAPPING = {
 
 def load_and_preprocess_140_districts():
     """Loads and computes FAO-56 metrics for the 158-district monthly dataset (1,896 records)."""
-    raw_path = os.path.join(RAW_DIR, "all_india_140_districts_raw.csv")
+    raw_path = "data/raw/all_india_140_districts_raw.csv"
     df = pd.read_csv(raw_path)
     df = df.drop_duplicates()
     
@@ -187,7 +186,7 @@ def load_and_preprocess_140_districts():
 
 def load_and_preprocess_agricultural_daily():
     """Loads and computes FAO-56 metrics for the 26-district daily dataset (4,758 records)."""
-    raw_path = os.path.join(RAW_DIR, "all_india_agricultural_raw.csv")
+    raw_path = "data/raw/all_india_agricultural_raw.csv"
     df = pd.read_csv(raw_path)
     df = df.drop_duplicates()
     
@@ -308,8 +307,11 @@ def enrich_with_soil_health_card_data(master_df):
     district-level soil nutrient indicators from data/raw/india_district_month_master_2025.csv.
     Adds official LGD codes, macro NPK shares, pH neutrality, organic carbon, and micro-nutrients.
     """
-    shc_raw_path = os.path.join(RAW_DIR, "india_district_month_master_2025.csv")
-    if not os.path.exists(shc_raw_path):
+    shc_raw_path = "data/raw/india_district_month_master_2025.csv"
+    try:
+        with open(shc_raw_path, "r") as test_f:
+            pass
+    except Exception:
         print(f"Warning: SHC 2025 dataset not found at {shc_raw_path}. Skipping SHC enrichment.")
         return master_df
 
@@ -443,7 +445,6 @@ def generate_master_dataset():
     # Enrich with Government of India Soil Health Card (SHC) 2024-25 Data
     master_df = enrich_with_soil_health_card_data(master_df)
     
-    os.makedirs(PROCESSED_DIR, exist_ok=True)
     master_df.to_csv(MASTER_CSV_PATH, index=False)
     
     print("\n" + "=" * 70)

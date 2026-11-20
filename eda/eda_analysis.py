@@ -11,7 +11,6 @@ Purpose: Analyze the processed agricultural dataset using Pandas, Matplotlib, an
          6. Regional stress comparison
 """
 
-import os
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -25,7 +24,6 @@ plt.rcParams["figure.dpi"] = 150
 # Define paths
 DATA_PATH = "data/processed/all_india_agricultural_processed.csv"
 PLOTS_DIR = "eda/plots"
-os.makedirs(PLOTS_DIR, exist_ok=True)
 
 print("=" * 70)
 print("STAGE 4: EXPLORATORY DATA ANALYSIS (EDA)")
@@ -63,7 +61,7 @@ axes[1].set_xlabel("Zone", fontsize=11)
 axes[1].set_ylabel("Temperature (°C)", fontsize=11)
 
 plt.tight_layout()
-temp_plot_path = os.path.join(PLOTS_DIR, "temperature_distribution.png")
+temp_plot_path = f"{PLOTS_DIR}/temperature_distribution.png"
 plt.savefig(temp_plot_path)
 plt.close()
 print(f"Saved: {temp_plot_path}")
@@ -92,7 +90,7 @@ for p in axes[1].patches:
                      ha="center", va="center", color="white", fontweight="bold")
 
 plt.tight_layout()
-rain_plot_path = os.path.join(PLOTS_DIR, "rainfall_distribution.png")
+rain_plot_path = f"{PLOTS_DIR}/rainfall_distribution.png"
 plt.savefig(rain_plot_path)
 plt.close()
 print(f"Saved: {rain_plot_path}")
@@ -121,7 +119,7 @@ axes[1].set_xlabel("Surface Soil Moisture (0-5 cm)", fontsize=11)
 axes[1].set_ylabel("Root-Zone Soil Moisture (0-100 cm)", fontsize=11)
 
 plt.tight_layout()
-soil_plot_path = os.path.join(PLOTS_DIR, "soil_moisture_distribution.png")
+soil_plot_path = f"{PLOTS_DIR}/soil_moisture_distribution.png"
 plt.savefig(soil_plot_path)
 plt.close()
 print(f"Saved: {soil_plot_path}")
@@ -159,7 +157,7 @@ for i, val in enumerate(priority_counts.values):
     axes[1].text(i, val + 40, f"{val}\n({pct:.1f}%)", ha="center", fontsize=10, fontweight="bold")
 
 plt.tight_layout()
-stress_plot_path = os.path.join(PLOTS_DIR, "crop_stress_distribution.png")
+stress_plot_path = f"{PLOTS_DIR}/crop_stress_distribution.png"
 plt.savefig(stress_plot_path)
 plt.close()
 print(f"Saved: {stress_plot_path}")
@@ -182,7 +180,7 @@ sns.heatmap(corr_matrix, mask=mask, annot=True, fmt=".2f", cmap="coolwarm",
 plt.title("Correlation Heatmap of Agricultural & Agro-Climatic Features", fontsize=14, fontweight="bold", pad=15)
 plt.xticks(rotation=45, ha="right")
 plt.tight_layout()
-heatmap_plot_path = os.path.join(PLOTS_DIR, "correlation_heatmap.png")
+heatmap_plot_path = f"{PLOTS_DIR}/correlation_heatmap.png"
 plt.savefig(heatmap_plot_path)
 plt.close()
 print(f"Saved: {heatmap_plot_path}")
@@ -197,7 +195,7 @@ plt.ylabel("Percentage of Season (%)", fontsize=11)
 plt.xticks(rotation=0)
 plt.legend(title="Crop Stress Level", bbox_to_anchor=(1.02, 1), loc="upper left")
 plt.tight_layout()
-regional_plot_path = os.path.join(PLOTS_DIR, "regional_stress_comparison.png")
+regional_plot_path = f"{PLOTS_DIR}/regional_stress_comparison.png"
 plt.savefig(regional_plot_path)
 plt.close()
 print(f"Saved: {regional_plot_path}")

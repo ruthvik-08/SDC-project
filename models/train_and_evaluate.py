@@ -14,7 +14,6 @@ Tuning: GridSearchCV
 Saving: Joblib inside backend/models/
 """
 
-import os
 import json
 import joblib
 import numpy as np
@@ -42,7 +41,6 @@ from imblearn.over_sampling import SMOTE
 
 # Output directory for saved models
 MODEL_DIR = "backend/models"
-os.makedirs(MODEL_DIR, exist_ok=True)
 
 print("=" * 80)
 print("STAGES 6 - 10: MACHINE LEARNING MODEL PIPELINE")
@@ -54,10 +52,10 @@ df = pd.read_csv(DATA_PATH)
 print(f"Loaded dataset: {df.shape[0]} rows, {df.shape[1]} columns")
 
 # Load model feature list, scaler, and encoders
-feature_cols = joblib.load(os.path.join(MODEL_DIR, "model_features.joblib"))
-scaler = joblib.load(os.path.join(MODEL_DIR, "feature_scaler.joblib"))
-crop_encoder = joblib.load(os.path.join(MODEL_DIR, "crop_encoder.joblib"))
-stage_encoder = joblib.load(os.path.join(MODEL_DIR, "stage_encoder.joblib"))
+feature_cols = joblib.load(MODEL_DIR + "/model_features.joblib")
+scaler = joblib.load(MODEL_DIR + "/feature_scaler.joblib")
+crop_encoder = joblib.load(MODEL_DIR + "/crop_encoder.joblib")
+stage_encoder = joblib.load(MODEL_DIR + "/stage_encoder.joblib")
 
 print(f"Features used for modeling ({len(feature_cols)} total):")
 for i, feat in enumerate(feature_cols, 1):
@@ -403,24 +401,24 @@ print("STAGE 10: SAVING ALL MODELS USING JOBLIB")
 print("=" * 80)
 
 # Save classification models
-joblib.dump(best_rf, os.path.join(MODEL_DIR, "best_crop_stress_random_forest.joblib"))
-joblib.dump(best_knn, os.path.join(MODEL_DIR, "best_crop_stress_knn.joblib"))
-joblib.dump(best_dt, os.path.join(MODEL_DIR, "best_crop_stress_decision_tree.joblib"))
-joblib.dump(trained_classifiers["Logistic Regression"], os.path.join(MODEL_DIR, "logistic_regression.joblib"))
-joblib.dump(trained_classifiers["Naive Bayes"], os.path.join(MODEL_DIR, "naive_bayes.joblib"))
+joblib.dump(best_rf, MODEL_DIR + "/best_crop_stress_random_forest.joblib")
+joblib.dump(best_knn, MODEL_DIR + "/best_crop_stress_knn.joblib")
+joblib.dump(best_dt, MODEL_DIR + "/best_crop_stress_decision_tree.joblib")
+joblib.dump(trained_classifiers["Logistic Regression"], MODEL_DIR + "/logistic_regression.joblib")
+joblib.dump(trained_classifiers["Naive Bayes"], MODEL_DIR + "/naive_bayes.joblib")
 
 # Save regression models
-joblib.dump(lin_reg_def, os.path.join(MODEL_DIR, "linear_regression_water_deficit.joblib"))
-joblib.dump(poly_reg_def, os.path.join(MODEL_DIR, "polynomial_regression_water_deficit.joblib"))
-joblib.dump(lin_reg_ipi, os.path.join(MODEL_DIR, "linear_regression_irrigation_priority.joblib"))
-joblib.dump(poly_reg_ipi, os.path.join(MODEL_DIR, "polynomial_regression_irrigation_priority.joblib"))
+joblib.dump(lin_reg_def, MODEL_DIR + "/linear_regression_water_deficit.joblib")
+joblib.dump(poly_reg_def, MODEL_DIR + "/polynomial_regression_water_deficit.joblib")
+joblib.dump(lin_reg_ipi, MODEL_DIR + "/linear_regression_irrigation_priority.joblib")
+joblib.dump(poly_reg_ipi, MODEL_DIR + "/polynomial_regression_irrigation_priority.joblib")
 
 # Save clustering & PCA models
-joblib.dump(kmeans, os.path.join(MODEL_DIR, "kmeans_cluster.joblib"))
-joblib.dump(pca, os.path.join(MODEL_DIR, "pca_model.joblib"))
+joblib.dump(kmeans, MODEL_DIR + "/kmeans_cluster.joblib")
+joblib.dump(pca, MODEL_DIR + "/pca_model.joblib")
 
 # Save comprehensive metrics JSON for FastAPI backend and Frontend
-metrics_file_path = os.path.join(MODEL_DIR, "model_metrics.json")
+metrics_file_path = MODEL_DIR + "/model_metrics.json"
 with open(metrics_file_path, "w") as f:
     json.dump(evaluation_metrics, f, indent=4)
 

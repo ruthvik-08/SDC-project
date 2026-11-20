@@ -12,7 +12,6 @@ Enforces correct ML practices:
   - StandardScaler fit exclusively on X_train (Zero Data Leakage)
 """
 
-import os
 import json
 import numpy as np
 import pandas as pd

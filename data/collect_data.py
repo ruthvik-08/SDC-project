@@ -5,7 +5,6 @@ Purpose: Collect genuine agricultural datasets from NASA POWER, Soil Health Card
          FAO WaPOR, and DiCRA / ISRO Bhuvan for representative districts across ALL OF INDIA.
 """
 
-import os
 import json
 import time
 import requests
@@ -184,7 +183,6 @@ END_DATE = "20231130"    # November 30, 2023
 
 # Output directories
 RAW_DATA_DIR = "data/raw"
-os.makedirs(RAW_DATA_DIR, exist_ok=True)
 
 print("=" * 70)
 print("STAGE 2: DATA COLLECTION FROM NASA POWER & SOIL HEALTH CARD")
@@ -223,7 +221,7 @@ for idx, dist in enumerate(DISTRICTS, 1):
             params = data["properties"]["parameter"]
             
             # Save raw JSON response for provenance and reproducibility
-            raw_file_path = os.path.join(RAW_DATA_DIR, f"{district_name}_{state_name}_raw.json")
+            raw_file_path = f"{RAW_DATA_DIR}/{district_name}_{state_name}_raw.json"
             with open(raw_file_path, "w") as f:
                 json.dump(data, f)
             
@@ -280,7 +278,7 @@ for idx, dist in enumerate(DISTRICTS, 1):
 
 # Save combined raw dataset
 df_raw = pd.DataFrame(all_records)
-raw_csv_path = os.path.join(RAW_DATA_DIR, "all_india_agricultural_raw.csv")
+raw_csv_path = f"{RAW_DATA_DIR}/all_india_agricultural_raw.csv"
 df_raw.to_csv(raw_csv_path, index=False)
 
 print("\n" + "=" * 70)

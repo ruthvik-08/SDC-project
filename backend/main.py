@@ -7,7 +7,6 @@
 # 3. Simple basic beginner Python syntax only.
 # ==============================================================================
 
-import os
 import json
 import joblib
 import numpy as np
@@ -93,8 +92,15 @@ model_poly_deficit = Pipeline([("poly", PolynomialFeatures(degree=2)), ("linear"
 # Load persistent tuned models from models/saved_models if available
 saved_clf_path = "models/saved_models/crop_stress_classifier.joblib"
 saved_reg_path = "models/saved_models/irrigation_priority_regressor.joblib"
-saved_rf_classifier = joblib.load(saved_clf_path) if os.path.exists(saved_clf_path) else model_rf
-saved_rf_regressor = joblib.load(saved_reg_path) if os.path.exists(saved_reg_path) else model_poly_priority
+try:
+    saved_rf_classifier = joblib.load(saved_clf_path)
+except Exception:
+    saved_rf_classifier = model_rf
+
+try:
+    saved_rf_regressor = joblib.load(saved_reg_path)
+except Exception:
+    saved_rf_regressor = model_poly_priority
 
 # Load human-readable evaluation metrics JSON
 metrics_file = open("backend/model_evaluation_metrics.json", "r")
@@ -407,6 +413,7 @@ app.add_api_route("/api/predict/irrigation-priority", priority_executor, methods
 # ------------------------------------------------------------------------------
 # 10. MOUNT FRONTEND DIRECTORY (ZERO DEF)
 # ------------------------------------------------------------------------------
-frontend_directory = "frontend"
-if os.path.exists(frontend_directory):
-    app.mount("/app", StaticFiles(directory=frontend_directory, html=True), name="frontend")
+try:
+    app.mount("/app", StaticFiles(directory="frontend", html=True), name="frontend")
+except Exception:
+    pass

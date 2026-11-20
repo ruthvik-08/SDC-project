@@ -13,7 +13,6 @@ Tests:
  8. Frontend Static Files Integrity (HTML, CSS, JS)
 """
 
-import os
 import sys
 import json
 import numpy as np
@@ -21,9 +20,8 @@ import pandas as pd
 from fastapi.testclient import TestClient
 
 # Ensure project root is in sys.path
-PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-if PROJECT_ROOT not in sys.path:
-    sys.path.insert(0, PROJECT_ROOT)
+if "." not in sys.path:
+    sys.path.insert(0, ".")
 
 # Import FastAPI app from backend
 from backend.main import app, feature_cols, scaler, model_rf, model_dt, model_knn, model_poly_deficit, model_poly_priority
@@ -38,7 +36,13 @@ print("=" * 80)
 def test_1_master_dataset_loading():
     print("\n[Test 1] Testing Master Dataset Loading & Integrity...")
     master_path = "data/processed/krishijal_master_dataset.csv"
-    assert os.path.exists(master_path), f"Master dataset not found at {master_path}"
+    try:
+        with open(master_path, "r") as f:
+            pass
+        file_exists = True
+    except Exception:
+        file_exists = False
+    assert file_exists, f"Master dataset not found at {master_path}"
     
     df = pd.read_csv(master_path)
     assert len(df) == 6654, f"Expected 6,654 rows, got {len(df)}"
@@ -255,11 +259,20 @@ def test_7_irrigation_priority_logic():
 
 def test_8_frontend_integrity():
     print("\n[Test 8] Testing Frontend Files Integrity...")
-    assert os.path.exists("frontend/index.html"), "Missing frontend/index.html"
-    assert os.path.exists("frontend/style.css"), "Missing frontend/style.css"
-    assert os.path.exists("frontend/app.js"), "Missing frontend/app.js"
-    assert os.path.exists("frontend/data/india_states_official.geojson"), "Missing official states GeoJSON"
-    assert os.path.exists("frontend/data/india_districts_official.geojson"), "Missing official districts GeoJSON"
+    for f_path in [
+        "frontend/index.html",
+        "frontend/style.css",
+        "frontend/app.js",
+        "frontend/data/india_states_official.geojson",
+        "frontend/data/india_districts_official.geojson",
+    ]:
+        try:
+            with open(f_path, "r") as f:
+                pass
+            found = True
+        except Exception:
+            found = False
+        assert found, f"Missing {f_path}"
     
     with open("frontend/index.html") as f:
         html = f.read()

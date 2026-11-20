@@ -7,16 +7,13 @@ Purpose: Load raw agricultural dataset, clean data, handle missing values,
          and save clean processed CSV for model training and analysis.
 """
 
-import os
 import numpy as np
 import pandas as pd
 
 # Define file paths
 RAW_DATA_PATH = "data/raw/all_india_agricultural_raw.csv"
 PROCESSED_DATA_DIR = "data/processed"
-PROCESSED_DATA_PATH = os.path.join(PROCESSED_DATA_DIR, "all_india_agricultural_processed.csv")
-
-os.makedirs(PROCESSED_DATA_DIR, exist_ok=True)
+PROCESSED_DATA_PATH = "data/processed/all_india_agricultural_processed.csv"
 
 print("=" * 70)
 print("STAGE 3: DATA PREPROCESSING")

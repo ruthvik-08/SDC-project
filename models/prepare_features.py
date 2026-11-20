@@ -7,7 +7,6 @@ Purpose: Select, transform, encode, and scale features for:
          3. Agricultural Region Clustering & PCA
 """
 
-import os
 import joblib
 import pandas as pd
 import numpy as np
@@ -16,7 +15,6 @@ from sklearn.preprocessing import StandardScaler, LabelEncoder
 # Paths
 DATA_PATH = "data/processed/all_india_agricultural_processed.csv"
 MODEL_DIR = "backend/models"
-os.makedirs(MODEL_DIR, exist_ok=True)
 
 print("=" * 70)
 print("STAGE 5: FEATURE ENGINEERING")
@@ -63,8 +61,8 @@ stage_encoder = LabelEncoder()
 df["growth_stage_encoded"] = stage_encoder.fit_transform(df["growth_stage"])
 
 # Save encoders for backend inference
-joblib.dump(crop_encoder, os.path.join(MODEL_DIR, "crop_encoder.joblib"))
-joblib.dump(stage_encoder, os.path.join(MODEL_DIR, "stage_encoder.joblib"))
+joblib.dump(crop_encoder, MODEL_DIR + "/crop_encoder.joblib")
+joblib.dump(stage_encoder, MODEL_DIR + "/stage_encoder.joblib")
 print("Saved crop_encoder and stage_encoder to backend/models/")
 
 # Step 3: Combine feature columns
@@ -82,8 +80,8 @@ print(f"Target regression y_reg shape: {y_reg.shape}")
 # Step 4: Fit StandardScaler
 scaler = StandardScaler()
 X_scaled = scaler.fit_transform(X)
-joblib.dump(scaler, os.path.join(MODEL_DIR, "feature_scaler.joblib"))
-joblib.dump(all_model_features, os.path.join(MODEL_DIR, "model_features.joblib"))
+joblib.dump(scaler, MODEL_DIR + "/feature_scaler.joblib")
+joblib.dump(all_model_features, MODEL_DIR + "/model_features.joblib")
 print("Saved feature_scaler and feature list to backend/models/")
 
 # Step 5: Save engineered feature dataset for model training

@@ -13,7 +13,6 @@ Enforces correct ML practices:
   - SMOTE applied exclusively on training data
 """
 
-import os
 import json
 import numpy as np
 import pandas as pd
