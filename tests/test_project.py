@@ -163,7 +163,7 @@ def test_5_api_endpoints():
     assert r5.status_code == 200
     assert "classification" in r5.json()
     
-    # Live ML Prediction POST
+    # Live ML Prediction POST (Crop Stress)
     payload = {
         "temperature": 34.0,
         "temp_max": 40.0,
@@ -185,8 +185,27 @@ def test_5_api_endpoints():
     assert "recommendation" in res6
     assert "predicted_water_deficit_mm_per_day" in res6
     assert "irrigation_priority_index" in res6
+
+    # Live ML Prediction POST (Irrigation Priority)
+    p_payload = {
+        "cwsi": 0.45,
+        "effective_soil_wetness": 0.30,
+        "water_deficit": 2.2,
+        "ndvi": 0.50,
+        "et0": 5.0,
+        "etc": 5.5,
+        "temperature": 33.0,
+        "rainfall": 0.0,
+        "humidity": 40.0
+    }
+    r7 = client.post("/api/predict/irrigation-priority", json=p_payload)
+    assert r7.status_code == 200
+    res7 = r7.json()
+    assert 0.0 <= res7["irrigation_priority_index"] <= 100.0
+    assert "priority_category" in res7
+    assert "actionable_farmer_advisory" in res7
     
-    print(f"  -> PASSED: All 7 REST API endpoints returned 200 OK across {res1['total_districts']} districts.")
+    print(f"  -> PASSED: All 8 REST API endpoints returned 200 OK across {res1['total_districts']} districts.")
 
 def test_6_invalid_inputs_and_edge_cases():
     print("\n[Test 6] Testing Edge Cases & Error Handling...")

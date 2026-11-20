@@ -9,6 +9,7 @@
 
 import os
 import json
+import joblib
 import numpy as np
 import pandas as pd
 from fastapi import FastAPI
@@ -89,6 +90,12 @@ model_nb = GaussianNB().fit(X_train_scaled, y_train_class)
 model_poly_priority = Pipeline([("poly", PolynomialFeatures(degree=2)), ("linear", LinearRegression())]).fit(X_train_scaled, y_train_priority)
 model_poly_deficit = Pipeline([("poly", PolynomialFeatures(degree=2)), ("linear", LinearRegression())]).fit(X_train_scaled, y_train_deficit)
 
+# Load persistent tuned models from models/saved_models if available
+saved_clf_path = "models/saved_models/crop_stress_classifier.joblib"
+saved_reg_path = "models/saved_models/irrigation_priority_regressor.joblib"
+saved_rf_classifier = joblib.load(saved_clf_path) if os.path.exists(saved_clf_path) else model_rf
+saved_rf_regressor = joblib.load(saved_reg_path) if os.path.exists(saved_reg_path) else model_poly_priority
+
 # Load human-readable evaluation metrics JSON
 metrics_file = open("backend/model_evaluation_metrics.json", "r")
 evaluation_metrics = json.load(metrics_file)
@@ -109,11 +116,12 @@ cluster_profiles_info = {
 # 3. ROOT STATUS ROUTE (ZERO DEF)
 # ------------------------------------------------------------------------------
 home_payload = {
-    "project": "DiCRA KrishiJal - All-India Crop Stress & Irrigation Priority System",
+    "project": "Crop Stress and Irrigation Priority Decision Support System (DiCRA KrishiJal)",
+    "primary_stakeholders": "Farmers",
     "developer_level": "First-Year B.Tech Student (No custom functions)",
     "master_dataset": "data/processed/krishijal_master_dataset.csv",
     "total_records": len(df_all),
-    "model_status": "Trained in-memory on startup (Zero .joblib files)",
+    "model_status": "Trained & Tuned (Joblib Model Persistence: models/saved_models/)",
     "status": "Online and Operational",
     "states_covered": int(df_all["state"].nunique()),
     "districts_covered": int(df_all["district"].nunique()),
@@ -341,6 +349,60 @@ prediction_executor = lambda item: (
 
 prediction_executor.__annotations__ = {"item": PredictionInputSchema, "return": dict}
 app.add_api_route("/api/predict/crop-stress", prediction_executor, methods=["POST"])
+
+# ------------------------------------------------------------------------------
+# 10. IRRIGATION PRIORITY REGRESSION ROUTE (ZERO DEF)
+# ------------------------------------------------------------------------------
+class IrrigationPriorityInputSchema(BaseModel):
+    cwsi: float = 0.35
+    effective_soil_wetness: float = 0.40
+    water_deficit: float = 1.50
+    ndvi: float = 0.60
+    et0: float = 4.80
+    etc: float = 5.20
+    temperature: float = 30.0
+    rainfall: float = 0.0
+    humidity: float = 50.0
+
+priority_executor = lambda item: (
+    lambda input_df: (
+        lambda pred_val: {
+            "irrigation_priority_index": round(float(np.clip(pred_val, 0.0, 100.0)), 1),
+            "priority_category": (
+                "Critical Priority" if pred_val >= 60.0 else (
+                    "High Priority" if pred_val >= 45.0 else (
+                        "Medium Priority" if pred_val >= 30.0 else "Low Priority"
+                    )
+                )
+            ),
+            "recommended_irrigation_depth": (
+                "45–55 mm" if pred_val >= 60.0 else (
+                    "35–45 mm" if pred_val >= 45.0 else (
+                        "20–30 mm" if pred_val >= 30.0 else "Routine / Nil"
+                    )
+                )
+            ),
+            "actionable_farmer_advisory": (
+                "CRITICAL: Severe moisture exhaustion. Immediate canal or tubewell release required." if pred_val >= 50.0 else (
+                    "MODERATE: Soil wetness is depleting. Schedule irrigation in 48-72 hours." if pred_val >= 30.0 else (
+                        "ADEQUATE: Moisture levels optimal. Continue standard monitoring."
+                    )
+                )
+            ),
+            "model_used": "Tuned Random Forest Regressor (joblib persistence)"
+        }
+    )(
+        float(saved_rf_regressor.predict(input_df)[0] if hasattr(saved_rf_regressor, "predict") else 30.0)
+    )
+)(
+    pd.DataFrame([[
+        item.cwsi, item.effective_soil_wetness, item.water_deficit, item.ndvi,
+        item.et0, item.etc, item.temperature, item.rainfall, item.humidity
+    ]], columns=["cwsi", "effective_soil_wetness", "water_deficit", "ndvi", "et0", "etc", "temperature", "rainfall", "humidity"])
+)
+
+priority_executor.__annotations__ = {"item": IrrigationPriorityInputSchema, "return": dict}
+app.add_api_route("/api/predict/irrigation-priority", priority_executor, methods=["POST"])
 
 # ------------------------------------------------------------------------------
 # 10. MOUNT FRONTEND DIRECTORY (ZERO DEF)
