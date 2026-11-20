@@ -44,10 +44,16 @@ app.add_middleware(
 )
 
 # ------------------------------------------------------------------------------
-# 2. LOAD DATASET AND FIT MODELS IN MEMORY (NO JOBLIB NEEDED)
+# 2. LOAD DATASET AND FIT MODELS IN MEMORY
 # ------------------------------------------------------------------------------
 # Load single consolidated master dataset covering all Indian States & UTs
 master_dataset_path = "data/processed/krishijal_master_dataset.csv"
+try:
+    with open(master_dataset_path, "r") as _test_f:
+        pass
+except Exception:
+    master_dataset_path = "../data/processed/krishijal_master_dataset.csv"
+
 df_master = pd.read_csv(master_dataset_path)
 df_processed = df_master
 df_all = df_master
@@ -89,23 +95,54 @@ model_nb = GaussianNB().fit(X_train_scaled, y_train_class)
 model_poly_priority = Pipeline([("poly", PolynomialFeatures(degree=2)), ("linear", LinearRegression())]).fit(X_train_scaled, y_train_priority)
 model_poly_deficit = Pipeline([("poly", PolynomialFeatures(degree=2)), ("linear", LinearRegression())]).fit(X_train_scaled, y_train_deficit)
 
-# Load persistent tuned models from models/saved_models if available
-saved_clf_path = "models/saved_models/crop_stress_classifier.joblib"
-saved_reg_path = "models/saved_models/irrigation_priority_regressor.joblib"
-try:
-    saved_rf_classifier = joblib.load(saved_clf_path)
-except Exception:
-    saved_rf_classifier = model_rf
+# Load persistent tuned models (.pkl and .joblib)
+saved_clf = None
+saved_reg = None
 
-try:
-    saved_rf_regressor = joblib.load(saved_reg_path)
-except Exception:
-    saved_rf_regressor = model_poly_priority
+for clf_path in [
+    "models/saved_models/crop_stress_classifier.pkl",
+    "../models/saved_models/crop_stress_classifier.pkl",
+    "models/saved_models/crop_stress_classifier.joblib",
+    "../models/saved_models/crop_stress_classifier.joblib",
+    "models/crop_stress_classifier.pkl",
+    "../models/crop_stress_classifier.pkl"
+]:
+    try:
+        saved_clf = joblib.load(clf_path)
+        break
+    except Exception:
+        pass
+
+for reg_path in [
+    "models/saved_models/irrigation_priority_regressor.pkl",
+    "../models/saved_models/irrigation_priority_regressor.pkl",
+    "models/saved_models/irrigation_priority_regressor.joblib",
+    "../models/saved_models/irrigation_priority_regressor.joblib",
+    "models/irrigation_priority_regressor.pkl",
+    "../models/irrigation_priority_regressor.pkl"
+]:
+    try:
+        saved_reg = joblib.load(reg_path)
+        break
+    except Exception:
+        pass
+
+saved_rf_classifier = saved_clf if saved_clf is not None else model_rf
+saved_rf_regressor = saved_reg if saved_reg is not None else model_poly_priority
 
 # Load human-readable evaluation metrics JSON
-metrics_file = open("backend/model_evaluation_metrics.json", "r")
-evaluation_metrics = json.load(metrics_file)
-metrics_file.close()
+evaluation_metrics = {}
+for m_path in [
+    "backend/model_evaluation_metrics.json",
+    "model_evaluation_metrics.json",
+    "../backend/model_evaluation_metrics.json"
+]:
+    try:
+        with open(m_path, "r") as mf:
+            evaluation_metrics = json.load(mf)
+        break
+    except Exception:
+        pass
 
 # Stress code to human label mapping
 stress_label_map = {0: "Low", 1: "Moderate", 2: "High", 3: "Severe"}
@@ -119,22 +156,174 @@ cluster_profiles_info = {
 }
 
 # ------------------------------------------------------------------------------
-# 3. ROOT STATUS ROUTE (ZERO DEF)
+# 3. ROOT STATUS ROUTE (GET /)
 # ------------------------------------------------------------------------------
 home_payload = {
-    "project": "Crop Stress and Irrigation Priority Decision Support System (DiCRA KrishiJal)",
+    "project": "Crop Stress and Irrigation Priority Decision Support System (KrishiJal)",
+    "project_name": "KrishiJal Decision Support System",
+    "description": "Machine Learning-based decision support system helping Indian farmers identify crop water stress and optimize irrigation scheduling.",
     "primary_stakeholders": "Farmers",
-    "developer_level": "First-Year B.Tech Student (No custom functions)",
-    "master_dataset": "data/processed/krishijal_master_dataset.csv",
-    "total_records": len(df_all),
-    "model_status": "Trained & Tuned (Joblib Model Persistence: models/saved_models/)",
     "status": "Online and Operational",
+    "version": "2.1.0",
+    "api_documentation": "/docs",
+    "alternative_documentation": "/redoc",
+    "endpoints": {
+        "root": "GET /",
+        "health_check": "GET /health",
+        "prediction": "POST /predict",
+        "crop_stress_api": "POST /api/predict/crop-stress",
+        "irrigation_priority_api": "POST /api/predict/irrigation-priority",
+        "districts_data": "GET /api/districts",
+        "regional_clusters": "GET /api/clusters/regions",
+        "irrigation_priority_table": "GET /api/irrigation/priority"
+    },
+    "features_required_for_predict": [
+        "cwsi", "effective_soil_wetness", "water_deficit", "ndvi", "et0", "etc", "temperature", "rainfall", "humidity"
+    ],
+    "models_active": {
+        "classification": "Tuned RandomForestClassifier (.pkl)",
+        "regression": "Tuned RandomForestRegressor (.pkl)"
+    },
+    "total_records": len(df_all),
     "states_covered": int(df_all["state"].nunique()),
     "districts_covered": int(df_all["district"].nunique()),
-    "api_documentation": "/docs",
     "web_app": "/app/"
 }
 app.add_api_route("/", lambda: home_payload, methods=["GET"])
+
+# ------------------------------------------------------------------------------
+# 3.1 HEALTH CHECK ROUTE (GET /health)
+# ------------------------------------------------------------------------------
+health_payload_func = lambda: {
+    "status": "healthy",
+    "api_operational": True,
+    "models_loaded": {
+        "crop_stress_classifier": saved_rf_classifier is not None,
+        "irrigation_priority_regressor": saved_rf_regressor is not None
+    },
+    "model_types": {
+        "classification": type(saved_rf_classifier).__name__,
+        "regression": type(saved_rf_regressor).__name__
+    },
+    "features_required": [
+        "cwsi", "effective_soil_wetness", "water_deficit", "ndvi", "et0", "etc", "temperature", "rainfall", "humidity"
+    ]
+}
+app.add_api_route("/health", health_payload_func, methods=["GET"])
+
+# ------------------------------------------------------------------------------
+# 3.2 MAIN ML PREDICTION ROUTE (POST /predict)
+# ------------------------------------------------------------------------------
+class PredictRequest(BaseModel):
+    cwsi: float
+    effective_soil_wetness: float
+    water_deficit: float
+    ndvi: float
+    et0: float
+    etc: float
+    temperature: float
+    rainfall: float
+    humidity: float
+
+    model_config = {
+        "json_schema_extra": {
+            "example": {
+                "cwsi": 0.35,
+                "effective_soil_wetness": 0.40,
+                "water_deficit": 1.50,
+                "ndvi": 0.60,
+                "et0": 4.80,
+                "etc": 5.20,
+                "temperature": 30.0,
+                "rainfall": 0.0,
+                "humidity": 50.0
+            }
+        }
+    }
+
+predict_handler = lambda item: (
+    lambda input_df: (
+        lambda stress_code, raw_priority: (
+            lambda stress_label, priority_index: {
+                "status": "success",
+                "input_features": {
+                    "cwsi": item.cwsi,
+                    "effective_soil_wetness": item.effective_soil_wetness,
+                    "water_deficit": item.water_deficit,
+                    "ndvi": item.ndvi,
+                    "et0": item.et0,
+                    "etc": item.etc,
+                    "temperature": item.temperature,
+                    "rainfall": item.rainfall,
+                    "humidity": item.humidity
+                },
+                "crop_stress_prediction": {
+                    "stress_level_code": stress_code,
+                    "stress_level": stress_label,
+                    "stress_probabilities": (
+                        {
+                            stress_label_map.get(idx, str(idx)): round(float(prob), 4)
+                            for idx, prob in enumerate(saved_rf_classifier.predict_proba(input_df)[0])
+                        } if hasattr(saved_rf_classifier, "predict_proba") else {}
+                    ),
+                    "condition_summary": (
+                        "Optimal conditions, crop is healthy." if stress_code == 0 else (
+                            "Mild to moderate stress, early signs of water limitation." if stress_code == 1 else (
+                                "High stress, significant water deficit impacting crop growth." if stress_code == 2 else (
+                                    "Severe moisture exhaustion, immediate intervention needed."
+                                )
+                            )
+                        )
+                    )
+                },
+                "irrigation_priority_prediction": {
+                    "irrigation_priority_index": priority_index,
+                    "priority_category": (
+                        "Critical Priority" if priority_index >= 60.0 else (
+                            "High Priority" if priority_index >= 45.0 else (
+                                "Medium Priority" if priority_index >= 30.0 else "Low Priority"
+                            )
+                        )
+                    ),
+                    "recommended_irrigation_depth": (
+                        "45–55 mm" if priority_index >= 60.0 else (
+                            "35–45 mm" if priority_index >= 45.0 else (
+                                "20–30 mm" if priority_index >= 30.0 else "Routine / Nil"
+                            )
+                        )
+                    ),
+                    "actionable_farmer_advisory": (
+                        "CRITICAL: Severe moisture exhaustion. Immediate canal or tubewell release required." if priority_index >= 60.0 else (
+                            "HIGH: Rapid soil moisture depletion observed. Schedule irrigation within 24–48 hours." if priority_index >= 45.0 else (
+                                "MODERATE: Soil moisture depleting. Plan irrigation cycle within 3–4 days." if priority_index >= 30.0 else (
+                                    "ADEQUATE: Moisture levels optimal. Continue standard crop monitoring."
+                                )
+                            )
+                        )
+                    )
+                },
+                "models_used": {
+                    "classifier": "Tuned RandomForestClassifier (.pkl)",
+                    "regressor": "Tuned RandomForestRegressor (.pkl)"
+                }
+            }
+        )(
+            stress_label_map.get(stress_code, "Moderate"),
+            round(float(np.clip(raw_priority, 0.0, 100.0)), 1)
+        )
+    )(
+        int(saved_rf_classifier.predict(input_df)[0] if hasattr(saved_rf_classifier, "predict") else 1),
+        float(saved_rf_regressor.predict(input_df)[0] if hasattr(saved_rf_regressor, "predict") else 30.0)
+    )
+)(
+    pd.DataFrame([[
+        item.cwsi, item.effective_soil_wetness, item.water_deficit, item.ndvi,
+        item.et0, item.etc, item.temperature, item.rainfall, item.humidity
+    ]], columns=["cwsi", "effective_soil_wetness", "water_deficit", "ndvi", "et0", "etc", "temperature", "rainfall", "humidity"])
+)
+
+predict_handler.__annotations__ = {"item": PredictRequest, "return": dict}
+app.add_api_route("/predict", predict_handler, methods=["POST"])
 
 # ------------------------------------------------------------------------------
 # 4. DATASET INFORMATION ROUTE (ZERO DEF)

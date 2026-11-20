@@ -1,217 +1,181 @@
 {
   "info": {
-    "_postman_id": "krishijal-crop-stress-irrigation-priority-v1",
-    "name": "Crop Stress and Irrigation Priority Decision Support System API",
-    "description": "Comprehensive Postman Collection for KrishiJal FastAPI Backend.\nPrimary Stakeholders: Farmers & Agricultural Officers.\nIncludes tests for health check, dataset information, district rankings, and live machine learning inference endpoints.",
+    "_postman_id": "krishijal-deployment-fastapi-v2",
+    "name": "KrishiJal - Crop Stress & Irrigation Priority Decision Support API",
+    "description": "Postman Collection for KrishiJal FastAPI Backend & Public Deployment.\nSupports testing against Localhost (http://127.0.0.1:8000) and Public Ngrok (https://<your-id>.ngrok-free.dev) using the {{base_url}} variable.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://127.0.0.1:8000",
+      "type": "string"
+    }
+  ],
   "item": [
     {
-      "name": "System & Health",
+      "name": "1. Deployment & Health Checks",
       "item": [
         {
-          "name": "1. System Health & Operational Status",
+          "name": "GET Project Information (/)",
           "request": {
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "http://127.0.0.1:8000/",
-              "protocol": "http",
-              "host": ["127", "0", "0", "1"],
-              "port": "8000",
+              "raw": "{{base_url}}/",
+              "host": ["{{base_url}}"],
               "path": [""]
             },
-            "description": "Returns operational status, model persistence type, total records (6,654), and district coverage (159 districts across 37 States/UTs)."
+            "description": "Displays KrishiJal project details, active models, stakeholders, and full endpoint directory."
           },
           "response": []
         },
         {
-          "name": "2. Master Dataset Information & Averages",
+          "name": "GET API & Model Health (/health)",
           "request": {
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "http://127.0.0.1:8000/api/dataset/info",
-              "protocol": "http",
-              "host": ["127", "0", "0", "1"],
-              "port": "8000",
+              "raw": "{{base_url}}/health",
+              "host": ["{{base_url}}"],
+              "path": ["health"]
+            },
+            "description": "Verifies whether the FastAPI service and trained ML models (Random Forest Classifier & Regressor) are loaded and operational."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "2. Machine Learning Predictions (/predict)",
+      "item": [
+        {
+          "name": "POST Predict - Valid Agricultural Features (200 OK)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cwsi\": 0.35,\n  \"effective_soil_wetness\": 0.40,\n  \"water_deficit\": 1.50,\n  \"ndvi\": 0.60,\n  \"et0\": 4.80,\n  \"etc\": 5.20,\n  \"temperature\": 30.0,\n  \"rainfall\": 0.0,\n  \"humidity\": 50.0\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/predict",
+              "host": ["{{base_url}}"],
+              "path": ["predict"]
+            },
+            "description": "Passes authentic agronomic features to the loaded Scikit-Learn models. Returns both Crop Stress classification (Low, Moderate, High, Severe) and Irrigation Priority regression index with farmer advisories."
+          },
+          "response": []
+        },
+        {
+          "name": "POST Predict - Missing Inputs (422 Error Test)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cwsi\": 0.35,\n  \"temperature\": 30.0\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/predict",
+              "host": ["{{base_url}}"],
+              "path": ["predict"]
+            },
+            "description": "Omits mandatory input features to verify that FastAPI and Pydantic handle missing inputs properly with HTTP 422 Unprocessable Entity."
+          },
+          "response": []
+        },
+        {
+          "name": "POST Predict - Invalid Data Type (422 Error Test)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cwsi\": \"not_a_number\",\n  \"effective_soil_wetness\": 0.40,\n  \"water_deficit\": 1.50,\n  \"ndvi\": 0.60,\n  \"et0\": 4.80,\n  \"etc\": 5.20,\n  \"temperature\": 30.0,\n  \"rainfall\": 0.0,\n  \"humidity\": 50.0\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/predict",
+              "host": ["{{base_url}}"],
+              "path": ["predict"]
+            },
+            "description": "Sends string instead of float for 'cwsi' to verify Pydantic data validation with HTTP 422."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "3. Nationwide Dataset & Directory Endpoints",
+      "item": [
+        {
+          "name": "GET Master Dataset Info (/api/dataset/info)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/dataset/info",
+              "host": ["{{base_url}}"],
               "path": ["api", "dataset", "info"]
             },
-            "description": "Returns national agricultural averages, crop lists, state directories, and stress level distributions."
+            "description": "Returns national agricultural summary statistics, state lists, and district counts."
           },
           "response": []
-        }
-      ]
-    },
-    {
-      "name": "Geospatial & Districts Directory",
-      "item": [
+        },
         {
-          "name": "3. Get All 159 Districts Summary",
+          "name": "GET 159 Districts Directory (/api/districts)",
           "request": {
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "http://127.0.0.1:8000/api/districts",
-              "protocol": "http",
-              "host": ["127", "0", "0", "1"],
-              "port": "8000",
+              "raw": "{{base_url}}/api/districts",
+              "host": ["{{base_url}}"],
               "path": ["api", "districts"]
             },
-            "description": "Fetches 159 district profiles with NASA weather, soil wetness, CWSI, priority index, and Soil Health Card 2024-25 data."
+            "description": "Lists all 159 districts across all 37 Indian States and UTs with agro-climatic indicators."
           },
           "response": []
         },
         {
-          "name": "4. Get Regional Agro-Climatic Clusters (K-Means)",
+          "name": "GET Irrigation Priority Ranked List (/api/irrigation/priority)",
           "request": {
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "http://127.0.0.1:8000/api/clusters/regions",
-              "protocol": "http",
-              "host": ["127", "0", "0", "1"],
-              "port": "8000",
-              "path": ["api", "clusters", "regions"]
-            },
-            "description": "Returns K-Means clustering (k=4) and 2D PCA spatial coordinates for nationwide district segmentation."
-          },
-          "response": []
-        },
-        {
-          "name": "5. Get All-India Irrigation Priority Rankings",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "http://127.0.0.1:8000/api/irrigation/priority",
-              "protocol": "http",
-              "host": ["127", "0", "0", "1"],
-              "port": "8000",
+              "raw": "{{base_url}}/api/irrigation/priority",
+              "host": ["{{base_url}}"],
               "path": ["api", "irrigation", "priority"]
             },
-            "description": "Returns all 159 districts in strict descending rank order of Irrigation Priority Index with actionable irrigation water depth recommendations."
-          },
-          "response": []
-        }
-      ]
-    },
-    {
-      "name": "Machine Learning Predictions (Farmers)",
-      "item": [
-        {
-          "name": "6. Crop Stress Classification - Valid Farmer Request",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"temperature\": 34.0,\n  \"temp_max\": 40.0,\n  \"temp_min\": 26.0,\n  \"rainfall\": 0.0,\n  \"humidity\": 32.0,\n  \"effective_soil_wetness\": 0.28,\n  \"solar_radiation\": 23.0,\n  \"soil_ph\": 8.1,\n  \"soil_organic_carbon\": 0.35,\n  \"crop_type\": \"Cotton\",\n  \"growth_stage\": \"Reproductive\",\n  \"selected_model\": \"Random Forest\"\n}"
-            },
-            "url": {
-              "raw": "http://127.0.0.1:8000/api/predict/crop-stress",
-              "protocol": "http",
-              "host": ["127", "0", "0", "1"],
-              "port": "8000",
-              "path": ["api", "predict", "crop-stress"]
-            },
-            "description": "Submits farmer field parameters and returns predicted crop stress severity (Low, Moderate, High, Severe) and recommended irrigation action."
+            "description": "Returns all 159 districts sorted in strict descending order of irrigation urgency."
           },
           "response": []
         },
         {
-          "name": "7. Crop Stress Classification - Invalid Input (422 Error Test)",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"temperature\": \"very_hot_weather_string\",\n  \"rainfall\": 0.0\n}"
-            },
-            "url": {
-              "raw": "http://127.0.0.1:8000/api/predict/crop-stress",
-              "protocol": "http",
-              "host": ["127", "0", "0", "1"],
-              "port": "8000",
-              "path": ["api", "predict", "crop-stress"]
-            },
-            "description": "Tests Pydantic validation error handling by passing an invalid string data type for temperature. Expects HTTP 422 Unprocessable Entity."
-          },
-          "response": []
-        },
-        {
-          "name": "8. Irrigation Priority Regression - Valid Farmer Request",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"cwsi\": 0.55,\n  \"effective_soil_wetness\": 0.25,\n  \"water_deficit\": 3.0,\n  \"ndvi\": 0.42,\n  \"et0\": 5.8,\n  \"etc\": 6.2,\n  \"temperature\": 36.0,\n  \"rainfall\": 0.0,\n  \"humidity\": 35.0\n}"
-            },
-            "url": {
-              "raw": "http://127.0.0.1:8000/api/predict/irrigation-priority",
-              "protocol": "http",
-              "host": ["127", "0", "0", "1"],
-              "port": "8000",
-              "path": ["api", "predict", "irrigation-priority"]
-            },
-            "description": "Submits continuous agronomic observations to the saved Tuned Random Forest Regressor and receives continuous Irrigation Priority Index (0-100) and actionable irrigation depth."
-          },
-          "response": []
-        },
-        {
-          "name": "9. Irrigation Priority Regression - Invalid Input (422 Error Test)",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"cwsi\": \"invalid_string_instead_of_float\",\n  \"effective_soil_wetness\": 0.25\n}"
-            },
-            "url": {
-              "raw": "http://127.0.0.1:8000/api/predict/irrigation-priority",
-              "protocol": "http",
-              "host": ["127", "0", "0", "1"],
-              "port": "8000",
-              "path": ["api", "predict", "irrigation-priority"]
-            },
-            "description": "Tests schema validation on the regression endpoint. Expects HTTP 422."
-          },
-          "response": []
-        },
-        {
-          "name": "10. Model Evaluation Benchmarks",
+          "name": "GET Model Evaluation Metrics (/api/models/evaluation)",
           "request": {
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "http://127.0.0.1:8000/api/models/evaluation",
-              "protocol": "http",
-              "host": ["127", "0", "0", "1"],
-              "port": "8000",
+              "raw": "{{base_url}}/api/models/evaluation",
+              "host": ["{{base_url}}"],
               "path": ["api", "models", "evaluation"]
             },
-            "description": "Returns full benchmark comparison metrics (Accuracy, Precision, Recall, F1, MAE, RMSE, R2, K-Means silhouette) evaluated on the unseen test set."
+            "description": "Returns benchmark test-set evaluation metrics for all algorithms."
           },
           "response": []
         }
