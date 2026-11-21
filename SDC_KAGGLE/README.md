@@ -1,74 +1,93 @@
-# SDC Machine Learning Project — Kaggle & FastAPI Deployment Guide
+# SDC Machine Learning Project — Kaggle & Render Deployment Guide
 
-This guide describes how to run the KrishiJal Machine Learning pipeline and deploy the FastAPI backend on Kaggle Notebooks with public Ngrok tunneling.
+This repository contains the beginner-friendly Machine Learning workflow for **KrishiJal: Crop Stress and Irrigation Priority Decision Support System**.
 
----
-
-## 1. Uploading the Dataset to Kaggle
-
-1. Sign in to your account at [kaggle.com](https://www.kaggle.com).
-2. In the left navigation sidebar, click **Datasets**, then click **New Dataset** (or **+ Create** -> **New Dataset**).
-3. Set the Dataset Title to: `krishijal-dataset`.
-4. Upload the dataset file: `data/processed/krishijal_master_dataset.csv` (or drag and drop it from your project folder).
-5. Click **Create** to finalize the upload.
+The project follows a clean academic architecture:
+**Kaggle → Model Training → Saved Models → GitHub → Render → FastAPI → Postman / Frontend**
 
 ---
 
-## 2. Setting Up and Executing the Kaggle Notebook
+## 1. Allowed Libraries
 
-1. In Kaggle, click **+ Create** -> **New Notebook**.
-2. On the right-hand panel under **Input**, click **+ Add Input**.
-3. Search for your uploaded dataset (`krishijal-dataset`) and click **Add**.
-4. In the top menu bar, click **File** -> **Import Notebook**, and select:
-   `SDC_KAGGLE/SDC_Kaggle_Notebook.ipynb`
-5. Verify that the Notebook settings use:
-   - **Environment**: Python 3
-   - **Accelerator**: None / CPU (or GPU if preferred)
-   - **Internet**: **Must be toggled ON** (in the right panel under *Settings* -> *Internet* -> *Turn on*) so that Uvicorn and Ngrok can connect to the web.
-6. Run the notebook cells sequentially from top to bottom by clicking **Run All** or executing each cell with `Shift + Enter`.
+* `pandas` — Data loading and tabular data manipulation
+* `numpy` — Mathematical array calculations
+* `matplotlib.pyplot` — Visual plots (Count plots, histograms, scatter plots)
+* `seaborn` — Statistical visualizations (Heatmaps, box plots)
+* `scikit-learn` — Preprocessing, classification, regression, and evaluation
+* `joblib` — Model persistence and loading
+* `fastapi` & `uvicorn` & `pydantic` — API backend and data validation
 
 ---
 
-## 3. Configuring Ngrok Authentication
+## 2. Machine Learning Workflow in Kaggle
 
-1. Obtain your free Ngrok AuthToken from your dashboard at [dashboard.ngrok.com/get-started/your-authtoken](https://dashboard.ngrok.com/get-started/your-authtoken).
-2. You can provide the token in either of two ways:
-   - **Interactive Prompt**: When executing Cell 20, an input prompt will ask: `Enter Ngrok AuthToken:`. Paste your token and press `Enter`.
-   - **Kaggle Secrets**: In the notebook menu, go to **Add-ons** -> **Secrets**, add a secret named `NGROK_AUTHTOKEN`, and paste your token value.
-3. The notebook will automatically authenticate with Ngrok without saving or hardcoding your token into the code.
+The notebook `SDC_Kaggle_Notebook.ipynb` executes the complete ML pipeline in 14 straightforward steps:
 
----
-
-## 4. Starting the FastAPI Application
-
-1. The notebook automatically trains the machine learning models and saves them to `/kaggle/working/models/saved_models/`.
-2. It starts the Uvicorn server in a non-blocking background thread on port 8000.
-3. `nest_asyncio` ensures that the FastAPI event loop runs smoothly inside the Jupyter environment.
-4. The server stays online for the duration of the active Kaggle notebook session.
-
----
-
-## 5. Obtaining the Public URL
-
-When Cell 20 executes, it prints your live public endpoints:
-
-```
-https://<unique-subdomain>.ngrok-free.dev
-https://<unique-subdomain>.ngrok-free.dev/docs
-https://<unique-subdomain>.ngrok-free.dev/health
-```
-
-- **Interactive API Documentation (Swagger UI)**: Open `https://<unique-subdomain>.ngrok-free.dev/docs` in your browser.
-- **Health Check**: Open `https://<unique-subdomain>.ngrok-free.dev/health` to verify that all classification and regression models are loaded and active.
+1. **Import Libraries**: Loads NumPy, Pandas, Matplotlib, Seaborn, Scikit-learn, and Joblib.
+2. **Load Dataset**: Reads `krishijal_master_dataset.csv` from `/kaggle/input/` or local directory.
+3. **Display Dataset Information**: Shows `.head()`, `.info()`, and `.describe()`.
+4. **Check Missing Values**: Inspects missing counts across columns.
+5. **Handle Missing Values**: Cleans missing records and drops duplicates.
+6. **Remove Unnecessary Columns**: Selects core observable features.
+7. **Encode Categorical Columns**: Uses `LabelEncoder` for `crop_type` and `growth_stage`.
+8. **Visualizations**: Generates Count plots, Histograms, Correlation heatmaps, and Box plots.
+9. **Train-Test Split & Scaling**: 80/20 train/test split with `StandardScaler`.
+10. **Train Classification Models**:
+    - Logistic Regression
+    - Decision Tree Classifier
+    - Random Forest Classifier
+11. **Compare Classification Performance**: Evaluates Accuracy, Precision, Recall, and F1-Score.
+12. **Evaluate with Confusion Matrix**: Visualizes prediction outcomes for the Random Forest classifier.
+13. **Train Regression Models**:
+    - Linear Regression
+    - Decision Tree Regressor
+    - Random Forest Regressor
+14. **Compare Regression Performance & Actual vs Predicted**: Evaluates MAE, MSE, RMSE, and R² Score, with a scatter plot.
+15. **Hyperparameter Tuning**: Performs simple tuning with `GridSearchCV`.
+16. **Save Trained Models**: Saves `.pkl` model files to `/kaggle/working/models/saved_models/`.
 
 ---
 
-## 6. Testing Prediction Endpoints Using Postman
+## 3. How to Run on Kaggle
 
-### Request 1: Health Check
+1. Go to [kaggle.com](https://www.kaggle.com) and click **+ Create** -> **New Dataset**.
+2. Upload `krishijal_master_dataset.csv` and name the dataset `krishijal-dataset`.
+3. Create a **New Notebook** (`+ Create` -> `New Notebook`).
+4. In the right panel under **Input**, click **+ Add Input** and add your `krishijal-dataset`.
+5. In the top menu, click **File** -> **Import Notebook**, and select `SDC_Kaggle_Notebook.ipynb`.
+6. Click **Run All** (or press `Shift + Enter` on each cell).
+7. The notebook will run all cells in order and save all trained models into `/kaggle/working/models/saved_models/`.
+8. To download the saved models: In the right panel under **Output**, click the three dots next to `/kaggle/working/` and click **Download**.
+
+---
+
+## 4. Deploying FastAPI on Render
+
+1. Commit and push your saved models and code to your GitHub repository:
+   ```bash
+   git add .
+   git commit -m "Update models and beginner-friendly FastAPI backend"
+   git push origin main
+   ```
+2. Log in to [dashboard.render.com](https://dashboard.render.com).
+3. Click **New +** -> **Web Service**.
+4. Connect your GitHub repository (`SDC-project`).
+5. Configure the service:
+   - **Environment**: `Python 3`
+   - **Build Command**: `pip install -r requirements.txt`
+   - **Start Command**: `uvicorn main:app --host 0.0.0.0 --port $PORT`
+6. Click **Create Web Service**.
+7. Render will automatically build the service, install dependencies, load the models, and launch the application.
+
+---
+
+## 5. Testing API Endpoints in Postman
+
+Once deployed on Render (or locally at `http://127.0.0.1:8000`), test the following endpoints:
+
+### Endpoint 1: Health Check
 * **Method**: `GET`
-* **URL**: `https://<your-ngrok-url>.ngrok-free.dev/health`
-* **Expected Status**: `200 OK`
+* **URL**: `https://<your-render-app>.onrender.com/health` (or `http://127.0.0.1:8000/health`)
 * **Expected Response**:
 ```json
 {
@@ -91,48 +110,25 @@ https://<unique-subdomain>.ngrok-free.dev/health
 
 ---
 
-### Request 2: Crop Stress & Irrigation Prediction (Primary Endpoint)
+### Endpoint 2: Crop Stress & Irrigation Prediction
 * **Method**: `POST`
-* **URL**: `https://<your-ngrok-url>.ngrok-free.dev/predict`
-* **Headers**:
-  - `Content-Type: application/json`
+* **URL**: `https://<your-render-app>.onrender.com/predict` (or `http://127.0.0.1:8000/predict`)
+* **Headers**: `Content-Type: application/json`
 * **Body** (`raw` JSON):
 ```json
 {
   "temperature": 34.0,
-  "temp_max": 39.5,
-  "temp_min": 25.0,
   "rainfall": 0.0,
   "humidity": 45.0,
   "effective_soil_wetness": 0.28,
-  "solar_radiation": 22.0,
-  "soil_ph": 7.5,
-  "soil_organic_carbon": 0.48,
   "crop_type": "Cotton",
   "growth_stage": "Reproductive"
 }
 ```
-* **Expected Status**: `200 OK`
 * **Expected Response**:
 ```json
 {
   "status": "success",
-  "input_features": {
-    "temperature": 34.0,
-    "temp_max": 39.5,
-    "temp_min": 25.0,
-    "rainfall": 0.0,
-    "humidity": 45.0,
-    "effective_soil_wetness": 0.28,
-    "solar_radiation": 22.0,
-    "soil_ph": 7.5,
-    "soil_organic_carbon": 0.48,
-    "ndvi": 0.606,
-    "et0": 5.48,
-    "etc": 6.03,
-    "crop_code": 1.0,
-    "stage_code": 2.0
-  },
   "crop_stress_prediction": {
     "stress_level_code": 2,
     "stress_level": "High",
@@ -149,36 +145,7 @@ https://<unique-subdomain>.ngrok-free.dev/health
 
 ---
 
-### Request 3: Interactive Crop Stress Simulator
-* **Method**: `POST`
-* **URL**: `https://<your-ngrok-url>.ngrok-free.dev/api/predict/crop-stress`
-* **Headers**:
-  - `Content-Type: application/json`
-* **Body** (`raw` JSON):
-```json
-{
-  "temperature": 33.0,
-  "rainfall": 0.0,
-  "effective_soil_wetness": 0.25,
-  "selected_model": "Random Forest"
-}
-```
-* **Expected Status**: `200 OK`
-
----
-
-## 7. Downloading Saved Models from Kaggle
-
-After the notebook runs, all trained models are stored in `/kaggle/working/models/saved_models/`:
-- `crop_stress_classifier.pkl`
-- `irrigation_priority_regressor.pkl`
-- `feature_scaler.pkl`
-- `crop_stress_decision_tree.pkl`
-- `crop_stress_logistic_regression.pkl`
-- `irrigation_decision_tree.pkl`
-- `irrigation_linear_regression.pkl`
-
-To download them:
-1. In the right panel of the Kaggle notebook, click on **Output**.
-2. Locate the `/kaggle/working/` folder.
-3. Click the three dots next to any model file or folder and select **Download**.
+### Endpoint 3: Interactive Swagger UI Documentation
+* **Method**: `GET` in your web browser
+* **URL**: `https://<your-render-app>.onrender.com/docs` (or `http://127.0.0.1:8000/docs`)
+* Provides interactive documentation where you can inspect all parameters and execute sample requests directly.
