@@ -4,12 +4,11 @@ Author: First-Year B.Tech Student Project
 Purpose: Starts the FastAPI backend and serves the frontend on http://127.0.0.1:8000
 """
 
-import os
 import sys
 import uvicorn
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 8000))
+    port = 8000
     print("=" * 75)
     print("🚀 STARTING KRISHIJAL: ALL-INDIA CROP STRESS & IRRIGATION PRIORITY SYSTEM")
     print("=" * 75)
