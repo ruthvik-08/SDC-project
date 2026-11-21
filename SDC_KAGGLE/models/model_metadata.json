@@ -1,0 +1,50 @@
+{
+  "project": "KrishiJal Crop Stress & Irrigation Priority Decision Support System",
+  "version": "2.2.0",
+  "feature_names": [
+    "temperature",
+    "temp_max",
+    "temp_min",
+    "rainfall",
+    "humidity",
+    "effective_soil_wetness",
+    "solar_radiation",
+    "soil_ph",
+    "soil_organic_carbon",
+    "ndvi",
+    "et0",
+    "etc",
+    "crop_code",
+    "stage_code"
+  ],
+  "n_features": 14,
+  "classifier": {
+    "model_name": "RandomForestClassifier",
+    "best_params": {
+      "max_depth": 10,
+      "min_samples_leaf": 1,
+      "min_samples_split": 4,
+      "n_estimators": 50
+    },
+    "test_accuracy": 0.9962434259954921,
+    "test_weighted_f1": 0.996264187089428,
+    "classes": [
+      "Low",
+      "Moderate",
+      "High",
+      "Severe"
+    ]
+  },
+  "regressor": {
+    "model_name": "RandomForestRegressor",
+    "best_params": {
+      "max_depth": 15,
+      "min_samples_leaf": 1,
+      "min_samples_split": 2,
+      "n_estimators": 100
+    },
+    "test_r2": 0.995381212641591,
+    "test_mae": 0.42932177880957606,
+    "test_rmse": 0.9397509678701959
+  }
+}
