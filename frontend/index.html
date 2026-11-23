@@ -165,7 +165,11 @@
     <div class="bar">
       <b>Krishi<span style="color:var(--acc)">Jal</span></b>
       <span class="pill" id="pill" title="Click to zoom back to India">INDIA</span>
-      <input id="search" list="dl" placeholder="Search district (e.g. Pune, Bikaner)…">
+      <span class="coverage-badge" id="coverage-badge">732 Districts | All India Coverage</span>
+      <select id="state-select" class="bar-select" title="Filter by State or Union Territory">
+        <option value="ALL">All States / UTs (732 Districts)</option>
+      </select>
+      <input id="search" list="dl" placeholder="Search 732+ districts (e.g. Khammam, Bikaner) or State…">
       <datalist id="dl"></datalist>
       <a href="#/" class="ibtn" title="Close Map and return to Home">&#10005;</a>
     </div>

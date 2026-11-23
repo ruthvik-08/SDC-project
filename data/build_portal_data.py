@@ -27,11 +27,17 @@ aliases = {
     ("goa", "salcete"): ("Goa", "South Goa"),
     ("uttarakhand", "pantnagar"): ("Uttarakhand", "Udham Singh Nagar"),
     ("westbengal", "burdwan"): ("West Bengal", "Purba Bardhaman"),
-    ("dadranagarhavelidmandiu", "daman"): ("Dadra and Nagar Haveli", "Dadra and Nagar Haveli"),
-    ("dadranagarhavelidmandiu", "diu"): ("Dadra and Nagar Haveli", "Dadra and Nagar Haveli"),
-    ("dadranagarhavelidmandiu", "dadranagarhaveli"): ("Dadra and Nagar Haveli", "Dadra and Nagar Haveli"),
+    ("dadranagarhavelidamandiu", "daman"): ("Dadra and Nagar Haveli", "Dadra and Nagar Haveli"),
+    ("dadranagarhavelidamandiu", "diu"): ("Dadra and Nagar Haveli", "Dadra and Nagar Haveli"),
+    ("dadranagarhavelidamandiu", "dadranagarhaveli"): ("Dadra and Nagar Haveli", "Dadra and Nagar Haveli"),
     ("telangana", "warangal"): ("Telangana", "Warangal Urban"),
     ("andamannicobar", "northmiddleandaman"): ("Andaman and Nicobar", "North and Middle Andaman"),
+    ("meghalaya", "ribhoi"): ("Meghalaya", "Ribhoi"),
+    ("jammuandkashmir", "anantnag"): ("JAMMU & KASHMIR", "Anantnag"),
+    ("jammuandkashmir", "baramulla"): ("JAMMU & KASHMIR", "Baramulla"),
+    ("jammuandkashmir", "jammu"): ("JAMMU & KASHMIR", "Jammu"),
+    ("jammuandkashmir", "srinagar"): ("JAMMU & KASHMIR", "Srinagar"),
+    ("jammuandkashmir", "udhampur"): ("JAMMU & KASHMIR", "Udhampur"),
 }
 
 out = {}
