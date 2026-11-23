@@ -1,9 +1,9 @@
 var LAYERS = {
-  stress:{name:"Stress level",cat:["#2e9e5b","#e6c229","#e8873a","#c0392b"],labels:["Low","Moderate","High","Severe"]},
+  stress:{name:"Crop Stress",cat:["#2e9e5b","#e6c229","#e8873a","#c0392b"],labels:["Low","Moderate","High","Severe"]},
   ipi:{name:"Irrigation priority",key:"ipi",unit:"/100",ramp:["#fbeee6","#f1b896","#d9784f","#b5573a","#7a2e17"]},
+  wet:{name:"Soil wetness",key:"soil_wetness",unit:"",ramp:["#f3ead7","#d9c79a","#9fb98c","#4f9d9a","#1f6a7a"]},
   ndvi:{name:"NDVI",key:"ndvi",unit:"",ramp:["#ffff66","#a6e07a","#4fbf8a","#14917f","#1d4e5f"]},
-  rainfall:{name:"Rainfall",key:"rainfall",unit:" mm/day",ramp:["#eef6fb","#bcdcee","#7fb8de","#3f86c4","#1f4e8c"]},
-  wet:{name:"Soil wetness",key:"soil_wetness",unit:"",ramp:["#f3ead7","#d9c79a","#9fb98c","#4f9d9a","#1f6a7a"]}
+  rainfall:{name:"Rainfall",key:"rainfall",unit:" mm/day",ramp:["#eef6fb","#bcdcee","#7fb8de","#3f86c4","#1f4e8c"]}
 };
 
 var BASEMAP_CONFIG = {
@@ -36,7 +36,7 @@ var BASEMAP_CONFIG = {
 
 var currentBasemap = "clean";
 var baseTileLayer = null;
-var layer = "ndvi", DATA = {}, statesGeo, distsGeo, stateLayer, distLayer = null, current = null, selected = null, ranges = {};
+var layer = "stress", DATA = {}, statesGeo, distsGeo, stateLayer, distLayer = null, current = null, selected = null, ranges = {};
 var map = L.map("map", {zoomControl:false, zoomSnap:0.25}).setView([22.5, 80], 4.5);
 L.control.zoom({position:"bottomright"}).addTo(map);
 
@@ -224,5 +224,232 @@ document.getElementById("search").onchange = function () {
     var parts = id.split("|"); showState(parts[0]); selected = {state:parts[0], district:parts[1]}; showInfo(DATA[id], selected); } }
 };
 
-function route() { var on = location.hash.indexOf("#/map") === 0; document.getElementById("app").classList.toggle("on", on); if (on) setTimeout(function () { map.invalidateSize(); }, 50); }
-window.onhashchange = route; route();
+// ========================================================
+// SECTION 2: IRRIGATION PRIORITY RANKING DATA & FILTERS
+// ========================================================
+var allPriorityList = [];
+var currentRankCategory = "ALL";
+
+function loadPriorityData() {
+  fetch("/api/irrigation/priority").then(function(r) { return r.json(); }).then(function(res) {
+    allPriorityList = res.ranked_districts || [];
+    renderPriorityKPIs(allPriorityList);
+    populateStateDropdown(allPriorityList);
+    renderTop10Chart(allPriorityList.slice(0, 10));
+    renderPriorityTable(allPriorityList);
+  }).catch(function(err) {
+    console.error("Could not load priority rankings:", err);
+  });
+}
+
+function renderPriorityKPIs(list) {
+  var high = 0, med = 0, low = 0, totalScore = 0;
+  for (var i = 0; i < list.length; i++) {
+    var sc = list[i].irrigation_priority_index;
+    totalScore += sc;
+    if (sc >= 50.0) high++;
+    else if (sc >= 35.0) med++;
+    else low++;
+  }
+  document.getElementById("rank-total-districts").textContent = list.length;
+  document.getElementById("rank-high-count").textContent = high;
+  document.getElementById("rank-med-count").textContent = med;
+  document.getElementById("rank-low-count").textContent = low;
+  document.getElementById("rank-avg-ipi").textContent = (totalScore / (list.length || 1)).toFixed(1);
+}
+
+function populateStateDropdown(list) {
+  var states = {};
+  for (var i = 0; i < list.length; i++) {
+    states[list[i].state] = true;
+  }
+  var sortedStates = Object.keys(states).sort();
+  var sel = document.getElementById("ranking-state-filter");
+  for (var j = 0; j < sortedStates.length; j++) {
+    var opt = document.createElement("option");
+    opt.value = sortedStates[j];
+    opt.textContent = sortedStates[j];
+    sel.appendChild(opt);
+  }
+}
+
+function renderTop10Chart(top10) {
+  var container = document.getElementById("top-10-bars");
+  var html = "";
+  for (var i = 0; i < top10.length; i++) {
+    var d = top10[i];
+    var pct = Math.min(100, (d.irrigation_priority_index / 70) * 100).toFixed(0);
+    var color = d.irrigation_priority_index >= 50.0 ? "var(--red)" : (d.irrigation_priority_index >= 35.0 ? "var(--amber)" : "var(--green)");
+    html += "<div class='bar-chart-row'>"
+          + "<div class='bar-chart-label' title='" + d.district + ", " + d.state + "'><b>#" + d.rank + "</b> " + d.district + " (" + d.state + ")</div>"
+          + "<div class='bar-chart-track'><div class='bar-chart-fill' style='width:" + pct + "%;background:" + color + ";'>" + d.recommended_irrigation_depth + "</div></div>"
+          + "<div class='bar-chart-val' style='color:" + color + ";'>" + d.irrigation_priority_index + "</div>"
+          + "</div>";
+  }
+  container.innerHTML = html;
+}
+
+function renderPriorityTable(list) {
+  var tbody = document.getElementById("priority-tbody");
+  if (!list || list.length === 0) {
+    tbody.innerHTML = "<tr><td colspan='9' style='text-align:center;padding:20px;color:var(--mute);'>No districts matching filter criteria.</td></tr>";
+    return;
+  }
+  var html = "";
+  for (var i = 0; i < list.length; i++) {
+    var d = list[i];
+    var badgeCls = d.irrigation_priority_index >= 50.0 ? "high" : (d.irrigation_priority_index >= 35.0 ? "med" : "low");
+    html += "<tr>"
+          + "<td class='mono'><b>#" + d.rank + "</b></td>"
+          + "<td><b>" + d.district + "</b></td>"
+          + "<td>" + d.state + "</td>"
+          + "<td>" + (d.crop_type || "Mixed") + "</td>"
+          + "<td class='mono'><b>" + d.irrigation_priority_index + "</b></td>"
+          + "<td><span class='badge " + badgeCls + "'>" + d.priority_category + "</span></td>"
+          + "<td>" + d.recommended_irrigation_depth + "</td>"
+          + "<td class='mono'>" + d.soil_moisture_level + "</td>"
+          + "<td class='mono'>" + d.daily_rainfall_mm + " mm</td>"
+          + "</tr>";
+  }
+  tbody.innerHTML = html;
+}
+
+function filterRankings() {
+  var search = (document.getElementById("ranking-search").value || "").toLowerCase().trim();
+  var state = document.getElementById("ranking-state-filter").value;
+  var filtered = allPriorityList.filter(function(d) {
+    var matchesSearch = !search || d.district.toLowerCase().indexOf(search) !== -1 || d.state.toLowerCase().indexOf(search) !== -1;
+    var matchesState = state === "ALL" || d.state === state;
+    var matchesCat = currentRankCategory === "ALL" || d.priority_category === currentRankCategory;
+    return matchesSearch && matchesState && matchesCat;
+  });
+  renderPriorityTable(filtered);
+}
+
+document.getElementById("ranking-search").oninput = filterRankings;
+document.getElementById("ranking-state-filter").onchange = filterRankings;
+
+var rankFilterBtns = document.querySelectorAll(".filter-tabs .filter-btn");
+for (var i = 0; i < rankFilterBtns.length; i++) {
+  rankFilterBtns[i].onclick = function() {
+    for (var j = 0; j < rankFilterBtns.length; j++) rankFilterBtns[j].classList.remove("active");
+    this.classList.add("active");
+    currentRankCategory = this.dataset.cat;
+    filterRankings();
+  };
+}
+
+// ========================================================
+// SECTION 4: REGIONAL AGRO-CLIMATIC CLUSTERS DATA & FILTER
+// ========================================================
+var allClustersList = [];
+
+function loadClustersData() {
+  fetch("/api/clusters/regions").then(function(r) { return r.json(); }).then(function(res) {
+    allClustersList = res.districts_clustered || [];
+    renderClustersTable(allClustersList);
+  }).catch(function(err) {
+    console.error("Could not load regional clusters:", err);
+  });
+}
+
+function renderClustersTable(list) {
+  var tbody = document.getElementById("clusters-tbody");
+  if (!list || list.length === 0) {
+    tbody.innerHTML = "<tr><td colspan='8' style='text-align:center;padding:20px;color:var(--mute);'>No clustered districts matching criteria.</td></tr>";
+    return;
+  }
+  var clusterColors = {
+    0: "#d9784f",
+    1: "#0f766e",
+    2: "#c0392b",
+    3: "#2e9e5b"
+  };
+  var html = "";
+  for (var i = 0; i < list.length; i++) {
+    var c = list[i];
+    var col = clusterColors[c.cluster_id] || "var(--acc)";
+    html += "<tr>"
+          + "<td><b>" + c.district + "</b></td>"
+          + "<td>" + c.state + "</td>"
+          + "<td><span class='badge' style='background:" + col + "20;color:" + col + ";border:1px solid " + col + "60;'>Zone " + c.cluster_id + ": " + c.cluster_name + "</span></td>"
+          + "<td>" + (c.crop || "Mixed") + "</td>"
+          + "<td class='mono'>" + c.mean_temperature + " °C</td>"
+          + "<td class='mono'>" + c.mean_rainfall + " mm</td>"
+          + "<td class='mono'>" + c.mean_soil_moisture + "</td>"
+          + "<td class='mono'><b>" + c.mean_priority_index + "</b></td>"
+          + "</tr>";
+  }
+  tbody.innerHTML = html;
+}
+
+function filterClusters() {
+  var search = (document.getElementById("cluster-search").value || "").toLowerCase().trim();
+  var zone = document.getElementById("cluster-zone-filter").value;
+  var filtered = allClustersList.filter(function(d) {
+    var matchesSearch = !search || d.district.toLowerCase().indexOf(search) !== -1 || d.state.toLowerCase().indexOf(search) !== -1;
+    var matchesZone = zone === "ALL" || String(d.cluster_id) === String(zone);
+    return matchesSearch && matchesZone;
+  });
+  renderClustersTable(filtered);
+}
+
+document.getElementById("cluster-search").oninput = filterClusters;
+document.getElementById("cluster-zone-filter").onchange = filterClusters;
+
+// ========================================================
+// HASH ROUTER FOR SEAMLESS CLIENT-SIDE NAVIGATION
+// ========================================================
+function route() {
+  var hash = location.hash || "#/";
+  var appEl = document.getElementById("app");
+  var homeEl = document.getElementById("view-home");
+  var rankingEl = document.getElementById("view-ranking");
+  var benchmarksEl = document.getElementById("view-benchmarks");
+  var clustersEl = document.getElementById("view-clusters");
+
+  // Deactivate all subviews
+  appEl.classList.remove("on");
+  homeEl.classList.remove("on");
+  rankingEl.classList.remove("on");
+  benchmarksEl.classList.remove("on");
+  clustersEl.classList.remove("on");
+
+  // Nav link indicators
+  var navLinks = document.querySelectorAll("nav.top a.nav-link");
+  for (var i = 0; i < navLinks.length; i++) {
+    navLinks[i].classList.remove("active");
+  }
+
+  if (hash.indexOf("#/map") === 0) {
+    appEl.classList.add("on");
+    document.getElementById("nav-map").classList.add("active");
+    setTimeout(function() { map.invalidateSize(); }, 60);
+  } else if (hash.indexOf("#/ranking") === 0) {
+    rankingEl.classList.add("on");
+    document.getElementById("nav-ranking").classList.add("active");
+    if (allPriorityList.length === 0) loadPriorityData();
+    window.scrollTo({top:0, behavior:"smooth"});
+  } else if (hash.indexOf("#/benchmarks") === 0) {
+    benchmarksEl.classList.add("on");
+    document.getElementById("nav-benchmarks").classList.add("active");
+    window.scrollTo({top:0, behavior:"smooth"});
+  } else if (hash.indexOf("#/clusters") === 0) {
+    clustersEl.classList.add("on");
+    document.getElementById("nav-clusters").classList.add("active");
+    if (allClustersList.length === 0) loadClustersData();
+    window.scrollTo({top:0, behavior:"smooth"});
+  } else {
+    // Default Home
+    homeEl.classList.add("on");
+    document.getElementById("nav-home").classList.add("active");
+    window.scrollTo({top:0, behavior:"smooth"});
+  }
+}
+
+window.onhashchange = route;
+route();
+
+// Preload priority and clusters data in background
+loadPriorityData();
+loadClustersData();

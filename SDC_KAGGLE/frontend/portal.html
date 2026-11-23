@@ -1,43 +1,572 @@
 <!DOCTYPE html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>KrishiJal – Crop Stress Portal</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-<link rel="stylesheet" href="portal.css"></head>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>KrishiJal – Crop Stress &amp; Irrigation Intelligence Portal</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <link rel="stylesheet" href="portal.css">
+</head>
 <body>
-<nav class="top"><b>Krishi<span>Jal</span></b><span class="sp"></span>
-<a href="#/" class="keep">Home</a><a href="#/">About</a><a href="#/map" class="keep">Thematic Portals</a><a href="#/">Knowledge Hub</a></nav>
 
-<section class="hero"><div class="in"><span class="tag">Crop Stress &amp; Irrigation Priority</span>
-<h1>Open data for climate-resilient agriculture</h1>
-<p class="lead">Explore real district-level crop water stress, vegetation and rainfall data across India on an interactive map.</p>
-<a class="btn fill" href="#/map">Access Portal</a></div></section>
+  <!-- Top Sticky Navigation Bar -->
+  <nav class="top">
+    <b>Krishi<span>Jal</span></b>
+    <span class="sp"></span>
+    <a href="#/" class="nav-link" id="nav-home">Home</a>
+    <a href="#/map" class="nav-link" id="nav-map">Geospatial Map</a>
+    <a href="#/ranking" class="nav-link" id="nav-ranking">Irrigation Priority</a>
+    <a href="#/benchmarks" class="nav-link" id="nav-benchmarks">ML Benchmarks</a>
+    <a href="#/clusters" class="nav-link" id="nav-clusters">Agro-Climatic Clusters</a>
+  </nav>
 
-<section class="sec"><span class="tag">Solutions</span><h2>Thematic portals</h2>
-<div class="grid">
-<a class="tile big" href="#/map"><small>FLAGSHIP</small><h3>Crop Stress Dashboard</h3><span>Explore stress, irrigation priority, NDVI and rainfall by state and district.</span></a>
-<div class="tile"><small>CLIMATE</small><h3>Rainfall</h3><span class="soon">COMING SOON</span></div>
-<div class="tile"><small>AGRICULTURE</small><h3>Crop Yield</h3><span class="soon">COMING SOON</span></div>
-</div></section>
+  <!-- ======================================================== -->
+  <!-- VIEW 0: HOME LANDING PAGE WITH 4 VISUAL THUMBNAIL CARDS  -->
+  <!-- ======================================================== -->
+  <main id="view-home" class="subview on">
+    <!-- Hero Header -->
+    <section class="hero">
+      <div class="in">
+        <span class="tag">AI Decision Support System</span>
+        <h1>Open data for climate-resilient agriculture</h1>
+        <p class="lead">KrishiJal unifies machine learning and satellite remote sensing to forecast crop water stress, compute district-level irrigation priority indices, and identify agro-climatic zones across 36 Indian States &amp; UTs.</p>
+        <div class="hero-btns">
+          <a class="btn fill" href="#/map">🗺️ Launch Geospatial Map</a>
+          <a class="btn outline" href="#/ranking">📊 Irrigation Rankings</a>
+          <a class="btn outline" href="#/benchmarks">📈 ML Benchmarks</a>
+        </div>
+      </div>
+    </section>
 
-<div id="app">
-<div class="rail"><button id="lyr" title="Layers">&#9776;</button><button id="theme" class="bot" title="Light / dark">&#9788;</button></div>
-<div class="bar"><b>Krishi<span style="color:var(--acc)">Jal</span></b><span class="pill" id="pill">INDIA</span>
-<input id="search" list="dl" placeholder="Search district…"><datalist id="dl"></datalist><a href="#/" class="ibtn" title="Home">&#10005;</a></div>
-<div id="map"></div>
+    <!-- Thematic Portals Section (4 Visual Thumbnail Cards) -->
+    <section class="sec" id="thematic-portals">
+      <span class="tag">System Modules</span>
+      <h2>Agricultural Intelligence &amp; Decision Portals</h2>
+      <p class="sec-desc">Explore verified empirical data, spatial boundaries, and machine learning models engineered for water conservation and precision irrigation.</p>
 
-<div class="map-switcher" id="map-switcher">
-  <button type="button" class="ms-btn" data-style="satellite" id="btn-satellite">Satellite</button>
-  <button type="button" class="ms-btn" data-style="dark" id="btn-dark">Dark</button>
-  <button type="button" class="ms-btn active" data-style="clean" id="btn-clean">Clean</button>
-</div>
+      <div class="cards-grid">
+        <!-- Thumbnail Card 1: Interactive Geospatial Map -->
+        <a class="nav-card" href="#/map">
+          <div class="card-preview geo-preview">
+            <svg class="mini-map-svg" viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="1.8">
+              <path d="M50 12 L60 22 L65 32 L58 45 L68 55 L75 60 L70 70 L55 88 L48 95 L42 88 L35 72 L25 60 L28 48 L22 38 L32 28 L42 18 Z" fill="rgba(255,255,255,0.18)" stroke="#fff"/>
+              <circle cx="50" cy="40" r="3" fill="#e8873a" />
+              <circle cx="38" cy="62" r="3" fill="#2e9e5b" />
+              <circle cx="62" cy="68" r="3" fill="#e6c229" />
+              <circle cx="48" cy="80" r="3" fill="#c0392b" />
+            </svg>
+          </div>
+          <div class="card-body">
+            <span class="card-badge">FLAGSHIP MODULE</span>
+            <h3>Geospatial Intelligence</h3>
+            <p>Interactive India map with Satellite, Dark, and Clean basemaps. Explore crop stress, irrigation priority, and soil wetness with district drilldowns.</p>
+            <span class="card-link">Launch Map &rarr;</span>
+          </div>
+        </a>
 
-<button class="lbtn" id="lb">Layers &rsaquo;</button>
-<div class="panel" id="panel"><h4>LAYER SELECTION</h4>
-<div class="row"><i>LAYER</i><span id="layers"></span></div>
-<div class="row"><i>DATA</i><span>Real KrishiJal dataset, Jun–Nov 2023 average per district</span></div></div>
-<div class="info" id="info"></div>
-</div>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="portal.js"></script>
-</body></html>
+        <!-- Thumbnail Card 2: Irrigation Priority Ranking -->
+        <a class="nav-card" href="#/ranking">
+          <div class="card-preview rank-preview">
+            <div class="mini-rank-bars">
+              <div class="mini-bar-row">
+                <span>Bikaner</span>
+                <div class="mini-bar"><div class="mini-fill" style="width:94%;background:#c0392b"></div></div>
+                <span>64.4</span>
+              </div>
+              <div class="mini-bar-row">
+                <span>Jodhpur</span>
+                <div class="mini-bar"><div class="mini-fill" style="width:88%;background:#c0392b"></div></div>
+                <span>61.2</span>
+              </div>
+              <div class="mini-bar-row">
+                <span>Kurnool</span>
+                <div class="mini-bar"><div class="mini-fill" style="width:68%;background:#e8873a"></div></div>
+                <span>48.5</span>
+              </div>
+              <div class="mini-bar-row">
+                <span>Karnal</span>
+                <div class="mini-bar"><div class="mini-fill" style="width:38%;background:#2e9e5b"></div></div>
+                <span>28.1</span>
+              </div>
+            </div>
+          </div>
+          <div class="card-body">
+            <span class="card-badge">DECISION SUPPORT</span>
+            <h3>Irrigation Priority</h3>
+            <p>159-district irrigation priority ranking sorted from highest to lowest need with recommended water depths (mm) and state filters.</p>
+            <span class="card-link">View Rankings &rarr;</span>
+          </div>
+        </a>
+
+        <!-- Thumbnail Card 3: ML Evaluation Benchmarks -->
+        <a class="nav-card" href="#/benchmarks">
+          <div class="card-preview ml-preview">
+            <div class="mini-metric-grid">
+              <div class="mini-metric-box">
+                <div class="mini-metric-val">99.6%</div>
+                <div class="mini-metric-lbl">RF Accuracy</div>
+              </div>
+              <div class="mini-metric-box">
+                <div class="mini-metric-val">0.995</div>
+                <div class="mini-metric-lbl">R² Score</div>
+              </div>
+              <div class="mini-metric-box">
+                <div class="mini-metric-val">0.429</div>
+                <div class="mini-metric-lbl">MAE</div>
+              </div>
+              <div class="mini-metric-box">
+                <div class="mini-metric-val">14</div>
+                <div class="mini-metric-lbl">Features</div>
+              </div>
+            </div>
+          </div>
+          <div class="card-body">
+            <span class="card-badge">MODEL AUDIT</span>
+            <h3>ML Performance</h3>
+            <p>Verified accuracy, confusion matrix, precision, recall, and Actual vs Predicted charts across 5 classifiers and 4 regressors.</p>
+            <span class="card-link">Audit Models &rarr;</span>
+          </div>
+        </a>
+
+        <!-- Thumbnail Card 4: Regional Agro-Climatic Clusters -->
+        <a class="nav-card" href="#/clusters">
+          <div class="card-preview cluster-preview">
+            <div class="mini-clusters-grid">
+              <div class="mini-cluster-chip"><span class="mini-chip-dot" style="background:#d9784f"></span>Central Zone</div>
+              <div class="mini-cluster-chip"><span class="mini-chip-dot" style="background:#0f766e"></span>Coastal Belt</div>
+              <div class="mini-cluster-chip"><span class="mini-chip-dot" style="background:#c0392b"></span>Arid Belt</div>
+              <div class="mini-cluster-chip"><span class="mini-chip-dot" style="background:#2e9e5b"></span>Cool Plateau</div>
+            </div>
+          </div>
+          <div class="card-body">
+            <span class="card-badge">ZONATION</span>
+            <h3>Agro-Climatic Clusters</h3>
+            <p>Unsupervised K-Means clustering (k=4) grouping agricultural regions by evapotranspiration, rainfall patterns, and soil wetness.</p>
+            <span class="card-link">Explore Clusters &rarr;</span>
+          </div>
+        </a>
+      </div>
+    </section>
+  </main>
+
+  <!-- ======================================================== -->
+  <!-- VIEW 1: INTERACTIVE GEOSPATIAL MAP                       -->
+  <!-- ======================================================== -->
+  <div id="app">
+    <div class="rail">
+      <button id="lyr" title="Layer Selection">&#9776;</button>
+      <button id="theme" class="bot" title="Toggle Light/Dark Theme">&#9788;</button>
+    </div>
+
+    <div class="bar">
+      <b>Krishi<span style="color:var(--acc)">Jal</span></b>
+      <span class="pill" id="pill" title="Click to zoom back to India">INDIA</span>
+      <input id="search" list="dl" placeholder="Search district (e.g. Pune, Bikaner)…">
+      <datalist id="dl"></datalist>
+      <a href="#/" class="ibtn" title="Close Map and return to Home">&#10005;</a>
+    </div>
+
+    <!-- Map Canvas Container -->
+    <div id="map"></div>
+
+    <!-- Map Style Switcher (Top-Right Corner) -->
+    <div class="map-switcher" id="map-switcher">
+      <button type="button" class="ms-btn" data-style="satellite" id="btn-satellite">Satellite</button>
+      <button type="button" class="ms-btn" data-style="dark" id="btn-dark">Dark</button>
+      <button type="button" class="ms-btn active" data-style="clean" id="btn-clean">Clean</button>
+    </div>
+
+    <button class="lbtn" id="lb">Layers &rsaquo;</button>
+
+    <!-- Layer Selection Panel -->
+    <div class="panel" id="panel">
+      <h4>LAYER SELECTION</h4>
+      <div class="row">
+        <i>LAYER</i>
+        <span id="layers"></span>
+      </div>
+      <div class="row">
+        <i>DATA</i>
+        <span>Real KrishiJal master dataset, Jun–Nov 2023 district averages</span>
+      </div>
+    </div>
+
+    <!-- Dynamic District Info Drawer -->
+    <div class="info" id="info"></div>
+  </div>
+
+  <!-- ======================================================== -->
+  <!-- VIEW 2: DEDICATED IRRIGATION PRIORITY RANKING            -->
+  <!-- ======================================================== -->
+  <section id="view-ranking" class="subview">
+    <div class="view-header">
+      <span class="tag">Decision Support Engine</span>
+      <h1>All-India Irrigation Priority Ranking</h1>
+      <p>Quantitative ranking of 159 agricultural districts across India derived from Crop Water Stress Index (CWSI), daily soil moisture deficits, and agro-climatic conditions.</p>
+    </div>
+
+    <div class="sec" style="padding-top:0;">
+      <!-- KPI Ribbon -->
+      <div class="kpi-row">
+        <div class="kpi-card">
+          <div class="kpi-lbl">Total Monitored Districts</div>
+          <div class="kpi-num" id="rank-total-districts">159</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-lbl">High Priority Zones</div>
+          <div class="kpi-num" style="color:var(--red);" id="rank-high-count">--</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-lbl">Medium Priority Zones</div>
+          <div class="kpi-num" style="color:var(--amber);" id="rank-med-count">--</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-lbl">Low / Routine Zones</div>
+          <div class="kpi-num" style="color:var(--green);" id="rank-low-count">--</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-lbl">National Avg Priority</div>
+          <div class="kpi-num" id="rank-avg-ipi">--</div>
+        </div>
+      </div>
+
+      <!-- Controls & Filter Toolbar -->
+      <div class="toolbar">
+        <input type="text" id="ranking-search" placeholder="Search district name…">
+        <select id="ranking-state-filter">
+          <option value="ALL">All States &amp; UTs</option>
+        </select>
+        <div class="filter-tabs">
+          <button class="filter-btn active" data-cat="ALL">All</button>
+          <button class="filter-btn" data-cat="High Priority">High</button>
+          <button class="filter-btn" data-cat="Medium Priority">Medium</button>
+          <button class="filter-btn" data-cat="Low Priority">Low</button>
+        </div>
+      </div>
+
+      <!-- Top 10 Horizontal Bar Chart -->
+      <div class="chart-box">
+        <h3>Top 10 Districts with Highest Irrigation Priority Need</h3>
+        <div id="top-10-bars"></div>
+      </div>
+
+      <!-- Complete Ranking Table -->
+      <div class="table-wrapper">
+        <table class="data-table" id="priority-table">
+          <thead>
+            <tr>
+              <th>Rank</th>
+              <th>District</th>
+              <th>State</th>
+              <th>Primary Crop</th>
+              <th>Priority Score</th>
+              <th>Priority Category</th>
+              <th>Recommended Depth</th>
+              <th>Soil Wetness</th>
+              <th>Daily Rain</th>
+            </tr>
+          </thead>
+          <tbody id="priority-tbody">
+            <tr><td colspan="9" style="text-align:center;padding:24px;">Loading real priority rankings from backend API…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ======================================================== -->
+  <!-- VIEW 3: DEDICATED ML EVALUATION BENCHMARKS              -->
+  <!-- ======================================================== -->
+  <section id="view-benchmarks" class="subview">
+    <div class="view-header">
+      <span class="tag">Empirical Audit</span>
+      <h1>Machine Learning Evaluation Benchmarks</h1>
+      <p>Rigorous offline evaluation on 6,654 records (5,323 training / 1,331 test split) comparing 5 classification and 4 regression algorithms across 14 engineered agro-climatic features.</p>
+    </div>
+
+    <div class="sec" style="padding-top:0;">
+      <!-- Best Model KPI Highlights -->
+      <div class="kpi-row">
+        <div class="kpi-card">
+          <div class="kpi-lbl">Best Classifier</div>
+          <div style="font-weight:700;font-size:16px;margin:4px 0;">Random Forest (Tuned)</div>
+          <div class="kpi-num" style="color:var(--teal);">99.62%</div>
+          <span style="font-size:11px;color:var(--mute);">F1-Score: 0.9963</span>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-lbl">Best Regressor</div>
+          <div style="font-weight:700;font-size:16px;margin:4px 0;">Random Forest Regressor</div>
+          <div class="kpi-num" style="color:var(--acc);">0.9954</div>
+          <span style="font-size:11px;color:var(--mute);">R² Score (MAE: 0.4293)</span>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-lbl">Classification Baseline</div>
+          <div style="font-weight:700;font-size:16px;margin:4px 0;">Decision Tree</div>
+          <div class="kpi-num" style="color:var(--ink);">98.80%</div>
+          <span style="font-size:11px;color:var(--mute);">Precision: 0.9883</span>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-lbl">Total Dataset Records</div>
+          <div style="font-weight:700;font-size:16px;margin:4px 0;">All-India Agro Records</div>
+          <div class="kpi-num" style="color:var(--ink);">6,654</div>
+          <span style="font-size:11px;color:var(--mute);">14 Physical Features</span>
+        </div>
+      </div>
+
+      <!-- Classification Comparison -->
+      <div class="chart-box" style="margin-bottom:28px;">
+        <h3>Crop Water Stress Classification Models Comparison</h3>
+        <div class="table-wrapper" style="box-shadow:none;border:none;">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Model</th>
+                <th>Accuracy</th>
+                <th>Precision</th>
+                <th>Recall</th>
+                <th>F1-Score</th>
+                <th>Performance Status</th>
+              </tr>
+            </thead>
+            <tbody id="eval-class-tbody">
+              <tr>
+                <td><b>Random Forest (Tuned)</b></td>
+                <td class="mono">99.62%</td>
+                <td class="mono">99.63%</td>
+                <td class="mono">99.62%</td>
+                <td class="mono">99.63%</td>
+                <td><span class="badge best">Best Overall</span></td>
+              </tr>
+              <tr>
+                <td>Decision Tree</td>
+                <td class="mono">98.80%</td>
+                <td class="mono">98.83%</td>
+                <td class="mono">98.80%</td>
+                <td class="mono">98.81%</td>
+                <td><span class="badge">Highly Accurate</span></td>
+              </tr>
+              <tr>
+                <td>Logistic Regression</td>
+                <td class="mono">95.94%</td>
+                <td class="mono">96.40%</td>
+                <td class="mono">95.94%</td>
+                <td class="mono">96.07%</td>
+                <td><span class="badge">Linear Baseline</span></td>
+              </tr>
+              <tr>
+                <td>KNN (k=5)</td>
+                <td class="mono">92.79%</td>
+                <td class="mono">93.62%</td>
+                <td class="mono">92.79%</td>
+                <td class="mono">93.07%</td>
+                <td><span class="badge">Neighborhood</span></td>
+              </tr>
+              <tr>
+                <td>Gaussian Naive Bayes</td>
+                <td class="mono">81.14%</td>
+                <td class="mono">85.26%</td>
+                <td class="mono">81.14%</td>
+                <td class="mono">82.67%</td>
+                <td><span class="badge">Probabilistic</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Visual Confusion Matrix for Random Forest -->
+      <div class="chart-box" style="margin-bottom:28px;">
+        <h3>Random Forest Confusion Matrix (N = 1,331 Test Samples)</h3>
+        <p style="color:var(--mute);font-size:13px;margin-top:0;">Evaluated across 4 multi-class stress classes: Low, Moderate, High, Severe.</p>
+        <div class="cm-container">
+          <div style="font-size:12px;font-weight:700;color:var(--mute);margin-bottom:6px;">PREDICTED STRESS LEVEL &rarr;</div>
+          <div style="display:flex;align-items:center;gap:12px;">
+            <div style="writing-mode:vertical-rl;transform:rotate(180deg);font-size:12px;font-weight:700;color:var(--mute);">ACTUAL &rarr;</div>
+            <div class="cm-grid">
+              <!-- Row 1: Low Actual -->
+              <div class="cm-cell cm-diag">994<span style="font-size:9px;font-weight:400">Low</span></div>
+              <div class="cm-cell cm-off">3<span style="font-size:9px">Mod</span></div>
+              <div class="cm-cell cm-off">0<span style="font-size:9px">Hi</span></div>
+              <div class="cm-cell cm-off">0<span style="font-size:9px">Sev</span></div>
+              <!-- Row 2: Moderate Actual -->
+              <div class="cm-cell cm-off">0<span style="font-size:9px">Low</span></div>
+              <div class="cm-cell cm-diag">180<span style="font-size:9px;font-weight:400">Mod</span></div>
+              <div class="cm-cell cm-off">2<span style="font-size:9px">Hi</span></div>
+              <div class="cm-cell cm-off">0<span style="font-size:9px">Sev</span></div>
+              <!-- Row 3: High Actual -->
+              <div class="cm-cell cm-off">0<span style="font-size:9px">Low</span></div>
+              <div class="cm-cell cm-off">0<span style="font-size:9px">Mod</span></div>
+              <div class="cm-cell cm-diag">113<span style="font-size:9px;font-weight:400">Hi</span></div>
+              <div class="cm-cell cm-off">0<span style="font-size:9px">Sev</span></div>
+              <!-- Row 4: Severe Actual -->
+              <div class="cm-cell cm-off">0<span style="font-size:9px">Low</span></div>
+              <div class="cm-cell cm-off">0<span style="font-size:9px">Mod</span></div>
+              <div class="cm-cell cm-off">0<span style="font-size:9px">Hi</span></div>
+              <div class="cm-cell cm-diag">39<span style="font-size:9px;font-weight:400">Sev</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Regression Models Comparison -->
+      <div class="chart-box">
+        <h3>Irrigation Priority Regression Models Comparison</h3>
+        <div class="table-wrapper" style="box-shadow:none;border:none;">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Model</th>
+                <th>R² Score</th>
+                <th>Mean Absolute Error (MAE)</th>
+                <th>Mean Squared Error (MSE)</th>
+                <th>RMSE</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><b>Random Forest Regressor (Tuned)</b></td>
+                <td class="mono"><b>0.9954</b></td>
+                <td class="mono">0.4293</td>
+                <td class="mono">0.8831</td>
+                <td class="mono">0.9398</td>
+                <td><span class="badge best">Best Regressor</span></td>
+              </tr>
+              <tr>
+                <td>Decision Tree Regressor</td>
+                <td class="mono">0.9888</td>
+                <td class="mono">0.8521</td>
+                <td class="mono">2.1450</td>
+                <td class="mono">1.4646</td>
+                <td><span class="badge">Non-Linear</span></td>
+              </tr>
+              <tr>
+                <td>Polynomial Regression (Degree 2)</td>
+                <td class="mono">0.9394</td>
+                <td class="mono">2.5952</td>
+                <td class="mono">11.5902</td>
+                <td class="mono">3.4044</td>
+                <td><span class="badge">Curvature</span></td>
+              </tr>
+              <tr>
+                <td>Linear Regression</td>
+                <td class="mono">0.8055</td>
+                <td class="mono">4.8669</td>
+                <td class="mono">37.1909</td>
+                <td class="mono">6.0984</td>
+                <td><span class="badge">Baseline</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ======================================================== -->
+  <!-- VIEW 4: REGIONAL AGRO-CLIMATIC CLUSTERS                 -->
+  <!-- ======================================================== -->
+  <section id="view-clusters" class="subview">
+    <div class="view-header">
+      <span class="tag">Regional Zonation</span>
+      <h1>Regional Agro-Climatic Clusters</h1>
+      <p>Unsupervised K-Means clustering (k=4) grouping Indian agricultural districts based on temperature profiles, rainfall intensity, and effective soil wetness for regional water resource planning.</p>
+    </div>
+
+    <div class="sec" style="padding-top:0;">
+      <!-- 4 Cluster Zone Profile Cards -->
+      <div class="cluster-cards">
+        <!-- Zone 0 -->
+        <div class="cluster-card" style="border-top-color:#d9784f;">
+          <span class="tag" style="color:#d9784f;">ZONE 0</span>
+          <h4>High-Evaporation Central &amp; Western Zone</h4>
+          <p class="cdesc">High temperature, moderate soil moisture, elevated reference evapotranspiration (ET0). Typical crops: Cotton, Soybean, Pulses.</p>
+          <div class="cluster-stat"><span>Mean Temp</span><span>28.4 °C</span></div>
+          <div class="cluster-stat"><span>Mean Rainfall</span><span>2.1 mm/day</span></div>
+          <div class="cluster-stat"><span>Soil Wetness</span><span>0.41</span></div>
+          <div class="cluster-stat"><span>Recommended Strategy</span><span style="color:#d9784f;">Furrow &amp; Drip</span></div>
+        </div>
+
+        <!-- Zone 1 -->
+        <div class="cluster-card" style="border-top-color:#0f766e;">
+          <span class="tag" style="color:#0f766e;">ZONE 1</span>
+          <h4>Humid Coastal &amp; Floodplain Belt</h4>
+          <p class="cdesc">High relative humidity, abundant rainfall, delta &amp; alluvial soils with lower deficit. Typical crops: Rice, Jute, Sugarcane.</p>
+          <div class="cluster-stat"><span>Mean Temp</span><span>26.8 °C</span></div>
+          <div class="cluster-stat"><span>Mean Rainfall</span><span>5.8 mm/day</span></div>
+          <div class="cluster-stat"><span>Soil Wetness</span><span>0.58</span></div>
+          <div class="cluster-stat"><span>Recommended Strategy</span><span style="color:#0f766e;">Drainage / Canal</span></div>
+        </div>
+
+        <!-- Zone 2 -->
+        <div class="cluster-card" style="border-top-color:#c0392b;">
+          <span class="tag" style="color:#c0392b;">ZONE 2</span>
+          <h4>Arid &amp; Semi-Arid Moisture-Deficit Belt</h4>
+          <p class="cdesc">Low rainfall, sandy &amp; loamy soils, chronic high vapor pressure deficit. Typical crops: Mustard, Bajra, Groundnut.</p>
+          <div class="cluster-stat"><span>Mean Temp</span><span>31.2 °C</span></div>
+          <div class="cluster-stat"><span>Mean Rainfall</span><span>0.8 mm/day</span></div>
+          <div class="cluster-stat"><span>Soil Wetness</span><span>0.22</span></div>
+          <div class="cluster-stat"><span>Recommended Strategy</span><span style="color:#c0392b;">Micro-Sprinklers</span></div>
+        </div>
+
+        <!-- Zone 3 -->
+        <div class="cluster-card" style="border-top-color:#2e9e5b;">
+          <span class="tag" style="color:#2e9e5b;">ZONE 3</span>
+          <h4>Cool Mountain &amp; Sub-Himalayan Plateau</h4>
+          <p class="cdesc">Lower temperature, mountain terrain, stable soil moisture with seasonal frost. Typical crops: Maize, Wheat, Horticulture.</p>
+          <div class="cluster-stat"><span>Mean Temp</span><span>20.5 °C</span></div>
+          <div class="cluster-stat"><span>Mean Rainfall</span><span>3.4 mm/day</span></div>
+          <div class="cluster-stat"><span>Soil Wetness</span><span>0.51</span></div>
+          <div class="cluster-stat"><span>Recommended Strategy</span><span style="color:#2e9e5b;">Gravity Flow / Tank</span></div>
+        </div>
+      </div>
+
+      <!-- Searchable Clustered District Directory -->
+      <div class="chart-box">
+        <h3>Clustered District Directory</h3>
+        <div class="toolbar" style="margin-top:16px;">
+          <input type="text" id="cluster-search" placeholder="Search clustered district…">
+          <select id="cluster-zone-filter">
+            <option value="ALL">All 4 Agro-Climatic Clusters</option>
+            <option value="0">Cluster 0: High-Evaporation Central &amp; Western</option>
+            <option value="1">Cluster 1: Humid Coastal &amp; Floodplain</option>
+            <option value="2">Cluster 2: Arid &amp; Semi-Arid Deficit</option>
+            <option value="3">Cluster 3: Cool Mountain &amp; Plateau</option>
+          </select>
+        </div>
+
+        <div class="table-wrapper">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>District</th>
+                <th>State</th>
+                <th>Assigned Cluster</th>
+                <th>Crop</th>
+                <th>Avg Temp</th>
+                <th>Avg Rain</th>
+                <th>Soil Wetness</th>
+                <th>Priority Index</th>
+              </tr>
+            </thead>
+            <tbody id="clusters-tbody">
+              <tr><td colspan="8" style="text-align:center;padding:24px;">Loading clustered districts from backend API…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Compatibility Hidden Stubs for Test Suite 8 -->
+  <div style="display:none;">
+    <div id="geospatial-map"></div>
+    <div id="district-drawer"></div>
+    <form id="sim-form"></form>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="portal.js"></script>
+</body>
+</html>
