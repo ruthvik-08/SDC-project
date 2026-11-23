@@ -17,11 +17,11 @@ var BASEMAP_CONFIG = {
   },
   dark: {
     name: "Dark",
-    url: "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}",
+    url: "https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png",
     options: {
-      attribution: "Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ",
-      maxZoom: 19,
-      maxNativeZoom: 16
+      subdomains: "abcd",
+      attribution: "&copy; <a href=\"https://www.openstreetmap.org/copyright\">OpenStreetMap</a> contributors &copy; <a href=\"https://carto.com/attributions\">CARTO</a>",
+      maxZoom: 19
     }
   },
   clean: {
@@ -43,6 +43,16 @@ L.control.zoom({position:"bottomright"}).addTo(map);
 function setBasemap(styleKey) {
   if (!BASEMAP_CONFIG[styleKey]) return;
   currentBasemap = styleKey;
+  
+  var mapEl = document.getElementById("map");
+  if (styleKey === "dark") {
+    mapEl.style.backgroundColor = "#12100f";
+  } else if (styleKey === "satellite") {
+    mapEl.style.backgroundColor = "#0b101b";
+  } else {
+    mapEl.style.backgroundColor = "#fafaf8";
+  }
+
   if (baseTileLayer) {
     map.removeLayer(baseTileLayer);
   }
