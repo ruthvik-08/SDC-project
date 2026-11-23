@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>KrishiJal – Crop Stress Portal</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="portal.css"></head>
+<body>
+<nav class="top"><b>Krishi<span>Jal</span></b><span class="sp"></span>
+<a href="#/" class="keep">Home</a><a href="#/">About</a><a href="#/map" class="keep">Thematic Portals</a><a href="#/">Knowledge Hub</a></nav>
+
+<section class="hero"><div class="in"><span class="tag">Crop Stress &amp; Irrigation Priority</span>
+<h1>Open data for climate-resilient agriculture</h1>
+<p class="lead">Explore real district-level crop water stress, vegetation and rainfall data across India on an interactive map.</p>
+<a class="btn fill" href="#/map">Access Portal</a></div></section>
+
+<section class="sec"><span class="tag">Solutions</span><h2>Thematic portals</h2>
+<div class="grid">
+<a class="tile big" href="#/map"><small>FLAGSHIP</small><h3>Crop Stress Dashboard</h3><span>Explore stress, irrigation priority, NDVI and rainfall by state and district.</span></a>
+<div class="tile"><small>CLIMATE</small><h3>Rainfall</h3><span class="soon">COMING SOON</span></div>
+<div class="tile"><small>AGRICULTURE</small><h3>Crop Yield</h3><span class="soon">COMING SOON</span></div>
+</div></section>
+
+<div id="app">
+<div class="rail"><button id="lyr" title="Layers">&#9776;</button><button id="theme" class="bot" title="Light / dark">&#9788;</button></div>
+<div class="bar"><b>Krishi<span style="color:var(--acc)">Jal</span></b><span class="pill" id="pill">INDIA</span>
+<input id="search" list="dl" placeholder="Search district…"><datalist id="dl"></datalist><a href="#/" class="ibtn" title="Home">&#10005;</a></div>
+<div id="map"></div>
+<button class="lbtn" id="lb">Layers &rsaquo;</button>
+<div class="panel" id="panel"><h4>LAYER SELECTION</h4>
+<div class="row"><i>LAYER</i><span id="layers"></span></div>
+<div class="row"><i>DATA</i><span>Real KrishiJal dataset, Jun–Nov 2023 average per district</span></div></div>
+<div class="info" id="info"></div>
+</div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="portal.js"></script>
+</body></html>
