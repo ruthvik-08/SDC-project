@@ -5,17 +5,71 @@ var LAYERS = {
   rainfall:{name:"Rainfall",key:"rainfall",unit:" mm/day",ramp:["#eef6fb","#bcdcee","#7fb8de","#3f86c4","#1f4e8c"]},
   wet:{name:"Soil wetness",key:"soil_wetness",unit:"",ramp:["#f3ead7","#d9c79a","#9fb98c","#4f9d9a","#1f6a7a"]}
 };
+
+var BASEMAP_CONFIG = {
+  satellite: {
+    name: "Satellite",
+    url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+    options: {
+      attribution: "Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community",
+      maxZoom: 19
+    }
+  },
+  dark: {
+    name: "Dark",
+    url: "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}",
+    options: {
+      attribution: "Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ",
+      maxZoom: 19,
+      maxNativeZoom: 16
+    }
+  },
+  clean: {
+    name: "Clean",
+    url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+    options: {
+      attribution: "&copy; <a href=\"https://www.openstreetmap.org/copyright\">OpenStreetMap</a> contributors",
+      maxZoom: 19
+    }
+  }
+};
+
+var currentBasemap = "clean";
+var baseTileLayer = null;
 var layer = "ndvi", DATA = {}, statesGeo, distsGeo, stateLayer, distLayer = null, current = null, selected = null, ranges = {};
 var map = L.map("map", {zoomControl:false, zoomSnap:0.25}).setView([22.5, 80], 4.5);
 L.control.zoom({position:"bottomright"}).addTo(map);
-L.tileLayer("https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png", {attribution:"© OpenStreetMap © CARTO"}).addTo(map);
+
+function setBasemap(styleKey) {
+  if (!BASEMAP_CONFIG[styleKey]) return;
+  currentBasemap = styleKey;
+  if (baseTileLayer) {
+    map.removeLayer(baseTileLayer);
+  }
+  var cfg = BASEMAP_CONFIG[styleKey];
+  baseTileLayer = L.tileLayer(cfg.url, cfg.options).addTo(map);
+  
+  if (stateLayer) stateLayer.bringToFront();
+  if (distLayer) distLayer.bringToFront();
+  
+  var btns = document.querySelectorAll(".map-switcher .ms-btn");
+  for (var i = 0; i < btns.length; i++) {
+    btns[i].classList.toggle("active", btns[i].dataset.style === styleKey);
+  }
+  
+  if (stateLayer) stateLayer.setStyle(styleState);
+  if (distLayer) distLayer.setStyle(styleDist);
+  showInfo(selected ? dataFor(selected) : null, selected);
+}
+
+setBasemap("clean");
 
 function normState(s) {
   return (s || "").toLowerCase().replace(/&/g, "and").replace(/[^a-z0-9]/g, "");
 }
 
 function colorFor(d) {
-  if (!d) return "#cfcac3";
+  if (!d) return currentBasemap === "dark" ? "#22201e" : (currentBasemap === "satellite" ? "#000000" : "#cfcac3");
   var L1 = LAYERS[layer];
   if (layer === "stress") return L1.cat[L1.labels.indexOf(d.stress)];
   var r = ranges[layer], t = (d[L1.key] - r[0]) / ((r[1] - r[0]) || 1);
@@ -37,14 +91,36 @@ function dataFor(p) {
   return null;
 }
 
-function styleDist(f) { return {fillColor:colorFor(dataFor(f.properties)), fillOpacity:.88, color:"#fff", weight:.8}; }
+function styleState(f) {
+  if (currentBasemap === "satellite") {
+    return {fillColor:"#ff9933", fillOpacity:0.12, color:"#ffffff", weight:1.6};
+  }
+  if (currentBasemap === "dark") {
+    return {fillColor:"#e8873a", fillOpacity:0.14, color:"#e8873a", weight:1.3};
+  }
+  return {fillColor:"#b5573a", fillOpacity:0.12, color:"#b5573a", weight:1.2};
+}
+
+function styleDist(f) {
+  var d = dataFor(f.properties);
+  var fill = colorFor(d);
+  if (currentBasemap === "satellite") {
+    return {fillColor:fill, fillOpacity:d ? 0.78 : 0.32, color:"#ffffff", weight:1.0};
+  }
+  if (currentBasemap === "dark") {
+    return {fillColor:fill, fillOpacity:0.90, color:"#383430", weight:0.8};
+  }
+  return {fillColor:fill, fillOpacity:0.88, color:"#ffffff", weight:0.8};
+}
 
 function drawLegend() {
   var L1 = LAYERS[layer], c = layer === "stress" ? L1.cat : L1.ramp, h = "";
   for (var i = 0; i < c.length; i++) h += "<div style='background:" + c[i] + "'></div>";
   var lo = layer === "stress" ? "LOW" : "LOW", hi = layer === "stress" ? "SEVERE" : "HIGH";
-  return "<div class='leg'><div style='background:#cfcac3;flex:.5'></div>" + h + "</div><div class='legl'><span>NO DATA</span><span>" + lo + "</span><span>" + hi + "</span></div>";
+  var noDataColor = currentBasemap === "dark" ? "#22201e" : (currentBasemap === "satellite" ? "#000000" : "#cfcac3");
+  return "<div class='leg'><div style='background:" + noDataColor + ";flex:.5'></div>" + h + "</div><div class='legl'><span>NO DATA</span><span>" + lo + "</span><span>" + hi + "</span></div>";
 }
+
 function showInfo(d, p) {
   var L1 = LAYERS[layer], el = document.getElementById("info"), h;
   if (!d) {
@@ -60,11 +136,15 @@ function showInfo(d, p) {
   }
   el.innerHTML = h + drawLegend();
 }
+
 function showStates() {
   current = null; document.getElementById("pill").textContent = "INDIA";
   if (distLayer) { map.removeLayer(distLayer); distLayer = null; }
-  stateLayer.addTo(map); map.flyTo([22.5, 80], 4.5, {duration:1.2}); showInfo(null);
+  stateLayer.addTo(map); stateLayer.bringToFront();
+  map.flyTo([22.5, 80], 4.5, {duration:1.2});
+  showInfo(null);
 }
+
 function showState(name, bounds) {
   current = name; document.getElementById("pill").textContent = name.toUpperCase();
   map.removeLayer(stateLayer); if (distLayer) map.removeLayer(distLayer);
@@ -79,11 +159,13 @@ function showState(name, bounds) {
     ly.on("mouseout", function () { distLayer.resetStyle(ly); });
     ly.bindTooltip(f.properties.district, {sticky:true});
   }}).addTo(map);
+  distLayer.bringToFront();
   if (distLayer.getBounds().isValid()) {
     map.flyToBounds(distLayer.getBounds(), {duration:1.2, padding:[40, 40]});
   }
   showInfo(null);
 }
+
 function recolor() { if (distLayer) distLayer.setStyle(styleDist); showInfo(selected ? dataFor(selected) : null, selected); }
 
 function buildLayerLinks() {
@@ -92,6 +174,7 @@ function buildLayerLinks() {
   var box = document.getElementById("layers"); box.innerHTML = h;
   box.onclick = function (e) { if (e.target.dataset.k) { layer = e.target.dataset.k; buildLayerLinks(); recolor(); } };
 }
+
 function computeRanges() {
   for (var k in LAYERS) { if (!LAYERS[k].key) continue; var lo = 1e9, hi = -1e9;
     for (var id in DATA) { var v = DATA[id][LAYERS[k].key]; if (v < lo) lo = v; if (v > hi) hi = v; }
@@ -104,12 +187,13 @@ Promise.all([fetch("data/india_states_simplified.geojson").then(function (r) { r
   statesGeo = res[0]; distsGeo = res[1]; DATA = res[2]; computeRanges(); buildLayerLinks();
   var dl = ""; for (var id in DATA) dl += "<option value='" + DATA[id].district + ", " + DATA[id].state + "'>";
   document.getElementById("dl").innerHTML = dl;
-  stateLayer = L.geoJSON(statesGeo, {style:{fillColor:"#b5573a", fillOpacity:.12, color:"#b5573a", weight:1.2}, onEachFeature:function (f, ly) {
+  stateLayer = L.geoJSON(statesGeo, {style:styleState, onEachFeature:function (f, ly) {
     ly.on("click", function () { showState(f.properties.state, ly.getBounds()); });
     ly.on("mouseover", function () { ly.setStyle({fillOpacity:.35}); });
     ly.on("mouseout", function () { stateLayer.resetStyle(ly); });
     ly.bindTooltip(f.properties.state, {sticky:true});
   }}).addTo(map);
+  stateLayer.bringToFront();
   showInfo(null);
 }).catch(function () { document.getElementById("info").innerHTML = "<h4>Could not load data</h4><p>Open this page through the FastAPI server at /app/portal.html.</p>"; });
 
@@ -117,9 +201,18 @@ document.getElementById("lb").onclick = function () { document.getElementById("p
 document.getElementById("lyr").onclick = function () { document.getElementById("panel").classList.toggle("on"); };
 document.getElementById("pill").onclick = function () { if (current) showStates(); };
 document.getElementById("theme").onclick = function () { document.documentElement.dataset.theme = document.documentElement.dataset.theme === "dark" ? "" : "dark"; };
+
+var msBtns = document.querySelectorAll(".map-switcher .ms-btn");
+for (var i = 0; i < msBtns.length; i++) {
+  msBtns[i].onclick = function () {
+    setBasemap(this.dataset.style);
+  };
+}
+
 document.getElementById("search").onchange = function () {
   for (var id in DATA) { if (DATA[id].district + ", " + DATA[id].state === this.value) {
     var parts = id.split("|"); showState(parts[0]); selected = {state:parts[0], district:parts[1]}; showInfo(DATA[id], selected); } }
 };
+
 function route() { var on = location.hash.indexOf("#/map") === 0; document.getElementById("app").classList.toggle("on", on); if (on) setTimeout(function () { map.invalidateSize(); }, 50); }
 window.onhashchange = route; route();
