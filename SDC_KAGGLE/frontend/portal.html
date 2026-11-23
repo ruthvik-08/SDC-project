@@ -10,22 +10,25 @@
 </head>
 <body>
 
-  <!-- Top Sticky Navigation Bar -->
+  <!-- Top Sticky Navigation Bar with Sliding Indicator -->
   <nav class="top">
     <b>Krishi<span>Jal</span></b>
     <span class="sp"></span>
-    <a href="#/" class="nav-link" id="nav-home">Home</a>
-    <a href="#/map" class="nav-link" id="nav-map">Geospatial Map</a>
-    <a href="#/ranking" class="nav-link" id="nav-ranking">Irrigation Priority</a>
-    <a href="#/benchmarks" class="nav-link" id="nav-benchmarks">ML Benchmarks</a>
-    <a href="#/clusters" class="nav-link" id="nav-clusters">Agro-Climatic Clusters</a>
+    <div class="nav-links-wrap" id="nav-links-wrap">
+      <a href="#/" class="nav-link" id="nav-home">Home</a>
+      <a href="#/map" class="nav-link" id="nav-map">Geospatial Map</a>
+      <a href="#/ranking" class="nav-link" id="nav-ranking">Irrigation Priority</a>
+      <a href="#/benchmarks" class="nav-link" id="nav-benchmarks">ML Benchmarks</a>
+      <a href="#/clusters" class="nav-link" id="nav-clusters">Agro-Climatic Clusters</a>
+      <div class="nav-indicator" id="nav-indicator"></div>
+    </div>
   </nav>
 
   <!-- ======================================================== -->
   <!-- VIEW 0: HOME LANDING PAGE WITH 4 VISUAL THUMBNAIL CARDS  -->
   <!-- ======================================================== -->
   <main id="view-home" class="subview on">
-    <!-- Hero Header (Principle 19: First Impression) -->
+    <!-- Hero Header -->
     <section class="hero">
       <div class="in">
         <span class="tag">AI Decision Support System</span>
@@ -39,7 +42,7 @@
       </div>
     </section>
 
-    <!-- Thematic Portals Section (4 Visual Thumbnail Cards) -->
+    <!-- Thematic Portals Section (4 3D Tilt & Genie Thumbnail Cards) -->
     <section class="sec" id="thematic-portals">
       <span class="tag">System Modules</span>
       <h2>Agricultural Intelligence &amp; Decision Portals</h2>
@@ -47,7 +50,7 @@
 
       <div class="cards-grid">
         <!-- Thumbnail Card 1: Interactive Geospatial Map -->
-        <a class="nav-card" href="#/map">
+        <a class="nav-card" href="#/map" data-target="#/map" id="card-geo">
           <div class="card-preview geo-preview">
             <svg class="mini-map-svg" viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="1.8">
               <path d="M50 12 L60 22 L65 32 L58 45 L68 55 L75 60 L70 70 L55 88 L48 95 L42 88 L35 72 L25 60 L28 48 L22 38 L32 28 L42 18 Z" fill="rgba(255,255,255,0.18)" stroke="#fff"/>
@@ -61,12 +64,12 @@
             <span class="card-badge">FLAGSHIP MODULE</span>
             <h3>Geospatial Intelligence</h3>
             <p>Interactive India map with Satellite, Dark, and Clean basemaps. Explore crop stress, irrigation priority, and soil wetness with district drilldowns.</p>
-            <span class="card-link">Launch Map &rarr;</span>
+            <span class="card-link">Launch Map <span class="arrow">&rarr;</span></span>
           </div>
         </a>
 
         <!-- Thumbnail Card 2: Irrigation Priority Ranking -->
-        <a class="nav-card" href="#/ranking">
+        <a class="nav-card" href="#/ranking" data-target="#/ranking" id="card-rank">
           <div class="card-preview rank-preview">
             <div class="mini-rank-bars">
               <div class="mini-bar-row">
@@ -95,12 +98,12 @@
             <span class="card-badge">DECISION SUPPORT</span>
             <h3>Irrigation Priority</h3>
             <p>159-district irrigation priority ranking sorted from highest to lowest need with recommended water depths (mm) and state filters.</p>
-            <span class="card-link">View Rankings &rarr;</span>
+            <span class="card-link">View Rankings <span class="arrow">&rarr;</span></span>
           </div>
         </a>
 
         <!-- Thumbnail Card 3: ML Evaluation Benchmarks -->
-        <a class="nav-card" href="#/benchmarks">
+        <a class="nav-card" href="#/benchmarks" data-target="#/benchmarks" id="card-bench">
           <div class="card-preview ml-preview">
             <div class="mini-metric-grid">
               <div class="mini-metric-box">
@@ -125,12 +128,12 @@
             <span class="card-badge">MODEL AUDIT</span>
             <h3>ML Performance</h3>
             <p>Verified accuracy, confusion matrix, precision, recall, and Actual vs Predicted charts across 5 classifiers and 4 regressors.</p>
-            <span class="card-link">Audit Models &rarr;</span>
+            <span class="card-link">Audit Models <span class="arrow">&rarr;</span></span>
           </div>
         </a>
 
         <!-- Thumbnail Card 4: Regional Agro-Climatic Clusters -->
-        <a class="nav-card" href="#/clusters">
+        <a class="nav-card" href="#/clusters" data-target="#/clusters" id="card-clusters">
           <div class="card-preview cluster-preview">
             <div class="mini-clusters-grid">
               <div class="mini-cluster-chip"><span class="mini-chip-dot" style="background:#d9784f;color:#d9784f;"></span>Central Zone</div>
@@ -143,7 +146,7 @@
             <span class="card-badge">ZONATION</span>
             <h3>Agro-Climatic Clusters</h3>
             <p>Unsupervised K-Means clustering (k=4) grouping agricultural regions by evapotranspiration, rainfall patterns, and soil wetness.</p>
-            <span class="card-link">Explore Clusters &rarr;</span>
+            <span class="card-link">Explore Clusters <span class="arrow">&rarr;</span></span>
           </div>
         </a>
       </div>
@@ -170,7 +173,7 @@
     <!-- Map Canvas Container -->
     <div id="map"></div>
 
-    <!-- Map Style Switcher (Top-Right Corner, Principle 8 & 18) -->
+    <!-- Map Style Switcher (Top-Right Corner) -->
     <div class="map-switcher" id="map-switcher">
       <button type="button" class="ms-btn" data-style="satellite" id="btn-satellite">Satellite</button>
       <button type="button" class="ms-btn" data-style="dark" id="btn-dark">Dark</button>
@@ -207,7 +210,7 @@
     </div>
 
     <div class="sec" style="padding-top:0;">
-      <!-- KPI Ribbon (Principle 1 & 13: Exaggeration & Von Restorff) -->
+      <!-- KPI Ribbon with Animated Numbers -->
       <div class="kpi-row">
         <div class="kpi-card">
           <div class="kpi-lbl">Total Monitored Districts</div>
@@ -231,7 +234,7 @@
         </div>
       </div>
 
-      <!-- Controls & Filter Toolbar (Principle 10: Hick's Law) -->
+      <!-- Controls & Filter Toolbar -->
       <div class="toolbar">
         <input type="text" id="ranking-search" placeholder="Search district name…">
         <select id="ranking-state-filter">
@@ -273,7 +276,7 @@
         </table>
       </div>
 
-      <!-- Principle 19: Peak-End Takeaway Banner -->
+      <!-- Peak-End Takeaway Banner -->
       <div class="takeaway-banner">
         <div class="takeaway-icon">💧</div>
         <div class="takeaway-text">
@@ -295,18 +298,18 @@
     </div>
 
     <div class="sec" style="padding-top:0;">
-      <!-- Best Model KPI Highlights (Principle 13: Von Restorff) -->
+      <!-- Best Model KPI Highlights -->
       <div class="kpi-row">
         <div class="kpi-card" style="border-left:4px solid var(--teal);">
           <div class="kpi-lbl">Best Classifier</div>
           <div style="font-weight:700;font-size:16px;margin:4px 0;">Random Forest (Tuned)</div>
-          <div class="kpi-num" style="color:var(--teal);">99.62%</div>
+          <div class="kpi-num" style="color:var(--teal);" id="bm-rf-acc">99.62%</div>
           <span style="font-size:11px;color:var(--mute);">F1-Score: 0.9963</span>
         </div>
         <div class="kpi-card" style="border-left:4px solid var(--acc);">
           <div class="kpi-lbl">Best Regressor</div>
           <div style="font-weight:700;font-size:16px;margin:4px 0;">Random Forest Regressor</div>
-          <div class="kpi-num" style="color:var(--acc);">0.9954</div>
+          <div class="kpi-num" style="color:var(--acc);" id="bm-rf-r2">0.9954</div>
           <span style="font-size:11px;color:var(--mute);">R² Score (MAE: 0.4293)</span>
         </div>
         <div class="kpi-card">
@@ -471,7 +474,7 @@
         </div>
       </div>
 
-      <!-- Principle 19: Peak-End Takeaway Banner -->
+      <!-- Peak-End Takeaway Banner -->
       <div class="takeaway-banner">
         <div class="takeaway-icon">🎯</div>
         <div class="takeaway-text">
@@ -575,7 +578,7 @@
         </div>
       </div>
 
-      <!-- Principle 19: Peak-End Takeaway Banner -->
+      <!-- Peak-End Takeaway Banner -->
       <div class="takeaway-banner">
         <div class="takeaway-icon">🌾</div>
         <div class="takeaway-text">

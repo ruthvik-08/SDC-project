@@ -36,7 +36,9 @@ var BASEMAP_CONFIG = {
 
 var currentBasemap = "clean";
 var baseTileLayer = null;
-var layer = "stress", DATA = {}, statesGeo, distsGeo, stateLayer, distLayer = null, current = null, selected = null, ranges = {};
+var layer = "stress", DATA = {}, statesGeo, distsGeo, stateLayer, distLayer = null, current = null, selected = null, selectedDistrictLayer = null, ranges = {};
+var lastGenieOrigin = null;
+
 var map = L.map("map", {zoomControl:false, zoomSnap:0.25}).setView([22.5, 80], 4.5);
 L.control.zoom({position:"bottomright"}).addTo(map);
 
@@ -148,27 +150,60 @@ function showInfo(d, p) {
 }
 
 function showStates() {
-  current = null; document.getElementById("pill").textContent = "INDIA";
+  current = null;
+  selected = null;
+  selectedDistrictLayer = null;
+  document.getElementById("pill").textContent = "INDIA";
   if (distLayer) { map.removeLayer(distLayer); distLayer = null; }
-  stateLayer.addTo(map); stateLayer.bringToFront();
+  stateLayer.addTo(map);
+  stateLayer.bringToFront();
   map.flyTo([22.5, 80], 4.5, {duration:1.2});
   showInfo(null);
 }
 
 function showState(name, bounds) {
-  current = name; document.getElementById("pill").textContent = name.toUpperCase();
-  map.removeLayer(stateLayer); if (distLayer) map.removeLayer(distLayer);
+  current = name;
+  selected = null;
+  selectedDistrictLayer = null;
+  document.getElementById("pill").textContent = name.toUpperCase();
+  map.removeLayer(stateLayer);
+  if (distLayer) map.removeLayer(distLayer);
   var nTarget = normState(name);
   var feats = distsGeo.features.filter(function (f) {
     var nFeat = normState(f.properties.state);
     return nFeat === nTarget || nFeat.indexOf(nTarget) !== -1 || nTarget.indexOf(nFeat) !== -1;
   });
-  distLayer = L.geoJSON({type:"FeatureCollection", features:feats}, {style:styleDist, onEachFeature:function (f, ly) {
-    ly.on("click", function () { selected = f.properties; showInfo(dataFor(f.properties), f.properties); });
-    ly.on("mouseover", function () { ly.setStyle({weight:2.5, color:"#b5573a"}); });
-    ly.on("mouseout", function () { distLayer.resetStyle(ly); });
-    ly.bindTooltip(f.properties.district, {sticky:true});
-  }}).addTo(map);
+  distLayer = L.geoJSON({type:"FeatureCollection", features:feats}, {
+    style: styleDist,
+    onEachFeature: function (f, ly) {
+      ly.on("click", function () {
+        if (selectedDistrictLayer && distLayer) {
+          distLayer.resetStyle(selectedDistrictLayer);
+        }
+        selectedDistrictLayer = ly;
+        selected = f.properties;
+        ly.setStyle({
+          weight: 3.5,
+          color: currentBasemap === "satellite" ? "#ffd700" : (currentBasemap === "dark" ? "#e8a58a" : "#b5573a"),
+          dashArray: ""
+        });
+        showInfo(dataFor(f.properties), f.properties);
+      });
+      ly.on("mouseover", function () {
+        if (ly !== selectedDistrictLayer) {
+          ly.setStyle({weight:2.4, color: currentBasemap === "satellite" ? "#ffffff" : "#b5573a"});
+        }
+      });
+      ly.on("mouseout", function () {
+        if (ly !== selectedDistrictLayer && distLayer) {
+          distLayer.resetStyle(ly);
+        }
+      });
+      var distData = dataFor(f.properties);
+      var tipText = f.properties.district + (distData ? " (" + (distData.stress || ("IPI " + distData.ipi)) + ")" : "");
+      ly.bindTooltip(tipText, {sticky:true});
+    }
+  }).addTo(map);
   distLayer.bringToFront();
   if (distLayer.getBounds().isValid()) {
     map.flyToBounds(distLayer.getBounds(), {duration:1.2, padding:[40, 40]});
@@ -176,41 +211,89 @@ function showState(name, bounds) {
   showInfo(null);
 }
 
-function recolor() { if (distLayer) distLayer.setStyle(styleDist); showInfo(selected ? dataFor(selected) : null, selected); }
+function recolor() {
+  if (distLayer) distLayer.setStyle(styleDist);
+  if (selectedDistrictLayer) {
+    selectedDistrictLayer.setStyle({
+      weight: 3.5,
+      color: currentBasemap === "satellite" ? "#ffd700" : (currentBasemap === "dark" ? "#e8a58a" : "#b5573a")
+    });
+  }
+  showInfo(selected ? dataFor(selected) : null, selected);
+}
 
 function buildLayerLinks() {
   var h = "";
-  for (var k in LAYERS) h += "<a data-k='" + k + "' class='" + (k === layer ? "sel" : "") + "' style='color:" + (k === "stress" ? "#c0392b" : "var(--acc)") + "'>" + LAYERS[k].name + "</a>";
-  var box = document.getElementById("layers"); box.innerHTML = h;
-  box.onclick = function (e) { if (e.target.dataset.k) { layer = e.target.dataset.k; buildLayerLinks(); recolor(); } };
+  for (var k in LAYERS) {
+    h += "<a data-k='" + k + "' class='" + (k === layer ? "sel" : "") + "' style='color:" + (k === "stress" ? "#c0392b" : "var(--acc)") + "'>" + LAYERS[k].name + "</a>";
+  }
+  var box = document.getElementById("layers");
+  box.innerHTML = h;
+  box.onclick = function (e) {
+    if (e.target.dataset.k) {
+      layer = e.target.dataset.k;
+      buildLayerLinks();
+      recolor();
+    }
+  };
 }
 
 function computeRanges() {
-  for (var k in LAYERS) { if (!LAYERS[k].key) continue; var lo = 1e9, hi = -1e9;
-    for (var id in DATA) { var v = DATA[id][LAYERS[k].key]; if (v < lo) lo = v; if (v > hi) hi = v; }
-    ranges[k] = [lo, hi]; }
+  for (var k in LAYERS) {
+    if (!LAYERS[k].key) continue;
+    var lo = 1e9, hi = -1e9;
+    for (var id in DATA) {
+      var v = DATA[id][LAYERS[k].key];
+      if (v < lo) lo = v;
+      if (v > hi) hi = v;
+    }
+    ranges[k] = [lo, hi];
+  }
 }
 
-Promise.all([fetch("data/india_states_simplified.geojson").then(function (r) { return r.json(); }),
-             fetch("data/india_districts_simplified.geojson").then(function (r) { return r.json(); }),
-             fetch("data/portal_data.json").then(function (r) { return r.json(); })]).then(function (res) {
-  statesGeo = res[0]; distsGeo = res[1]; DATA = res[2]; computeRanges(); buildLayerLinks();
-  var dl = ""; for (var id in DATA) dl += "<option value='" + DATA[id].district + ", " + DATA[id].state + "'>";
+Promise.all([
+  fetch("data/india_states_simplified.geojson").then(function (r) { return r.json(); }),
+  fetch("data/india_districts_simplified.geojson").then(function (r) { return r.json(); }),
+  fetch("data/portal_data.json").then(function (r) { return r.json(); })
+]).then(function (res) {
+  statesGeo = res[0];
+  distsGeo = res[1];
+  DATA = res[2];
+  computeRanges();
+  buildLayerLinks();
+  var dl = "";
+  for (var id in DATA) {
+    dl += "<option value='" + DATA[id].district + ", " + DATA[id].state + "'>";
+  }
   document.getElementById("dl").innerHTML = dl;
-  stateLayer = L.geoJSON(statesGeo, {style:styleState, onEachFeature:function (f, ly) {
-    ly.on("click", function () { showState(f.properties.state, ly.getBounds()); });
-    ly.on("mouseover", function () { ly.setStyle({fillOpacity:.35}); });
-    ly.on("mouseout", function () { stateLayer.resetStyle(ly); });
-    ly.bindTooltip(f.properties.state, {sticky:true});
-  }}).addTo(map);
+  stateLayer = L.geoJSON(statesGeo, {
+    style: styleState,
+    onEachFeature: function (f, ly) {
+      ly.on("click", function () { showState(f.properties.state, ly.getBounds()); });
+      ly.on("mouseover", function () { ly.setStyle({fillOpacity: 0.35}); });
+      ly.on("mouseout", function () { stateLayer.resetStyle(ly); });
+      ly.bindTooltip(f.properties.state, {sticky:true});
+    }
+  }).addTo(map);
   stateLayer.bringToFront();
   showInfo(null);
-}).catch(function () { document.getElementById("info").innerHTML = "<h4>Could not load data</h4><p>Open this page through the FastAPI server at /app/portal.html.</p>"; });
+}).catch(function () {
+  document.getElementById("info").innerHTML = "<h4>Could not load data</h4><p>Open this page through the FastAPI server at /app/portal.html.</p>";
+});
 
-document.getElementById("lb").onclick = function () { document.getElementById("panel").classList.add("on"); this.style.display = "none"; };
-document.getElementById("lyr").onclick = function () { document.getElementById("panel").classList.toggle("on"); };
-document.getElementById("pill").onclick = function () { if (current) showStates(); };
-document.getElementById("theme").onclick = function () { document.documentElement.dataset.theme = document.documentElement.dataset.theme === "dark" ? "" : "dark"; };
+document.getElementById("lb").onclick = function () {
+  document.getElementById("panel").classList.add("on");
+  this.style.display = "none";
+};
+document.getElementById("lyr").onclick = function () {
+  document.getElementById("panel").classList.toggle("on");
+};
+document.getElementById("pill").onclick = function () {
+  if (current) showStates();
+};
+document.getElementById("theme").onclick = function () {
+  document.documentElement.dataset.theme = document.documentElement.dataset.theme === "dark" ? "" : "dark";
+};
 
 var msBtns = document.querySelectorAll(".map-switcher .ms-btn");
 for (var i = 0; i < msBtns.length; i++) {
@@ -220,8 +303,14 @@ for (var i = 0; i < msBtns.length; i++) {
 }
 
 document.getElementById("search").onchange = function () {
-  for (var id in DATA) { if (DATA[id].district + ", " + DATA[id].state === this.value) {
-    var parts = id.split("|"); showState(parts[0]); selected = {state:parts[0], district:parts[1]}; showInfo(DATA[id], selected); } }
+  for (var id in DATA) {
+    if (DATA[id].district + ", " + DATA[id].state === this.value) {
+      var parts = id.split("|");
+      showState(parts[0]);
+      selected = {state:parts[0], district:parts[1]};
+      showInfo(DATA[id], selected);
+    }
+  }
 };
 
 // ========================================================
@@ -229,6 +318,26 @@ document.getElementById("search").onchange = function () {
 // ========================================================
 var allPriorityList = [];
 var currentRankCategory = "ALL";
+
+function animateNumber(el, start, end, duration, decimals, suffix) {
+  if (!el) return;
+  decimals = decimals || 0;
+  suffix = suffix || "";
+  var startTime = null;
+  function step(timestamp) {
+    if (!startTime) startTime = timestamp;
+    var progress = Math.min((timestamp - startTime) / duration, 1);
+    var easeProgress = 1 - Math.pow(1 - progress, 3);
+    var currentVal = start + (end - start) * easeProgress;
+    el.textContent = currentVal.toFixed(decimals) + suffix;
+    if (progress < 1) {
+      requestAnimationFrame(step);
+    } else {
+      el.textContent = end.toFixed(decimals) + suffix;
+    }
+  }
+  requestAnimationFrame(step);
+}
 
 function loadPriorityData() {
   fetch("/api/irrigation/priority").then(function(r) { return r.json(); }).then(function(res) {
@@ -251,11 +360,11 @@ function renderPriorityKPIs(list) {
     else if (sc >= 35.0) med++;
     else low++;
   }
-  document.getElementById("rank-total-districts").textContent = list.length;
-  document.getElementById("rank-high-count").textContent = high;
-  document.getElementById("rank-med-count").textContent = med;
-  document.getElementById("rank-low-count").textContent = low;
-  document.getElementById("rank-avg-ipi").textContent = (totalScore / (list.length || 1)).toFixed(1);
+  animateNumber(document.getElementById("rank-total-districts"), 0, list.length, 700, 0, "");
+  animateNumber(document.getElementById("rank-high-count"), 0, high, 700, 0, "");
+  animateNumber(document.getElementById("rank-med-count"), 0, med, 700, 0, "");
+  animateNumber(document.getElementById("rank-low-count"), 0, low, 700, 0, "");
+  animateNumber(document.getElementById("rank-avg-ipi"), 0, (totalScore / (list.length || 1)), 700, 1, "");
 }
 
 function populateStateDropdown(list) {
@@ -265,11 +374,13 @@ function populateStateDropdown(list) {
   }
   var sortedStates = Object.keys(states).sort();
   var sel = document.getElementById("ranking-state-filter");
-  for (var j = 0; j < sortedStates.length; j++) {
-    var opt = document.createElement("option");
-    opt.value = sortedStates[j];
-    opt.textContent = sortedStates[j];
-    sel.appendChild(opt);
+  if (sel.options.length <= 1) {
+    for (var j = 0; j < sortedStates.length; j++) {
+      var opt = document.createElement("option");
+      opt.value = sortedStates[j];
+      opt.textContent = sortedStates[j];
+      sel.appendChild(opt);
+    }
   }
 }
 
@@ -398,6 +509,141 @@ document.getElementById("cluster-search").oninput = filterClusters;
 document.getElementById("cluster-zone-filter").onchange = filterClusters;
 
 // ========================================================
+// ADVANCED MOTION: 3D CARD TILT ON CURSOR HOVER
+// ========================================================
+function initCardTilt() {
+  if (!window.matchMedia || !window.matchMedia("(hover: hover)").matches) return;
+  var cards = document.querySelectorAll(".nav-card, .cluster-card");
+  for (var i = 0; i < cards.length; i++) {
+    (function(card) {
+      card.addEventListener("mousemove", function(e) {
+        var rect = card.getBoundingClientRect();
+        var x = e.clientX - rect.left;
+        var y = e.clientY - rect.top;
+        var cx = rect.width / 2;
+        var cy = rect.height / 2;
+        var dx = (x - cx) / cx;
+        var dy = (y - cy) / cy;
+        var rotX = (-dy * 6).toFixed(2);
+        var rotY = (dx * 6).toFixed(2);
+        card.style.transform = "perspective(1200px) rotateX(" + rotX + "deg) rotateY(" + rotY + "deg) translateY(-4px)";
+      });
+      card.addEventListener("mouseleave", function() {
+        card.style.transform = "";
+      });
+    })(cards[i]);
+  }
+}
+
+// ========================================================
+// ADVANCED MOTION: TOP NAVIGATION SLIDING INDICATOR
+// ========================================================
+function updateNavIndicator() {
+  var indicator = document.getElementById("nav-indicator");
+  var activeLink = document.querySelector("nav.top a.nav-link.active");
+  if (!indicator || !activeLink) return;
+  var wrap = activeLink.parentElement;
+  if (!wrap) return;
+  var wrapRect = wrap.getBoundingClientRect();
+  var linkRect = activeLink.getBoundingClientRect();
+  var left = linkRect.left - wrapRect.left;
+  var width = linkRect.width;
+  indicator.style.left = left + "px";
+  indicator.style.width = width + "px";
+  indicator.style.opacity = "1";
+}
+window.addEventListener("resize", updateNavIndicator);
+
+// ========================================================
+// ADVANCED MOTION: MACOS-INSPIRED GENIE MORPHING EFFECT
+// ========================================================
+function getTargetElementForHash(hash) {
+  if (hash.indexOf("#/map") === 0) return document.getElementById("app");
+  if (hash.indexOf("#/ranking") === 0) return document.getElementById("view-ranking");
+  if (hash.indexOf("#/benchmarks") === 0) return document.getElementById("view-benchmarks");
+  if (hash.indexOf("#/clusters") === 0) return document.getElementById("view-clusters");
+  return document.getElementById("view-home");
+}
+
+function triggerGenieExpand(card, targetHash) {
+  var targetEl = getTargetElementForHash(targetHash);
+  if (!targetEl) {
+    location.hash = targetHash;
+    return;
+  }
+  
+  var rect = card.getBoundingClientRect();
+  var scaleX = Math.max(0.12, rect.width / window.innerWidth);
+  var scaleY = Math.max(0.12, rect.height / window.innerHeight);
+  var deltaX = rect.left;
+  var deltaY = rect.top;
+
+  targetEl.style.setProperty("--genie-x", deltaX + "px");
+  targetEl.style.setProperty("--genie-y", deltaY + "px");
+  targetEl.style.setProperty("--genie-scale-x", scaleX.toFixed(3));
+  targetEl.style.setProperty("--genie-scale-y", scaleY.toFixed(3));
+  
+  lastGenieOrigin = card;
+  targetEl.classList.remove("genie-collapsing");
+  targetEl.classList.add("genie-expanding");
+
+  location.hash = targetHash;
+  setTimeout(function() {
+    targetEl.classList.remove("genie-expanding");
+  }, 560);
+}
+
+function triggerGenieCollapse(targetHash, e) {
+  if (e) e.preventDefault();
+  var activeSection = document.querySelector("#app.on, .subview.on:not(#view-home)");
+  if (activeSection && lastGenieOrigin) {
+    var rect = lastGenieOrigin.getBoundingClientRect();
+    var scaleX = Math.max(0.12, rect.width / window.innerWidth);
+    var scaleY = Math.max(0.12, rect.height / window.innerHeight);
+    var deltaX = rect.left;
+    var deltaY = rect.top;
+
+    activeSection.style.setProperty("--genie-x", deltaX + "px");
+    activeSection.style.setProperty("--genie-y", deltaY + "px");
+    activeSection.style.setProperty("--genie-scale-x", scaleX.toFixed(3));
+    activeSection.style.setProperty("--genie-scale-y", scaleY.toFixed(3));
+    activeSection.classList.remove("genie-expanding");
+    activeSection.classList.add("genie-collapsing");
+
+    setTimeout(function() {
+      activeSection.classList.remove("genie-collapsing");
+      location.hash = targetHash || "#/";
+      lastGenieOrigin = null;
+    }, 400);
+  } else {
+    location.hash = targetHash || "#/";
+  }
+}
+
+function initGenieTransitions() {
+  var navCards = document.querySelectorAll(".nav-card[data-target]");
+  for (var i = 0; i < navCards.length; i++) {
+    (function(card) {
+      card.addEventListener("click", function(e) {
+        e.preventDefault();
+        var targetHash = card.getAttribute("data-target");
+        triggerGenieExpand(card, targetHash);
+      });
+    })(navCards[i]);
+  }
+
+  // Back to home triggers (Sliding collapse)
+  var homeLinks = document.querySelectorAll("nav.top a[href='#/'], .bar .ibtn, nav.top b");
+  for (var j = 0; j < homeLinks.length; j++) {
+    homeLinks[j].addEventListener("click", function(e) {
+      if (location.hash && location.hash !== "#/") {
+        triggerGenieCollapse("#/", e);
+      }
+    });
+  }
+}
+
+// ========================================================
 // HASH ROUTER FOR SEAMLESS CLIENT-SIDE NAVIGATION
 // ========================================================
 function route() {
@@ -428,11 +674,19 @@ function route() {
   } else if (hash.indexOf("#/ranking") === 0) {
     rankingEl.classList.add("on");
     document.getElementById("nav-ranking").classList.add("active");
-    if (allPriorityList.length === 0) loadPriorityData();
+    if (allPriorityList.length === 0) {
+      loadPriorityData();
+    } else {
+      renderPriorityKPIs(allPriorityList);
+    }
     window.scrollTo({top:0, behavior:"smooth"});
   } else if (hash.indexOf("#/benchmarks") === 0) {
     benchmarksEl.classList.add("on");
     document.getElementById("nav-benchmarks").classList.add("active");
+    var rfAcc = document.getElementById("bm-rf-acc");
+    var rfR2 = document.getElementById("bm-rf-r2");
+    if (rfAcc) animateNumber(rfAcc, 80.0, 99.62, 800, 2, "%");
+    if (rfR2) animateNumber(rfR2, 0.7000, 0.9954, 800, 4, "");
     window.scrollTo({top:0, behavior:"smooth"});
   } else if (hash.indexOf("#/clusters") === 0) {
     clustersEl.classList.add("on");
@@ -440,15 +694,21 @@ function route() {
     if (allClustersList.length === 0) loadClustersData();
     window.scrollTo({top:0, behavior:"smooth"});
   } else {
-    // Default Home
     homeEl.classList.add("on");
     document.getElementById("nav-home").classList.add("active");
     window.scrollTo({top:0, behavior:"smooth"});
   }
+
+  setTimeout(updateNavIndicator, 20);
 }
 
 window.onhashchange = route;
+
+// Initialize on page ready
 route();
+initCardTilt();
+initGenieTransitions();
+setTimeout(updateNavIndicator, 80);
 
 // Preload priority and clusters data in background
 loadPriorityData();
