@@ -10,6 +10,10 @@ var map = L.map("map", {zoomControl:false, zoomSnap:0.25}).setView([22.5, 80], 4
 L.control.zoom({position:"bottomright"}).addTo(map);
 L.tileLayer("https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png", {attribution:"© OpenStreetMap © CARTO"}).addTo(map);
 
+function normState(s) {
+  return (s || "").toLowerCase().replace(/&/g, "and").replace(/[^a-z0-9]/g, "");
+}
+
 function colorFor(d) {
   if (!d) return "#cfcac3";
   var L1 = LAYERS[layer];
@@ -17,7 +21,22 @@ function colorFor(d) {
   var r = ranges[layer], t = (d[L1.key] - r[0]) / ((r[1] - r[0]) || 1);
   return L1.ramp[Math.max(0, Math.min(L1.ramp.length - 1, Math.floor(t * L1.ramp.length)))];
 }
-function dataFor(p) { return DATA[p.state + "|" + p.district]; }
+
+function dataFor(p) {
+  if (!p) return null;
+  if (DATA[p.state + "|" + p.district]) return DATA[p.state + "|" + p.district];
+  var nSt = normState(p.state), nDt = normState(p.district);
+  for (var k in DATA) {
+    var parts = k.split("|");
+    var sSt = normState(parts[0]), sDt = normState(parts[1]);
+    if ((sSt === nSt || sSt.indexOf(nSt) !== -1 || nSt.indexOf(sSt) !== -1) &&
+        (sDt === nDt || sDt.indexOf(nDt) !== -1 || nDt.indexOf(sDt) !== -1)) {
+      return DATA[k];
+    }
+  }
+  return null;
+}
+
 function styleDist(f) { return {fillColor:colorFor(dataFor(f.properties)), fillOpacity:.88, color:"#fff", weight:.8}; }
 
 function drawLegend() {
@@ -49,14 +68,21 @@ function showStates() {
 function showState(name, bounds) {
   current = name; document.getElementById("pill").textContent = name.toUpperCase();
   map.removeLayer(stateLayer); if (distLayer) map.removeLayer(distLayer);
-  var feats = distsGeo.features.filter(function (f) { return f.properties.state === name; });
+  var nTarget = normState(name);
+  var feats = distsGeo.features.filter(function (f) {
+    var nFeat = normState(f.properties.state);
+    return nFeat === nTarget || nFeat.indexOf(nTarget) !== -1 || nTarget.indexOf(nFeat) !== -1;
+  });
   distLayer = L.geoJSON({type:"FeatureCollection", features:feats}, {style:styleDist, onEachFeature:function (f, ly) {
     ly.on("click", function () { selected = f.properties; showInfo(dataFor(f.properties), f.properties); });
     ly.on("mouseover", function () { ly.setStyle({weight:2.5, color:"#b5573a"}); });
     ly.on("mouseout", function () { distLayer.resetStyle(ly); });
     ly.bindTooltip(f.properties.district, {sticky:true});
   }}).addTo(map);
-  map.flyToBounds(distLayer.getBounds(), {duration:1.2, padding:[40, 40]}); showInfo(null);
+  if (distLayer.getBounds().isValid()) {
+    map.flyToBounds(distLayer.getBounds(), {duration:1.2, padding:[40, 40]});
+  }
+  showInfo(null);
 }
 function recolor() { if (distLayer) distLayer.setStyle(styleDist); showInfo(selected ? dataFor(selected) : null, selected); }
 
