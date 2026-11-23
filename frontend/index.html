@@ -17,6 +17,7 @@
     <div class="nav-links-wrap" id="nav-links-wrap">
       <a href="#/" class="nav-link" id="nav-home">Home</a>
       <a href="#/map" class="nav-link" id="nav-map">Geospatial Map</a>
+      <a href="#/predictor" class="nav-link" id="nav-predictor">AI Predictor</a>
       <a href="#/ranking" class="nav-link" id="nav-ranking">Irrigation Priority</a>
       <a href="#/benchmarks" class="nav-link" id="nav-benchmarks">ML Benchmarks</a>
       <a href="#/clusters" class="nav-link" id="nav-clusters">Agro-Climatic Clusters</a>
@@ -36,6 +37,7 @@
         <p class="lead">KrishiJal unifies machine learning and satellite remote sensing to forecast crop water stress, compute district-level irrigation priority indices, and identify agro-climatic zones across 36 Indian States &amp; UTs.</p>
         <div class="hero-btns">
           <a class="btn fill" href="#/map">🗺️ Launch Geospatial Map</a>
+          <a class="btn outline" href="#/predictor">🌾 AI Predictor</a>
           <a class="btn outline" href="#/ranking">📊 Irrigation Rankings</a>
           <a class="btn outline" href="#/benchmarks">📈 ML Benchmarks</a>
         </div>
@@ -202,6 +204,201 @@
     <!-- Dynamic District Info Drawer -->
     <div class="info" id="info"></div>
   </div>
+
+  <!-- ======================================================== -->
+  <!-- VIEW: AGRICULTURAL DECISION PREDICTOR                    -->
+  <!-- ======================================================== -->
+  <section id="view-predictor" class="subview">
+    <div class="view-header">
+      <span class="tag">AI Decision Engine</span>
+      <h1>Agricultural Decision Predictor</h1>
+      <p>Real-time machine learning inference using trained Random Forest models to forecast localized crop water stress, compute dynamic irrigation priority indices, and calculate water deficits for any of India’s 732 districts.</p>
+    </div>
+
+    <div class="sec" style="padding-top:0;">
+      <div class="predictor-layout">
+        <!-- Left: Input Form Card -->
+        <div class="pred-card">
+          <h3>Agronomic Configuration</h3>
+          <p class="sub">Select location across 732 districts and tune environmental indicators to run verified Random Forest inferences.</p>
+
+          <form id="pred-form" onsubmit="return false;">
+            <div class="form-grid-2">
+              <div class="form-field">
+                <label for="pred-state">State / UT</label>
+                <select id="pred-state" required></select>
+              </div>
+              <div class="form-field">
+                <label for="pred-district">District (732+)</label>
+                <select id="pred-district" required></select>
+              </div>
+            </div>
+
+            <div class="form-grid-2">
+              <div class="form-field">
+                <label for="pred-crop">Crop Type</label>
+                <select id="pred-crop">
+                  <option value="Cotton" selected>Cotton</option>
+                  <option value="Rice">Rice (Paddy)</option>
+                  <option value="Wheat">Wheat</option>
+                  <option value="Sugarcane">Sugarcane</option>
+                  <option value="Maize">Maize</option>
+                  <option value="Pulses">Pulses</option>
+                  <option value="Groundnut">Groundnut</option>
+                  <option value="Mustard">Mustard</option>
+                  <option value="Barley">Barley</option>
+                </select>
+              </div>
+              <div class="form-field">
+                <label for="pred-stage">Growth Stage</label>
+                <select id="pred-stage">
+                  <option value="Initial">Initial / Germination</option>
+                  <option value="Vegetative">Vegetative</option>
+                  <option value="Reproductive" selected>Reproductive / Flowering</option>
+                  <option value="Maturity">Maturity / Harvesting</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Effective Soil Wetness Slider -->
+            <div class="form-field">
+              <label for="pred-soil">Effective Soil Wetness (0.10 – 0.80)</label>
+              <div class="range-wrap">
+                <input type="range" id="pred-soil" min="0.10" max="0.80" step="0.01" value="0.32">
+                <span class="range-val" id="pred-soil-val">0.32</span>
+              </div>
+            </div>
+
+            <!-- Temperature Slider -->
+            <div class="form-field">
+              <label for="pred-temp">Air Temperature (15 – 48 °C)</label>
+              <div class="range-wrap">
+                <input type="range" id="pred-temp" min="15" max="48" step="0.5" value="33.5">
+                <span class="range-val" id="pred-temp-val">33.5 °C</span>
+              </div>
+            </div>
+
+            <!-- Rainfall Slider -->
+            <div class="form-field">
+              <label for="pred-rain">Daily Rainfall (0 – 100 mm)</label>
+              <div class="range-wrap">
+                <input type="range" id="pred-rain" min="0" max="100" step="0.5" value="0.0">
+                <span class="range-val" id="pred-rain-val">0.0 mm</span>
+              </div>
+            </div>
+
+            <!-- Humidity Slider -->
+            <div class="form-field">
+              <label for="pred-hum">Relative Humidity (10 – 95%)</label>
+              <div class="range-wrap">
+                <input type="range" id="pred-hum" min="10" max="95" step="1" value="42">
+                <span class="range-val" id="pred-hum-val">42%</span>
+              </div>
+            </div>
+
+            <!-- Simulation Presets -->
+            <div style="margin-top:10px;">
+              <span style="font-size:11px;font-weight:700;color:var(--mute);text-transform:uppercase;letter-spacing:0.5px;">Quick Simulation Presets:</span>
+              <div class="preset-chips">
+                <button type="button" class="preset-chip" id="preset-arid">🌵 Arid Drought Spell</button>
+                <button type="button" class="preset-chip" id="preset-dry">☀️ Moderate Water Deficit</button>
+                <button type="button" class="preset-chip" id="preset-monsoon">🌧️ Adequate Monsoon</button>
+              </div>
+            </div>
+
+            <button type="button" id="btn-run-predict" class="btn fill" style="width:100%;font-size:15px;margin-top:10px;">
+              ⚡ Run Agricultural Prediction
+            </button>
+          </form>
+        </div>
+
+        <!-- Right: Results Card -->
+        <div class="pred-card" id="pred-results-container">
+          <div class="results-empty" id="results-empty">
+            <div class="empty-icon">🌾</div>
+            <h4>Ready to Forecast Agricultural Stress</h4>
+            <p>Select any of India’s 732 districts, configure agronomic indicators, and run real-time inference using the trained Random Forest classifier and regressor.</p>
+          </div>
+
+          <div class="results-content" id="results-content">
+            <div class="res-header">
+              <div>
+                <span class="tag" style="margin-bottom:2px;">MODEL INFERENCE RESULT</span>
+                <div class="res-district-title" id="res-target-title">Khammam, Telangana</div>
+              </div>
+              <div id="res-badge-wrap">
+                <span class="badge high" id="res-stress-badge">High Stress</span>
+              </div>
+            </div>
+
+            <!-- Primary 4 KPI Boxes -->
+            <div class="res-grid-kpi">
+              <div class="res-kpi-box">
+                <div class="res-kpi-lbl">Crop Water Stress</div>
+                <div class="res-kpi-val" id="res-stress-val" style="color:var(--acc);">High</div>
+              </div>
+              <div class="res-kpi-box">
+                <div class="res-kpi-lbl">Irrigation Priority Index</div>
+                <div class="res-kpi-val" id="res-ipi-val" style="color:var(--red);">49.0</div>
+              </div>
+              <div class="res-kpi-box">
+                <div class="res-kpi-lbl">Recommended Irrigation</div>
+                <div class="res-kpi-val" id="res-depth-val" style="font-size:20px;color:var(--teal);">35–45 mm</div>
+              </div>
+              <div class="res-kpi-box">
+                <div class="res-kpi-lbl">Daily Water Deficit</div>
+                <div class="res-kpi-val" id="res-deficit-val" style="font-size:20px;color:var(--ink);">4.2 mm/d</div>
+              </div>
+            </div>
+
+            <!-- Class Probabilities Breakdown -->
+            <div class="prob-breakdown">
+              <h5>Random Forest Class Probabilities</h5>
+              <div class="prob-row">
+                <span class="prob-label">Low</span>
+                <div class="prob-track"><div class="prob-fill" id="prob-fill-low" style="width:5%;background:var(--green);"></div></div>
+                <span class="prob-num" id="prob-num-low">5%</span>
+              </div>
+              <div class="prob-row">
+                <span class="prob-label">Moderate</span>
+                <div class="prob-track"><div class="prob-fill" id="prob-fill-mod" style="width:25%;background:var(--amber);"></div></div>
+                <span class="prob-num" id="prob-num-mod">25%</span>
+              </div>
+              <div class="prob-row">
+                <span class="prob-label">High</span>
+                <div class="prob-track"><div class="prob-fill" id="prob-fill-high" style="width:50%;background:var(--acc);"></div></div>
+                <span class="prob-num" id="prob-num-high">50%</span>
+              </div>
+              <div class="prob-row">
+                <span class="prob-label">Severe</span>
+                <div class="prob-track"><div class="prob-fill" id="prob-fill-sev" style="width:20%;background:var(--red);"></div></div>
+                <span class="prob-num" id="prob-num-sev">20%</span>
+              </div>
+            </div>
+
+            <!-- Actionable Advisory Banner -->
+            <div class="advisory-card">
+              <h5 id="res-advisory-title">Farmer Actionable Advisory</h5>
+              <p id="res-advisory-text">Rapid soil moisture depletion observed. Schedule irrigation within 24–48 hours.</p>
+            </div>
+
+            <!-- Calculated Agronomic Indicators -->
+            <div style="font-size:12px;color:var(--mute);margin-bottom:18px;display:flex;gap:16px;flex-wrap:wrap;">
+              <span>Ref ET₀: <b id="res-et0" class="mono" style="color:var(--ink);">5.67 mm</b></span>
+              <span>Crop ETc: <b id="res-etc" class="mono" style="color:var(--ink);">6.24 mm</b></span>
+              <span>Estimated NDVI: <b id="res-ndvi" class="mono" style="color:var(--ink);">0.614</b></span>
+              <span>Model: <b class="mono" style="color:var(--teal);">RandomForestClassifier (.pkl)</b></span>
+            </div>
+
+            <!-- View on Map Button -->
+            <button type="button" id="btn-view-on-map" class="btn fill" style="background:var(--teal);border-color:var(--teal);width:100%;font-size:15px;">
+              🗺️ View &amp; Highlight District on India Map &rarr;
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
 
   <!-- ======================================================== -->
   <!-- VIEW 2: DEDICATED IRRIGATION PRIORITY RANKING            -->

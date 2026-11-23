@@ -377,6 +377,268 @@ function handleSearch(val) {
   }
 }
 
+// ========================================================
+// SECTION 5: AGRICULTURAL DECISION PREDICTOR SYSTEM
+// ========================================================
+var stateDistrictsList = {};
+var latestPrediction = null;
+
+function initPredictorForm() {
+  var stateSelect = document.getElementById("pred-state");
+  var distSelect = document.getElementById("pred-district");
+  if (!stateSelect || !distSelect || !distsGeo) return;
+
+  stateDistrictsList = {};
+  distsGeo.features.forEach(function(f) {
+    var rawSt = f.properties.state;
+    var formattedSt = formatStateName(rawSt);
+    if (!stateDistrictsList[formattedSt]) {
+      stateDistrictsList[formattedSt] = [];
+    }
+    stateDistrictsList[formattedSt].push(f.properties.district);
+  });
+
+  stateSelect.innerHTML = "";
+  var sortedStates = Object.keys(stateDistrictsList).sort();
+  sortedStates.forEach(function(st) {
+    var opt = document.createElement("option");
+    opt.value = st;
+    opt.textContent = st + " (" + stateDistrictsList[st].length + " districts)";
+    if (st === "Telangana") opt.selected = true;
+    stateSelect.appendChild(opt);
+  });
+
+  function updateDistrictsForSelectedState() {
+    var chosenState = stateSelect.value;
+    var dists = (stateDistrictsList[chosenState] || []).slice().sort();
+    distSelect.innerHTML = "";
+    dists.forEach(function(dt) {
+      var opt = document.createElement("option");
+      opt.value = dt;
+      opt.textContent = dt;
+      if (dt === "Khammam" || dt === "Bikaner") opt.selected = true;
+      distSelect.appendChild(opt);
+    });
+  }
+
+  stateSelect.onchange = updateDistrictsForSelectedState;
+  updateDistrictsForSelectedState();
+
+  function linkSlider(sliderId, valId, unit, decimals) {
+    var slider = document.getElementById(sliderId);
+    var valEl = document.getElementById(valId);
+    if (!slider || !valEl) return;
+    slider.oninput = function() {
+      var n = parseFloat(this.value);
+      valEl.textContent = (decimals > 0 ? n.toFixed(decimals) : n) + (unit ? " " + unit : "");
+    };
+  }
+
+  linkSlider("pred-soil", "pred-soil-val", "", 2);
+  linkSlider("pred-temp", "pred-temp-val", "°C", 1);
+  linkSlider("pred-rain", "pred-rain-val", "mm", 1);
+  linkSlider("pred-hum", "pred-hum-val", "%", 0);
+
+  function applyPreset(soil, temp, rain, hum, crop, stage) {
+    document.getElementById("pred-soil").value = soil;
+    document.getElementById("pred-soil-val").textContent = soil.toFixed(2);
+    document.getElementById("pred-temp").value = temp;
+    document.getElementById("pred-temp-val").textContent = temp.toFixed(1) + " °C";
+    document.getElementById("pred-rain").value = rain;
+    document.getElementById("pred-rain-val").textContent = rain.toFixed(1) + " mm";
+    document.getElementById("pred-hum").value = hum;
+    document.getElementById("pred-hum-val").textContent = hum + "%";
+    if (crop) document.getElementById("pred-crop").value = crop;
+    if (stage) document.getElementById("pred-stage").value = stage;
+  }
+
+  var btnArid = document.getElementById("preset-arid");
+  if (btnArid) {
+    btnArid.onclick = function() {
+      applyPreset(0.18, 39.0, 0.0, 22, "Cotton", "Reproductive");
+    };
+  }
+  var btnDry = document.getElementById("preset-dry");
+  if (btnDry) {
+    btnDry.onclick = function() {
+      applyPreset(0.30, 33.5, 0.0, 38, "Cotton", "Reproductive");
+    };
+  }
+  var btnMonsoon = document.getElementById("preset-monsoon");
+  if (btnMonsoon) {
+    btnMonsoon.onclick = function() {
+      applyPreset(0.58, 28.0, 24.0, 78, "Rice", "Vegetative");
+    };
+  }
+
+  var btnRun = document.getElementById("btn-run-predict");
+  if (btnRun) {
+    btnRun.onclick = runPredictionInference;
+  }
+
+  var btnMap = document.getElementById("btn-view-on-map");
+  if (btnMap) {
+    btnMap.onclick = navigatePredictionToMap;
+  }
+}
+
+function runPredictionInference() {
+  var btnRun = document.getElementById("btn-run-predict");
+  var st = document.getElementById("pred-state").value;
+  var dt = document.getElementById("pred-district").value;
+  var crop = document.getElementById("pred-crop").value;
+  var stage = document.getElementById("pred-stage").value;
+  var soil = parseFloat(document.getElementById("pred-soil").value);
+  var temp = parseFloat(document.getElementById("pred-temp").value);
+  var rain = parseFloat(document.getElementById("pred-rain").value);
+  var hum = parseFloat(document.getElementById("pred-hum").value);
+
+  var payload = {
+    state: st,
+    district: dt,
+    crop_type: crop,
+    growth_stage: stage,
+    effective_soil_wetness: soil,
+    temperature: temp,
+    rainfall: rain,
+    humidity: hum
+  };
+
+  btnRun.disabled = true;
+  btnRun.textContent = "⏳ Running Random Forest Models...";
+
+  fetch("/predict", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  }).then(function(r) {
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    return r.json();
+  }).then(function(res) {
+    btnRun.disabled = false;
+    btnRun.textContent = "⚡ Run Agricultural Prediction";
+    renderPredictionResults(res, payload);
+  }).catch(function(err) {
+    btnRun.disabled = false;
+    btnRun.textContent = "⚡ Run Agricultural Prediction";
+    alert("Prediction failed: " + err.message + ". Please verify input parameters.");
+  });
+}
+
+function renderPredictionResults(res, payload) {
+  latestPrediction = { res: res, payload: payload };
+
+  var emptyEl = document.getElementById("results-empty");
+  var contentEl = document.getElementById("results-content");
+  if (emptyEl) emptyEl.style.display = "none";
+  if (contentEl) {
+    contentEl.style.display = "block";
+    contentEl.classList.add("active");
+  }
+
+  var cStress = res.crop_stress_prediction || {};
+  var iPriority = res.irrigation_priority_prediction || {};
+  var agro = res.calculated_agronomic_indicators || {};
+
+  document.getElementById("res-target-title").textContent = payload.district + ", " + payload.state + " · " + payload.crop_type;
+
+  var stressBadge = document.getElementById("res-stress-badge");
+  var stressLevel = cStress.stress_level || "Moderate";
+  stressBadge.textContent = stressLevel + " Stress";
+  stressBadge.className = "badge " + (stressLevel === "Severe" || stressLevel === "High" ? "high" : (stressLevel === "Moderate" ? "med" : "low"));
+
+  var stressVal = document.getElementById("res-stress-val");
+  stressVal.textContent = stressLevel;
+  var stressColors = { "Low": "var(--green)", "Moderate": "var(--amber)", "High": "var(--acc)", "Severe": "var(--red)" };
+  stressVal.style.color = stressColors[stressLevel] || "var(--acc)";
+
+  var ipiVal = document.getElementById("res-ipi-val");
+  var ipiScore = iPriority.irrigation_priority_index || 0.0;
+  ipiVal.textContent = ipiScore.toFixed(1);
+  ipiVal.style.color = ipiScore >= 50.0 ? "var(--red)" : (ipiScore >= 35.0 ? "var(--amber)" : "var(--green)");
+
+  document.getElementById("res-depth-val").textContent = iPriority.recommended_irrigation_depth || "35–45 mm";
+  document.getElementById("res-deficit-val").textContent = (agro.daily_water_deficit_mm || 0.0).toFixed(1) + " mm/d";
+
+  var probs = cStress.stress_probabilities || {};
+  var pLow = probs["Low"] || 0.0;
+  var pMod = probs["Moderate"] || 0.0;
+  var pHigh = probs["High"] || 0.0;
+  var pSev = probs["Severe"] || 0.0;
+
+  document.getElementById("prob-fill-low").style.width = (pLow * 100).toFixed(0) + "%";
+  document.getElementById("prob-num-low").textContent = (pLow * 100).toFixed(1) + "%";
+
+  document.getElementById("prob-fill-mod").style.width = (pMod * 100).toFixed(0) + "%";
+  document.getElementById("prob-num-mod").textContent = (pMod * 100).toFixed(1) + "%";
+
+  document.getElementById("prob-fill-high").style.width = (pHigh * 100).toFixed(0) + "%";
+  document.getElementById("prob-num-high").textContent = (pHigh * 100).toFixed(1) + "%";
+
+  document.getElementById("prob-fill-sev").style.width = (pSev * 100).toFixed(0) + "%";
+  document.getElementById("prob-num-sev").textContent = (pSev * 100).toFixed(1) + "%";
+
+  document.getElementById("res-advisory-title").textContent = iPriority.priority_category + " Advisory";
+  document.getElementById("res-advisory-text").textContent = (iPriority.actionable_farmer_advisory || "") + " " + (cStress.condition_summary || "");
+
+  document.getElementById("res-et0").textContent = (agro.reference_et0_mm || 0.0).toFixed(2) + " mm";
+  document.getElementById("res-etc").textContent = (agro.crop_etc_mm || 0.0).toFixed(2) + " mm";
+  document.getElementById("res-ndvi").textContent = (agro.vegetation_ndvi || 0.0).toFixed(3);
+}
+
+function navigatePredictionToMap() {
+  if (!latestPrediction) return;
+  var payload = latestPrediction.payload;
+  var res = latestPrediction.res;
+
+  location.hash = "#/map";
+
+  setTimeout(function() {
+    var targetDt = normState(payload.district);
+    var targetSt = normState(payload.state);
+    var exactKey = targetSt + "|" + targetDt;
+    var ly = districtMap[exactKey];
+
+    if (!ly) {
+      for (var k in districtMap) {
+        if (k.split("|")[1] === targetDt) {
+          ly = districtMap[k];
+          break;
+        }
+      }
+    }
+
+    if (ly) {
+      if (current && normState(ly.feature.properties.state) !== normState(current)) {
+        current = formatStateName(ly.feature.properties.state);
+        document.getElementById("pill").textContent = current.toUpperCase();
+        document.getElementById("state-select").value = current;
+        distLayer.setStyle(styleDist);
+        stateLayer.setStyle(styleState);
+      }
+      selectDistrict(ly.feature.properties, ly);
+      map.flyToBounds(ly.getBounds(), { duration: 1.0, maxZoom: 8, padding: [50, 50] });
+
+      var cStress = res.crop_stress_prediction || {};
+      var iPriority = res.irrigation_priority_prediction || {};
+      var agro = res.calculated_agronomic_indicators || {};
+      var stressLevel = cStress.stress_level || "Moderate";
+      var badgeCls = stressLevel === "Severe" || stressLevel === "High" ? "high" : (stressLevel === "Moderate" ? "med" : "low");
+
+      var h = "<h4>" + payload.district + ", " + formatStateName(payload.state) + "</h4>"
+        + "<div style='margin:6px 0;'><span class='badge " + badgeCls + "'>Predicted: " + stressLevel + " Stress</span> "
+        + "<span class='badge' style='background:rgba(15,118,110,0.15);color:var(--teal);'>ML INFERENCE</span></div>"
+        + "<div class='v mono' style='color:var(--acc);font-size:22px;margin:4px 0;'>IPI " + (iPriority.irrigation_priority_index || 0.0).toFixed(1) + " / 100</div>"
+        + "<p><b>Recommended Irrigation:</b> " + (iPriority.recommended_irrigation_depth || "35–45 mm") + "</p>"
+        + "<p><b>Crop:</b> " + payload.crop_type + " (" + payload.growth_stage + " stage)</p>"
+        + "<p style='font-size:12px;margin:8px 0;line-height:1.4;'><b>Advisory:</b> " + (iPriority.actionable_farmer_advisory || "") + "</p>"
+        + "<p style='font-size:11.5px;color:var(--mute);margin-top:10px;'>Deficit: " + (agro.daily_water_deficit_mm || 0.0).toFixed(1) + " mm/d · ETc: " + (agro.crop_etc_mm || 0.0).toFixed(2) + " mm · NDVI: " + (agro.vegetation_ndvi || 0.0).toFixed(3) + "</p>";
+
+      document.getElementById("info").innerHTML = h + drawLegend();
+    }
+  }, 180);
+}
+
 Promise.all([
   fetch("data/india_states_simplified.geojson").then(function (r) { return r.json(); }),
   fetch("data/india_districts_simplified.geojson").then(function (r) { return r.json(); }),
@@ -481,6 +743,8 @@ Promise.all([
   distLayer.bringToFront();
   stateLayer.bringToFront();
   showInfo(null);
+
+  initPredictorForm();
 }).catch(function (err) {
   console.error("Map initialization failed:", err);
   document.getElementById("info").innerHTML = "<h4>Could not load data</h4><p>Open this page through the FastAPI server at /app/portal.html.</p>";
@@ -583,7 +847,7 @@ function populateStateDropdown(list) {
   }
   var sortedStates = Object.keys(states).sort();
   var sel = document.getElementById("ranking-state-filter");
-  if (sel.options.length <= 1) {
+  if (sel && sel.options.length <= 1) {
     for (var j = 0; j < sortedStates.length; j++) {
       var opt = document.createElement("option");
       opt.value = sortedStates[j];
@@ -595,6 +859,7 @@ function populateStateDropdown(list) {
 
 function renderTop10Chart(top10) {
   var container = document.getElementById("top-10-bars");
+  if (!container) return;
   var html = "";
   for (var i = 0; i < top10.length; i++) {
     var d = top10[i];
@@ -611,6 +876,7 @@ function renderTop10Chart(top10) {
 
 function renderPriorityTable(list) {
   var tbody = document.getElementById("priority-tbody");
+  if (!tbody) return;
   if (!list || list.length === 0) {
     tbody.innerHTML = "<tr><td colspan='9' style='text-align:center;padding:20px;color:var(--mute);'>No districts matching filter criteria.</td></tr>";
     return;
@@ -646,8 +912,10 @@ function filterRankings() {
   renderPriorityTable(filtered);
 }
 
-document.getElementById("ranking-search").oninput = filterRankings;
-document.getElementById("ranking-state-filter").onchange = filterRankings;
+var rankSearchEl = document.getElementById("ranking-search");
+if (rankSearchEl) rankSearchEl.oninput = filterRankings;
+var rankStateEl = document.getElementById("ranking-state-filter");
+if (rankStateEl) rankStateEl.onchange = filterRankings;
 
 var rankFilterBtns = document.querySelectorAll(".filter-tabs .filter-btn");
 for (var i = 0; i < rankFilterBtns.length; i++) {
@@ -675,6 +943,7 @@ function loadClustersData() {
 
 function renderClustersTable(list) {
   var tbody = document.getElementById("clusters-tbody");
+  if (!tbody) return;
   if (!list || list.length === 0) {
     tbody.innerHTML = "<tr><td colspan='8' style='text-align:center;padding:20px;color:var(--mute);'>No clustered districts matching criteria.</td></tr>";
     return;
@@ -714,15 +983,17 @@ function filterClusters() {
   renderClustersTable(filtered);
 }
 
-document.getElementById("cluster-search").oninput = filterClusters;
-document.getElementById("cluster-zone-filter").onchange = filterClusters;
+var clusterSearchEl = document.getElementById("cluster-search");
+if (clusterSearchEl) clusterSearchEl.oninput = filterClusters;
+var clusterZoneEl = document.getElementById("cluster-zone-filter");
+if (clusterZoneEl) clusterZoneEl.onchange = filterClusters;
 
 // ========================================================
 // ADVANCED MOTION: 3D CARD TILT ON CURSOR HOVER
 // ========================================================
 function initCardTilt() {
   if (!window.matchMedia || !window.matchMedia("(hover: hover)").matches) return;
-  var cards = document.querySelectorAll(".nav-card, .cluster-card");
+  var cards = document.querySelectorAll(".nav-card, .cluster-card, .pred-card");
   for (var i = 0; i < cards.length; i++) {
     (function(card) {
       card.addEventListener("mousemove", function(e) {
@@ -733,9 +1004,9 @@ function initCardTilt() {
         var cy = rect.height / 2;
         var dx = (x - cx) / cx;
         var dy = (y - cy) / cy;
-        var rotX = (-dy * 6).toFixed(2);
-        var rotY = (dx * 6).toFixed(2);
-        card.style.transform = "perspective(1200px) rotateX(" + rotX + "deg) rotateY(" + rotY + "deg) translateY(-4px)";
+        var rotX = (-dy * 5).toFixed(2);
+        var rotY = (dx * 5).toFixed(2);
+        card.style.transform = "perspective(1200px) rotateX(" + rotX + "deg) rotateY(" + rotY + "deg) translateY(-3px)";
       });
       card.addEventListener("mouseleave", function() {
         card.style.transform = "";
@@ -768,6 +1039,7 @@ window.addEventListener("resize", updateNavIndicator);
 // ========================================================
 function getTargetElementForHash(hash) {
   if (hash.indexOf("#/map") === 0) return document.getElementById("app");
+  if (hash.indexOf("#/predictor") === 0) return document.getElementById("view-predictor");
   if (hash.indexOf("#/ranking") === 0) return document.getElementById("view-ranking");
   if (hash.indexOf("#/benchmarks") === 0) return document.getElementById("view-benchmarks");
   if (hash.indexOf("#/clusters") === 0) return document.getElementById("view-clusters");
@@ -858,12 +1130,14 @@ function route() {
   var hash = location.hash || "#/";
   var appEl = document.getElementById("app");
   var homeEl = document.getElementById("view-home");
+  var predictorEl = document.getElementById("view-predictor");
   var rankingEl = document.getElementById("view-ranking");
   var benchmarksEl = document.getElementById("view-benchmarks");
   var clustersEl = document.getElementById("view-clusters");
 
   appEl.classList.remove("on");
   homeEl.classList.remove("on");
+  if (predictorEl) predictorEl.classList.remove("on");
   rankingEl.classList.remove("on");
   benchmarksEl.classList.remove("on");
   clustersEl.classList.remove("on");
@@ -877,6 +1151,11 @@ function route() {
     appEl.classList.add("on");
     document.getElementById("nav-map").classList.add("active");
     setTimeout(function() { map.invalidateSize(); }, 60);
+  } else if (hash.indexOf("#/predictor") === 0) {
+    if (predictorEl) predictorEl.classList.add("on");
+    var navPred = document.getElementById("nav-predictor");
+    if (navPred) navPred.classList.add("active");
+    window.scrollTo({top:0, behavior:"smooth"});
   } else if (hash.indexOf("#/ranking") === 0) {
     rankingEl.classList.add("on");
     document.getElementById("nav-ranking").classList.add("active");

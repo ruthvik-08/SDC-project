@@ -110,6 +110,8 @@ class PredictRequest(BaseModel):
     stage_code: int = None
     cwsi: float = None
     water_deficit: float = None
+    state: str = None
+    district: str = None
 
 class CropStressSimRequest(BaseModel):
     temperature: float = 32.5
@@ -221,6 +223,7 @@ def predict(item: PredictRequest):
     daily_deficit = max(0.0, round(etc_val - (rain_val + soil_val * etc_val), 2))
     return {
         "status": "success",
+        "location": {"state": item.state, "district": item.district},
         "input_features": {col: float(raw_df[col].iloc[0]) for col in feature_cols},
         "crop_stress_prediction": {
             "stress_level_code": stress_code,
