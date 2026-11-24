@@ -47,9 +47,9 @@ The notebook `SDC_Kaggle_Notebook.ipynb` executes the complete ML pipeline acros
 15. **Hyperparameter Tuning**: Performs parameter tuning with `GridSearchCV`.
 16. **Save Trained Models**: Saves `.pkl` model files with `joblib.dump()`.
 
-### All-India 732-District Expansion
-17. **Load 732 Districts Dataset**: Reads `india_district_agriculture.csv` covering all 732 districts of India.
-18. **Feature Vector Derivation**: Computes the 14 required physical and agronomic features for all 732 districts.
+### All-India 732-District Expansion (From the Same Unified Dataset)
+17. **Access All-India 732 Districts**: Extracts the 732 authentic district baseline records directly from the single unified dataset (`df[df["granularity"] == "district_baseline"]`).
+18. **Feature Vector Extraction**: Takes the pre-computed 14 physical and agronomic features for all 732 districts.
 19. **All-India Priority Ranking**: Generates Random Forest regression and classification predictions, ranks districts from Rank 1 to Rank 732, and categorizes into High, Medium, and Low Priority.
 20. **Top 10 Districts Priority Chart**: Plots the top 10 highest irrigation priority districts in India.
 21. **Priority Distribution Summary**: Displays exact distribution counts across priority categories.
@@ -61,16 +61,15 @@ The notebook `SDC_Kaggle_Notebook.ipynb` executes the complete ML pipeline acros
 
 ---
 
-## 3. How to Update Your Existing Kaggle Notebook (Preserve Identity & URL)
+## 3. How to Run on Kaggle (Only 1 Dataset Needed!)
 
-To update your existing Kaggle notebook without creating a duplicate or changing its URL:
-
-1. Open your existing notebook on [kaggle.com](https://www.kaggle.com) in your browser.
-2. In the top editor menu bar, click **File** -> **Upload Notebook** (or **Import Notebook**).
-3. Select your local file: `SDC_KAGGLE/SDC_Kaggle_Notebook.ipynb`.
-4. Kaggle will replace the notebook contents in-place, keeping your existing URL, title, metadata, version history, and attached datasets.
-5. Click **Save Version** -> Choose **Save & Run All (Commit)** -> Click **Save**.
-6. The notebook will run all 32 cells from start to finish, generating all benchmark tables, plots, 732-district rankings, K-Means clusters, PCA projection, and saving all trained models to `/kaggle/working/`.
+1. Go to your existing notebook on [kaggle.com](https://www.kaggle.com).
+2. Under **Input** in the right-hand panel, ensure your dataset contains **`krishijal_master_dataset.csv`** (upload the updated 7,386-row version from `SDC_KAGGLE/krishijal_master_dataset.csv`).
+3. You do **NOT** need any other dataset or secondary file.
+4. In the top editor menu, click **File** -> **Upload Notebook** (or **Import Notebook**).
+5. Select `SDC_KAGGLE/SDC_Kaggle_Notebook.ipynb` from your computer.
+6. Click **Save Version** -> Choose **Save & Run All (Commit)** -> Click **Save**.
+7. The notebook will run all 32 cells from start to finish using only `krishijal_master_dataset.csv`!
 
 ---
 
