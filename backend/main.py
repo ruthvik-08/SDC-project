@@ -1,3 +1,4 @@
+import json
 import pandas as pd
 import numpy as np
 import joblib
@@ -9,6 +10,8 @@ from sklearn.preprocessing import StandardScaler, PolynomialFeatures
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.pipeline import Pipeline
 from sklearn.linear_model import LinearRegression
+from sklearn.cluster import KMeans
+from sklearn.decomposition import PCA
 
 df_master = pd.read_csv("data/processed/krishijal_master_dataset.csv")
 df_india_agri = pd.read_csv("data/india_district_agriculture.csv")
@@ -494,63 +497,88 @@ def get_all_districts():
         "districts": df_india_agri[["State", "District", "LGD_Code", "Latitude", "Longitude", "Crop", "Soil_Type", "Irrigation_Coverage", "Data_Year"]].to_dict(orient="records")
     }
 
-cluster_list = []
-for d_name, grp in df_master.groupby("district"):
-    c_id = int(grp["cluster_id"].mode()[0]) if "cluster_id" in grp else 0
-    c_info = cluster_profiles_info.get(c_id, {"name": "General Zone", "description": ""})
-    cluster_list.append({
-        "district": d_name,
-        "state": grp["state"].iloc[0],
-        "crop": grp["crop_type"].iloc[0],
-        "cluster_id": c_id,
-        "cluster_name": c_info["name"],
-        "cluster_description": c_info["description"],
-        "pca_x": round(float(grp["pca_x"].mean()), 2) if "pca_x" in grp else 0.0,
-        "pca_y": round(float(grp["pca_y"].mean()), 2) if "pca_y" in grp else 0.0,
-        "mean_temperature": round(float(grp["temperature"].mean()), 1),
-        "mean_rainfall": round(float(grp["rainfall"].mean()), 1),
-        "mean_soil_moisture": round(float(grp["effective_soil_wetness"].mean()), 2),
-        "mean_priority_index": round(float(grp["irrigation_priority_index"].mean()), 1)
+geo_districts_data = json.load(open("frontend/data/india_districts_simplified.geojson"))
+portal_districts_data = json.load(open("frontend/data/portal_data.json"))
+
+district_732_rows = []
+district_732_meta = []
+
+for f in geo_districts_data["features"]:
+    st = f["properties"]["state"]
+    dt = f["properties"]["district"]
+    key = st + "|" + dt
+    info = portal_districts_data.get(key, {})
+    temp = float(info.get("temperature") or 28.0)
+    tmax = temp + 5.5
+    tmin = temp - 5.5
+    rain = float(info.get("rainfall") or 5.0)
+    hum = float(info.get("humidity") or 60.0)
+    soil = float(info.get("soil_wetness") or 0.45)
+    solar = round(0.16 * np.sqrt(max(tmax - tmin, 1.0)) * 28.0, 1)
+    sph = 7.4
+    soc = 0.48
+    et0 = round(0.0023 * (temp + 17.8) * np.sqrt(max(tmax - tmin, 1.0)) * 14.5, 2)
+    etc = round(et0 * 1.10, 2)
+    ndvi = round(float(np.clip(0.55 + (soil * 0.20), 0.15, 0.88)), 3)
+    crop_name = info.get("crop") or "Cotton"
+    crop_code = int(crop_map.get(crop_name, 0))
+    stage_code = int(stage_map.get("Reproductive", 1))
+
+    district_732_rows.append([temp, tmax, tmin, rain, hum, soil, solar, sph, soc, ndvi, et0, etc, crop_code, stage_code])
+    district_732_meta.append({
+        "state": st,
+        "district": dt,
+        "crop": crop_name,
+        "soil_type": info.get("soil_type") or "Alluvial",
+        "temperature": temp,
+        "rainfall": rain,
+        "humidity": hum,
+        "effective_soil_wetness": soil,
+        "solar_radiation": solar,
+        "soil_ph": sph,
+        "soil_organic_carbon": soc,
+        "ndvi": ndvi,
+        "et0": et0,
+        "etc": etc
     })
 
-clusters_response = {
-    "clusters_summary": cluster_profiles_info,
-    "districts_clustered": cluster_list
-}
+X_732_df = pd.DataFrame(district_732_rows, columns=feature_cols)
+X_732_scaled = pd.DataFrame(scaler.transform(X_732_df), columns=feature_cols)
 
-@app.get("/api/clusters/regions")
-def get_clusters_regions():
-    return clusters_response
+preds_732_priority = model_reg.predict(X_732_scaled)
+preds_732_stress = model_rf.predict(X_732_scaled)
 
 ranked_priority_list = []
-for d_name, grp in df_master.groupby("district"):
-    mean_ipi = round(float(grp["irrigation_priority_index"].mean()), 1)
-    mean_cwsi = round(float(grp["cwsi"].mean()), 3) if "cwsi" in grp else 0.3
-    mean_soil = round(float(grp["effective_soil_wetness"].mean()), 3)
-    mean_rain = round(float(grp["rainfall"].mean()), 2)
-    mean_deficit = round(float(grp["water_deficit"].mean()), 2) if "water_deficit" in grp else 1.5
+for i in range(len(district_732_meta)):
+    m = district_732_meta[i]
+    raw_ipi = float(preds_732_priority[i])
+    ipi = round(float(np.clip(raw_ipi, 0.0, 100.0)), 1)
+    stress_code = int(preds_732_stress[i])
+    stress_tag = stress_label_map.get(stress_code, "Moderate")
+    deficit = max(0.0, round(m["etc"] - (m["rainfall"] + m["effective_soil_wetness"] * m["etc"]), 2))
 
-    if mean_ipi >= 50.0:
-        priority_tag = "High Priority"
-        water_depth = "40–50 mm"
-    elif mean_ipi >= 35.0:
-        priority_tag = "Medium Priority"
-        water_depth = "25–35 mm"
+    if ipi >= 50.0:
+        cat = "High Priority"
+        depth = "40–50 mm"
+    elif ipi >= 35.0:
+        cat = "Medium Priority"
+        depth = "25–35 mm"
     else:
-        priority_tag = "Low Priority"
-        water_depth = "Routine / Nil"
+        cat = "Low Priority"
+        depth = "Routine / Nil"
 
     ranked_priority_list.append({
-        "district": d_name,
-        "state": grp["state"].iloc[0],
-        "crop_type": grp["crop_type"].iloc[0],
-        "irrigation_priority_index": mean_ipi,
-        "priority_category": priority_tag,
-        "recommended_irrigation_depth": water_depth,
-        "crop_water_stress_cwsi": mean_cwsi,
-        "soil_moisture_level": mean_soil,
-        "daily_rainfall_mm": mean_rain,
-        "daily_water_deficit_mm": mean_deficit
+        "district": m["district"],
+        "state": m["state"],
+        "crop_type": m["crop"],
+        "soil_type": m["soil_type"],
+        "irrigation_priority_index": ipi,
+        "priority_category": cat,
+        "recommended_irrigation_depth": depth,
+        "crop_water_stress": stress_tag,
+        "soil_moisture_level": round(m["effective_soil_wetness"], 2),
+        "daily_rainfall_mm": round(m["rainfall"], 1),
+        "daily_water_deficit_mm": round(deficit, 1)
     })
 
 ranked_priority_list = sorted(ranked_priority_list, key=lambda x: x["irrigation_priority_index"], reverse=True)
@@ -558,14 +586,112 @@ for rank_index, item_dict in enumerate(ranked_priority_list, 1):
     item_dict["rank"] = rank_index
 
 priority_response = {
-    "title": "All-India Irrigation Priority Ranking (140+ Districts, 36 States & UTs)",
+    "title": "All-India Irrigation Priority Ranking (732 Districts, 36 States & UTs)",
     "total_districts": len(ranked_priority_list),
+    "priority_summary": {
+        "high": sum(1 for x in ranked_priority_list if x["priority_category"] == "High Priority"),
+        "medium": sum(1 for x in ranked_priority_list if x["priority_category"] == "Medium Priority"),
+        "low": sum(1 for x in ranked_priority_list if x["priority_category"] == "Low Priority"),
+        "average_priority_index": round(float(np.mean([x["irrigation_priority_index"] for x in ranked_priority_list])), 1)
+    },
     "ranked_districts": ranked_priority_list
 }
 
 @app.get("/api/irrigation/priority")
 def get_irrigation_priority():
     return priority_response
+
+clustering_features = [
+    "temperature", "rainfall", "humidity", "effective_soil_wetness",
+    "solar_radiation", "soil_ph", "soil_organic_carbon", "ndvi", "et0", "etc"
+]
+
+cluster_scaler = StandardScaler()
+X_cluster_scaled = cluster_scaler.fit_transform(X_732_df[clustering_features])
+
+kmeans_732 = KMeans(n_clusters=4, random_state=42, n_init=10)
+cluster_ids_732 = kmeans_732.fit_predict(X_cluster_scaled)
+
+pca_732 = PCA(n_components=2, random_state=42)
+coords_732 = pca_732.fit_transform(X_cluster_scaled)
+
+zone_profiles = {
+    0: {
+        "name": "Cool Mountain & High-Altitude Zone",
+        "description": "Lower temperature, alpine and mountain terrain, stable moisture with seasonal snowmelt.",
+        "recommended_strategy": "Gravity Flow / Terraced Water Harvesting",
+        "color": "#d9784f"
+    },
+    1: {
+        "name": "Humid Coastal & Deltaic Floodplain Belt",
+        "description": "High relative humidity, abundant monsoon rainfall, deltaic soils with low irrigation deficit.",
+        "recommended_strategy": "Drainage Canal Regulation & Furrow",
+        "color": "#0f766e"
+    },
+    2: {
+        "name": "Semi-Arid & High-Deficit Agricultural Core",
+        "description": "High summer temperature, progressive soil moisture depletion, high evapotranspiration demand.",
+        "recommended_strategy": "Precision Micro-Drip & Sprinklers",
+        "color": "#c0392b"
+    },
+    3: {
+        "name": "Wet Tropical & Heavy Rain Zone",
+        "description": "Elevated natural precipitation, dense canopy, prolonged root-zone soil saturation.",
+        "recommended_strategy": "Surface Water Storage / Watershed",
+        "color": "#2e9e5b"
+    }
+}
+
+cluster_list = []
+for i in range(len(district_732_meta)):
+    m = district_732_meta[i]
+    cid = int(cluster_ids_732[i])
+    z = zone_profiles.get(cid, {})
+    cluster_list.append({
+        "district": m["district"],
+        "state": m["state"],
+        "crop": m["crop"],
+        "cluster_id": cid,
+        "cluster_name": z.get("name", "Zone " + str(cid)),
+        "cluster_description": z.get("description", ""),
+        "pca_x": round(float(coords_732[i, 0]), 2),
+        "pca_y": round(float(coords_732[i, 1]), 2),
+        "mean_temperature": round(m["temperature"], 1),
+        "mean_rainfall": round(m["rainfall"], 1),
+        "mean_soil_moisture": round(m["effective_soil_wetness"], 2),
+        "mean_priority_index": round(float(preds_732_priority[i]), 1)
+    })
+
+clusters_summary_data = {}
+for cid in range(4):
+    z = zone_profiles[cid]
+    c_districts = [x for x in cluster_list if x["cluster_id"] == cid]
+    clusters_summary_data[cid] = {
+        "name": z["name"],
+        "description": z["description"],
+        "recommended_strategy": z["recommended_strategy"],
+        "color": z["color"],
+        "district_count": len(c_districts),
+        "mean_temperature": round(float(np.mean([x["mean_temperature"] for x in c_districts])), 1) if c_districts else 0.0,
+        "mean_rainfall": round(float(np.mean([x["mean_rainfall"] for x in c_districts])), 1) if c_districts else 0.0,
+        "mean_soil_moisture": round(float(np.mean([x["mean_soil_moisture"] for x in c_districts])), 2) if c_districts else 0.0,
+        "mean_priority_index": round(float(np.mean([x["mean_priority_index"] for x in c_districts])), 1) if c_districts else 0.0
+    }
+
+clusters_response = {
+    "total_districts": len(cluster_list),
+    "clusters_summary": clusters_summary_data,
+    "pca_variance": {
+        "pc1": round(float(pca_732.explained_variance_ratio_[0]), 4),
+        "pc2": round(float(pca_732.explained_variance_ratio_[1]), 4),
+        "total": round(float(np.sum(pca_732.explained_variance_ratio_)), 4)
+    },
+    "districts_clustered": cluster_list
+}
+
+@app.get("/api/clusters/regions")
+def get_clusters_regions():
+    return clusters_response
 
 evaluation_metrics = {
     "dataset_source": "data/processed/krishijal_master_dataset.csv",

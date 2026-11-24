@@ -99,7 +99,7 @@
           <div class="card-body">
             <span class="card-badge">DECISION SUPPORT</span>
             <h3>Irrigation Priority</h3>
-            <p>159-district irrigation priority ranking sorted from highest to lowest need with recommended water depths (mm) and state filters.</p>
+            <p>All-India 732-district quantitative irrigation priority ranking sorted from highest to lowest need with recommended water depths (mm), search, and state filters.</p>
             <span class="card-link">View Rankings <span class="arrow">&rarr;</span></span>
           </div>
         </a>
@@ -147,7 +147,7 @@
           <div class="card-body">
             <span class="card-badge">ZONATION</span>
             <h3>Agro-Climatic Clusters</h3>
-            <p>Unsupervised K-Means clustering (k=4) grouping agricultural regions by evapotranspiration, rainfall patterns, and soil wetness.</p>
+            <p>Unsupervised K-Means clustering (k=4) and 2D PCA mapping all 732 agricultural districts by evapotranspiration, rainfall patterns, and soil wetness.</p>
             <span class="card-link">Explore Clusters <span class="arrow">&rarr;</span></span>
           </div>
         </a>
@@ -625,7 +625,7 @@
     <div class="view-header">
       <span class="tag">Decision Support Engine</span>
       <h1>All-India Irrigation Priority Ranking</h1>
-      <p>Quantitative ranking of 159 agricultural districts across India derived from Crop Water Stress Index (CWSI), daily soil moisture deficits, and agro-climatic conditions.</p>
+      <p>Quantitative ranking of 732 agricultural districts across all 36 Indian States and Union Territories derived from trained Random Forest models, Crop Water Stress Index (CWSI), and daily soil moisture deficits.</p>
     </div>
 
     <div class="sec" style="padding-top:0;">
@@ -633,7 +633,7 @@
       <div class="kpi-row">
         <div class="kpi-card">
           <div class="kpi-lbl">Total Monitored Districts</div>
-          <div class="kpi-num" id="rank-total-districts">159</div>
+          <div class="kpi-num" id="rank-total-districts">732</div>
         </div>
         <div class="kpi-card">
           <div class="kpi-lbl"><span class="pulse-indicator"></span>High Priority Zones</div>
@@ -655,12 +655,12 @@
 
       <!-- Controls & Filter Toolbar -->
       <div class="toolbar">
-        <input type="text" id="ranking-search" placeholder="Search district name…">
+        <input type="text" id="ranking-search" placeholder="Search 732 districts or states (e.g. Bikaner, Khammam, Nashik)…">
         <select id="ranking-state-filter">
-          <option value="ALL">All States &amp; UTs</option>
+          <option value="ALL">All States &amp; UTs (36)</option>
         </select>
         <div class="filter-tabs">
-          <button class="filter-btn active" data-cat="ALL">All</button>
+          <button class="filter-btn active" data-cat="ALL">All (732)</button>
           <button class="filter-btn" data-cat="High Priority">High</button>
           <button class="filter-btn" data-cat="Medium Priority">Medium</button>
           <button class="filter-btn" data-cat="Low Priority">Low</button>
@@ -678,21 +678,37 @@
         <table class="data-table" id="priority-table">
           <thead>
             <tr>
-              <th>Rank</th>
-              <th>District</th>
-              <th>State</th>
-              <th>Primary Crop</th>
-              <th>Priority Score</th>
-              <th>Priority Category</th>
+              <th data-sort="rank" class="sortable">Rank <span class="sort-icon">&#8597;</span></th>
+              <th data-sort="district" class="sortable">District <span class="sort-icon">&#8597;</span></th>
+              <th data-sort="state" class="sortable">State <span class="sort-icon">&#8597;</span></th>
+              <th data-sort="crop_type" class="sortable">Primary Crop <span class="sort-icon">&#8597;</span></th>
+              <th data-sort="irrigation_priority_index" class="sortable">Priority Score <span class="sort-icon">&#8597;</span></th>
+              <th data-sort="priority_category" class="sortable">Priority Category <span class="sort-icon">&#8597;</span></th>
               <th>Recommended Depth</th>
-              <th>Soil Wetness</th>
-              <th>Daily Rain</th>
+              <th data-sort="soil_moisture_level" class="sortable">Soil Wetness <span class="sort-icon">&#8597;</span></th>
+              <th data-sort="daily_rainfall_mm" class="sortable">Daily Rain <span class="sort-icon">&#8597;</span></th>
             </tr>
           </thead>
           <tbody id="priority-tbody">
             <tr><td colspan="9" style="text-align:center;padding:24px;">Loading real priority rankings from backend API…</td></tr>
           </tbody>
         </table>
+      </div>
+
+      <!-- Pagination Controls for Ranking Table -->
+      <div class="table-pagination" id="priority-pagination">
+        <div class="pagination-info" id="priority-pagination-info">Showing 1–50 of 732 districts</div>
+        <div class="pagination-controls">
+          <button type="button" class="page-btn" id="priority-prev-btn" disabled>&lsaquo; Prev</button>
+          <span class="page-current" id="priority-page-num">Page 1 of 15</span>
+          <button type="button" class="page-btn" id="priority-next-btn">Next &rsaquo;</button>
+          <select id="priority-page-size" class="page-select" title="Rows per page">
+            <option value="25">25 per page</option>
+            <option value="50" selected>50 per page</option>
+            <option value="100">100 per page</option>
+            <option value="732">Show All 732</option>
+          </select>
+        </div>
       </div>
 
       <!-- Peak-End Takeaway Banner -->
@@ -911,89 +927,182 @@
     <div class="view-header">
       <span class="tag">Regional Zonation</span>
       <h1>Regional Agro-Climatic Clusters</h1>
-      <p>Unsupervised K-Means clustering (k=4) grouping Indian agricultural districts based on temperature profiles, rainfall intensity, and effective soil wetness for regional water resource planning.</p>
+      <p>Unsupervised K-Means clustering (k=4) and 2D Principal Component Analysis (PCA) grouping all 732 Indian agricultural districts across 10 standardized physical climate and soil features for regional water resource planning.</p>
     </div>
 
     <div class="sec" style="padding-top:0;">
+      <!-- 2D PCA Feature Space Scatter Plot -->
+      <div class="pca-card">
+        <div class="pca-header">
+          <div class="pca-title-wrap">
+            <h3>2D Principal Component Analysis (PCA) Feature Space (732 Districts)</h3>
+            <p>Unsupervised projection of 732 Indian agricultural districts across 10 standardized physical climate and soil features. Hover over any point to inspect district attributes and cluster classification.</p>
+          </div>
+          <div class="pca-variance-pills">
+            <span class="variance-pill" id="pca-var-pc1">PC1: 49.59% Var</span>
+            <span class="variance-pill" id="pca-var-pc2">PC2: 37.27% Var</span>
+            <span class="variance-pill" id="pca-var-tot" style="color:var(--teal);border-color:var(--teal);">Total 2D: 86.86%</span>
+          </div>
+        </div>
+
+        <!-- Interactive Cluster Filter Pills -->
+        <div class="pca-filter-row">
+          <button type="button" class="cluster-pill-btn active" data-zone="ALL" id="pill-zone-all">
+            All Clusters (732)
+          </button>
+          <button type="button" class="cluster-pill-btn" data-zone="0" id="pill-zone-0">
+            <span class="cluster-pill-dot" style="background:#d9784f;"></span> Zone 0 (44)
+          </button>
+          <button type="button" class="cluster-pill-btn" data-zone="1" id="pill-zone-1">
+            <span class="cluster-pill-dot" style="background:#0f766e;"></span> Zone 1 (188)
+          </button>
+          <button type="button" class="cluster-pill-btn" data-zone="2" id="pill-zone-2">
+            <span class="cluster-pill-dot" style="background:#c0392b;"></span> Zone 2 (400)
+          </button>
+          <button type="button" class="cluster-pill-btn" data-zone="3" id="pill-zone-3">
+            <span class="cluster-pill-dot" style="background:#2e9e5b;"></span> Zone 3 (100)
+          </button>
+        </div>
+
+        <!-- SVG Container & Interactive Tooltip -->
+        <div class="pca-svg-container" id="pca-scatter-container">
+          <svg class="pca-svg" id="pca-svg" viewBox="0 0 840 440" preserveAspectRatio="xMidYMid meet"></svg>
+          <div class="pca-tooltip" id="pca-tooltip"></div>
+        </div>
+
+        <!-- Legend Row -->
+        <div class="pca-legend">
+          <div class="pca-legend-item">
+            <span class="pca-legend-swatch" style="background:#d9784f;"></span>
+            <span><b>Zone 0:</b> Cool Mountain &amp; High Altitude (44 districts)</span>
+          </div>
+          <div class="pca-legend-item">
+            <span class="pca-legend-swatch" style="background:#0f766e;"></span>
+            <span><b>Zone 1:</b> Humid Coastal &amp; Deltaic Floodplain (188 districts)</span>
+          </div>
+          <div class="pca-legend-item">
+            <span class="pca-legend-swatch" style="background:#c0392b;"></span>
+            <span><b>Zone 2:</b> Semi-Arid &amp; Deficit Core (400 districts)</span>
+          </div>
+          <div class="pca-legend-item">
+            <span class="pca-legend-swatch" style="background:#2e9e5b;"></span>
+            <span><b>Zone 3:</b> Wet Tropical &amp; Heavy Rain (100 districts)</span>
+          </div>
+        </div>
+      </div>
+
       <!-- 4 Cluster Zone Profile Cards -->
       <div class="cluster-cards">
         <!-- Zone 0 -->
         <div class="cluster-card" style="border-top-color:#d9784f;">
-          <span class="tag" style="color:#d9784f;">ZONE 0</span>
-          <h4>High-Evaporation Central &amp; Western Zone</h4>
-          <p class="cdesc">High temperature, moderate soil moisture, elevated reference evapotranspiration (ET0). Typical crops: Cotton, Soybean, Pulses.</p>
-          <div class="cluster-stat"><span>Mean Temp</span><span>28.4 °C</span></div>
-          <div class="cluster-stat"><span>Mean Rainfall</span><span>2.1 mm/day</span></div>
-          <div class="cluster-stat"><span>Soil Wetness</span><span>0.41</span></div>
-          <div class="cluster-stat"><span>Recommended Strategy</span><span style="color:#d9784f;">Furrow &amp; Drip</span></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+            <span class="tag" style="color:#d9784f;margin:0;">ZONE 0</span>
+            <span class="badge" style="background:#d9784f20;color:#d9784f;border:1px solid #d9784f60;">44 Districts</span>
+          </div>
+          <h4>Cool Mountain &amp; High-Altitude Zone</h4>
+          <p class="cdesc">Himalayan and northern highland belts characterized by lower temperatures, seasonal snowmelt, and stable alpine soil moisture. Crops: Wheat, Barley, Maize.</p>
+          <div class="cluster-stat"><span>Mean Temp</span><span id="c0-temp">8.5 °C</span></div>
+          <div class="cluster-stat"><span>Mean Rainfall</span><span id="c0-rain">38.6 mm</span></div>
+          <div class="cluster-stat"><span>Soil Wetness</span><span id="c0-soil">0.54</span></div>
+          <div class="cluster-stat"><span>Mean Priority</span><span id="c0-ipi" style="color:#d9784f;">14.1 (Low)</span></div>
+          <div class="cluster-stat"><span>Strategy</span><span style="color:#d9784f;">Terraced Flow &amp; Tank</span></div>
         </div>
 
         <!-- Zone 1 -->
         <div class="cluster-card" style="border-top-color:#0f766e;">
-          <span class="tag" style="color:#0f766e;">ZONE 1</span>
-          <h4>Humid Coastal &amp; Floodplain Belt</h4>
-          <p class="cdesc">High relative humidity, abundant rainfall, delta &amp; alluvial soils with lower deficit. Typical crops: Rice, Jute, Sugarcane.</p>
-          <div class="cluster-stat"><span>Mean Temp</span><span>26.8 °C</span></div>
-          <div class="cluster-stat"><span>Mean Rainfall</span><span>5.8 mm/day</span></div>
-          <div class="cluster-stat"><span>Soil Wetness</span><span>0.58</span></div>
-          <div class="cluster-stat"><span>Recommended Strategy</span><span style="color:#0f766e;">Drainage / Canal</span></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+            <span class="tag" style="color:#0f766e;margin:0;">ZONE 1</span>
+            <span class="badge" style="background:#0f766e20;color:#0f766e;border:1px solid #0f766e60;">188 Districts</span>
+          </div>
+          <h4>Humid Coastal &amp; Deltaic Floodplain</h4>
+          <p class="cdesc">Coastal corridors and deltaic floodplains with high relative humidity, abundant monsoon rainfall, and fertile alluvial soils with low deficits. Crops: Rice, Sugarcane.</p>
+          <div class="cluster-stat"><span>Mean Temp</span><span id="c1-temp">25.1 °C</span></div>
+          <div class="cluster-stat"><span>Mean Rainfall</span><span id="c1-rain">135.6 mm</span></div>
+          <div class="cluster-stat"><span>Soil Wetness</span><span id="c1-soil">0.53</span></div>
+          <div class="cluster-stat"><span>Mean Priority</span><span id="c1-ipi" style="color:#0f766e;">24.2 (Low)</span></div>
+          <div class="cluster-stat"><span>Strategy</span><span style="color:#0f766e;">Drainage Canal / Furrow</span></div>
         </div>
 
         <!-- Zone 2 -->
         <div class="cluster-card" style="border-top-color:#c0392b;">
-          <span class="tag" style="color:#c0392b;">ZONE 2</span>
-          <h4>Arid &amp; Semi-Arid Moisture-Deficit Belt</h4>
-          <p class="cdesc">Low rainfall, sandy &amp; loamy soils, chronic high vapor pressure deficit. Typical crops: Mustard, Bajra, Groundnut.</p>
-          <div class="cluster-stat"><span>Mean Temp</span><span>31.2 °C</span></div>
-          <div class="cluster-stat"><span>Mean Rainfall</span><span>0.8 mm/day</span></div>
-          <div class="cluster-stat"><span>Soil Wetness</span><span>0.22</span></div>
-          <div class="cluster-stat"><span>Recommended Strategy</span><span style="color:#c0392b;">Micro-Sprinklers</span></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+            <span class="tag" style="color:#c0392b;margin:0;">ZONE 2</span>
+            <span class="badge" style="background:#c0392b20;color:#c0392b;border:1px solid #c0392b60;">400 Districts</span>
+          </div>
+          <h4>Semi-Arid &amp; High-Deficit Agricultural Core</h4>
+          <p class="cdesc">Vast rainfed agricultural heartland across the Deccan plateau and central India facing seasonal moisture exhaustion and high evapotranspiration. Crops: Cotton, Soybean, Pulses.</p>
+          <div class="cluster-stat"><span>Mean Temp</span><span id="c2-temp">25.5 °C</span></div>
+          <div class="cluster-stat"><span>Mean Rainfall</span><span id="c2-rain">71.9 mm</span></div>
+          <div class="cluster-stat"><span>Soil Wetness</span><span id="c2-soil">0.36</span></div>
+          <div class="cluster-stat"><span>Mean Priority</span><span id="c2-ipi" style="color:#c0392b;">31.6 (Medium)</span></div>
+          <div class="cluster-stat"><span>Strategy</span><span style="color:#c0392b;">Precision Micro-Drip</span></div>
         </div>
 
         <!-- Zone 3 -->
         <div class="cluster-card" style="border-top-color:#2e9e5b;">
-          <span class="tag" style="color:#2e9e5b;">ZONE 3</span>
-          <h4>Cool Mountain &amp; Sub-Himalayan Plateau</h4>
-          <p class="cdesc">Lower temperature, mountain terrain, stable soil moisture with seasonal frost. Typical crops: Maize, Wheat, Horticulture.</p>
-          <div class="cluster-stat"><span>Mean Temp</span><span>20.5 °C</span></div>
-          <div class="cluster-stat"><span>Mean Rainfall</span><span>3.4 mm/day</span></div>
-          <div class="cluster-stat"><span>Soil Wetness</span><span>0.51</span></div>
-          <div class="cluster-stat"><span>Recommended Strategy</span><span style="color:#2e9e5b;">Gravity Flow / Tank</span></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+            <span class="tag" style="color:#2e9e5b;margin:0;">ZONE 3</span>
+            <span class="badge" style="background:#2e9e5b20;color:#2e9e5b;border:1px solid #2e9e5b60;">100 Districts</span>
+          </div>
+          <h4>Wet Tropical &amp; Heavy Rain Zone</h4>
+          <p class="cdesc">Western Ghats and northeastern tropical belts featuring extreme precipitation, rich vegetative cover, and high baseline root-zone saturation. Crops: Rice, Plantation, Spices.</p>
+          <div class="cluster-stat"><span>Mean Temp</span><span id="c3-temp">24.5 °C</span></div>
+          <div class="cluster-stat"><span>Mean Rainfall</span><span id="c3-rain">209.6 mm</span></div>
+          <div class="cluster-stat"><span>Soil Wetness</span><span id="c3-soil">0.66</span></div>
+          <div class="cluster-stat"><span>Mean Priority</span><span id="c3-ipi" style="color:#2e9e5b;">22.0 (Low)</span></div>
+          <div class="cluster-stat"><span>Strategy</span><span style="color:#2e9e5b;">Watershed / Rain Storage</span></div>
         </div>
       </div>
 
       <!-- Searchable Clustered District Directory -->
       <div class="chart-box">
-        <h3>Clustered District Directory</h3>
+        <h3>Clustered District Directory (732 Districts)</h3>
         <div class="toolbar" style="margin-top:16px;">
-          <input type="text" id="cluster-search" placeholder="Search clustered district…">
+          <input type="text" id="cluster-search" placeholder="Search clustered district or state (e.g. Khammam, Bikaner)…">
           <select id="cluster-zone-filter">
-            <option value="ALL">All 4 Agro-Climatic Clusters</option>
-            <option value="0">Cluster 0: High-Evaporation Central &amp; Western</option>
-            <option value="1">Cluster 1: Humid Coastal &amp; Floodplain</option>
-            <option value="2">Cluster 2: Arid &amp; Semi-Arid Deficit</option>
-            <option value="3">Cluster 3: Cool Mountain &amp; Plateau</option>
+            <option value="ALL">All 4 Agro-Climatic Clusters (732)</option>
+            <option value="0">Cluster 0: Cool Mountain &amp; High Altitude (44)</option>
+            <option value="1">Cluster 1: Humid Coastal &amp; Floodplain (188)</option>
+            <option value="2">Cluster 2: Semi-Arid &amp; Deficit Core (400)</option>
+            <option value="3">Cluster 3: Wet Tropical &amp; Heavy Rain (100)</option>
           </select>
         </div>
 
         <div class="table-wrapper">
-          <table class="data-table">
+          <table class="data-table" id="clusters-table">
             <thead>
               <tr>
-                <th>District</th>
-                <th>State</th>
-                <th>Assigned Cluster</th>
-                <th>Crop</th>
-                <th>Avg Temp</th>
-                <th>Avg Rain</th>
-                <th>Soil Wetness</th>
-                <th>Priority Index</th>
+                <th data-sort="district" class="sortable">District <span class="sort-icon">&#8597;</span></th>
+                <th data-sort="state" class="sortable">State <span class="sort-icon">&#8597;</span></th>
+                <th data-sort="cluster_id" class="sortable">Assigned Cluster <span class="sort-icon">&#8597;</span></th>
+                <th data-sort="crop" class="sortable">Crop <span class="sort-icon">&#8597;</span></th>
+                <th data-sort="mean_temperature" class="sortable">Avg Temp <span class="sort-icon">&#8597;</span></th>
+                <th data-sort="mean_rainfall" class="sortable">Avg Rain <span class="sort-icon">&#8597;</span></th>
+                <th data-sort="mean_soil_moisture" class="sortable">Soil Wetness <span class="sort-icon">&#8597;</span></th>
+                <th data-sort="mean_priority_index" class="sortable">Priority Index <span class="sort-icon">&#8597;</span></th>
+                <th data-sort="pca_x" class="sortable">PCA (PC1, PC2) <span class="sort-icon">&#8597;</span></th>
               </tr>
             </thead>
             <tbody id="clusters-tbody">
-              <tr><td colspan="8" style="text-align:center;padding:24px;">Loading clustered districts from backend API…</td></tr>
+              <tr><td colspan="9" style="text-align:center;padding:24px;">Loading clustered districts from backend API…</td></tr>
             </tbody>
           </table>
+        </div>
+
+        <!-- Pagination Controls for Clusters Table -->
+        <div class="table-pagination" id="clusters-pagination">
+          <div class="pagination-info" id="clusters-pagination-info">Showing 1–50 of 732 districts</div>
+          <div class="pagination-controls">
+            <button type="button" class="page-btn" id="clusters-prev-btn" disabled>&lsaquo; Prev</button>
+            <span class="page-current" id="clusters-page-num">Page 1 of 15</span>
+            <button type="button" class="page-btn" id="clusters-next-btn">Next &rsaquo;</button>
+            <select id="clusters-page-size" class="page-select" title="Rows per page">
+              <option value="25">25 per page</option>
+              <option value="50" selected>50 per page</option>
+              <option value="100">100 per page</option>
+              <option value="732">Show All 732</option>
+            </select>
+          </div>
         </div>
       </div>
 

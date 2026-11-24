@@ -1149,13 +1149,19 @@ function animateNumber(el, start, end, duration, decimals, suffix) {
   requestAnimationFrame(step);
 }
 
+var priorityPage = 1;
+var priorityPageSize = 50;
+var prioritySortKey = "rank";
+var prioritySortAsc = true;
+var currentFilteredPriority = [];
+
 function loadPriorityData() {
   fetch("/api/irrigation/priority").then(function(r) { return r.json(); }).then(function(res) {
     allPriorityList = res.ranked_districts || [];
     renderPriorityKPIs(allPriorityList);
     populateStateDropdown(allPriorityList);
     renderTop10Chart(allPriorityList.slice(0, 10));
-    renderPriorityTable(allPriorityList);
+    filterRankings();
   }).catch(function(err) {
     console.error("Could not load priority rankings:", err);
   });
@@ -1170,11 +1176,16 @@ function renderPriorityKPIs(list) {
     else if (sc >= 35.0) med++;
     else low++;
   }
-  animateNumber(document.getElementById("rank-total-districts"), 0, list.length, 700, 0, "");
-  animateNumber(document.getElementById("rank-high-count"), 0, high, 700, 0, "");
-  animateNumber(document.getElementById("rank-med-count"), 0, med, 700, 0, "");
-  animateNumber(document.getElementById("rank-low-count"), 0, low, 700, 0, "");
-  animateNumber(document.getElementById("rank-avg-ipi"), 0, (totalScore / (list.length || 1)), 700, 1, "");
+  var totalEl = document.getElementById("rank-total-districts");
+  if (totalEl) animateNumber(totalEl, 0, list.length, 700, 0, "");
+  var highEl = document.getElementById("rank-high-count");
+  if (highEl) animateNumber(highEl, 0, high, 700, 0, "");
+  var medEl = document.getElementById("rank-med-count");
+  if (medEl) animateNumber(medEl, 0, med, 700, 0, "");
+  var lowEl = document.getElementById("rank-low-count");
+  if (lowEl) animateNumber(lowEl, 0, low, 700, 0, "");
+  var avgEl = document.getElementById("rank-avg-ipi");
+  if (avgEl) animateNumber(avgEl, 0, (totalScore / (list.length || 1)), 700, 1, "");
 }
 
 function populateStateDropdown(list) {
@@ -1211,16 +1222,24 @@ function renderTop10Chart(top10) {
   container.innerHTML = html;
 }
 
-function renderPriorityTable(list) {
+function renderPriorityTable() {
   var tbody = document.getElementById("priority-tbody");
   if (!tbody) return;
+  var list = currentFilteredPriority;
   if (!list || list.length === 0) {
-    tbody.innerHTML = "<tr><td colspan='9' style='text-align:center;padding:20px;color:var(--mute);'>No districts matching filter criteria.</td></tr>";
+    tbody.innerHTML = "<tr><td colspan='9' style='text-align:center;padding:24px;color:var(--mute);'>No districts matching filter criteria.</td></tr>";
+    updatePriorityPagination(0, 0, 0);
     return;
   }
+
+  var total = list.length;
+  var startIdx = (priorityPage - 1) * priorityPageSize;
+  var endIdx = Math.min(startIdx + priorityPageSize, total);
+  var pageItems = list.slice(startIdx, endIdx);
+
   var html = "";
-  for (var i = 0; i < list.length; i++) {
-    var d = list[i];
+  for (var i = 0; i < pageItems.length; i++) {
+    var d = pageItems[i];
     var badgeCls = d.irrigation_priority_index >= 50.0 ? "high" : (d.irrigation_priority_index >= 35.0 ? "med" : "low");
     html += "<tr>"
           + "<td class='mono'><b>#" + d.rank + "</b></td>"
@@ -1235,18 +1254,84 @@ function renderPriorityTable(list) {
           + "</tr>";
   }
   tbody.innerHTML = html;
+  updatePriorityPagination(total, startIdx + 1, endIdx);
+}
+
+function updatePriorityPagination(total, start, end) {
+  var infoEl = document.getElementById("priority-pagination-info");
+  var pageNumEl = document.getElementById("priority-page-num");
+  var prevBtn = document.getElementById("priority-prev-btn");
+  var nextBtn = document.getElementById("priority-next-btn");
+  if (!infoEl || !pageNumEl) return;
+
+  if (total === 0) {
+    infoEl.textContent = "Showing 0 of 0 districts";
+    pageNumEl.textContent = "Page 0 of 0";
+    if (prevBtn) prevBtn.disabled = true;
+    if (nextBtn) nextBtn.disabled = true;
+    return;
+  }
+
+  var totalPages = Math.ceil(total / priorityPageSize);
+  infoEl.textContent = "Showing " + start + "–" + end + " of " + total + " districts";
+  pageNumEl.textContent = "Page " + priorityPage + " of " + totalPages;
+  if (prevBtn) prevBtn.disabled = priorityPage <= 1;
+  if (nextBtn) nextBtn.disabled = priorityPage >= totalPages;
+}
+
+function sortPriorityList(key) {
+  if (prioritySortKey === key) {
+    prioritySortAsc = !prioritySortAsc;
+  } else {
+    prioritySortKey = key;
+    prioritySortAsc = true;
+  }
+  updatePrioritySortHeaders();
+  applyPrioritySorting();
+  priorityPage = 1;
+  renderPriorityTable();
+}
+
+function updatePrioritySortHeaders() {
+  var headers = document.querySelectorAll("#priority-table th.sortable");
+  for (var i = 0; i < headers.length; i++) {
+    var th = headers[i];
+    th.classList.remove("asc", "desc");
+    var icon = th.querySelector(".sort-icon");
+    if (icon) icon.innerHTML = "&#8597;";
+    if (th.getAttribute("data-sort") === prioritySortKey) {
+      th.classList.add(prioritySortAsc ? "asc" : "desc");
+      if (icon) icon.innerHTML = prioritySortAsc ? "&#9650;" : "&#9660;";
+    }
+  }
+}
+
+function applyPrioritySorting() {
+  var key = prioritySortKey;
+  var asc = prioritySortAsc;
+  currentFilteredPriority.sort(function(a, b) {
+    var valA = a[key];
+    var valB = b[key];
+    if (typeof valA === "string") valA = valA.toLowerCase();
+    if (typeof valB === "string") valB = valB.toLowerCase();
+    if (valA < valB) return asc ? -1 : 1;
+    if (valA > valB) return asc ? 1 : -1;
+    return 0;
+  });
 }
 
 function filterRankings() {
   var search = (document.getElementById("ranking-search").value || "").toLowerCase().trim();
   var state = document.getElementById("ranking-state-filter").value;
-  var filtered = allPriorityList.filter(function(d) {
+  currentFilteredPriority = allPriorityList.filter(function(d) {
     var matchesSearch = !search || d.district.toLowerCase().indexOf(search) !== -1 || d.state.toLowerCase().indexOf(search) !== -1;
     var matchesState = state === "ALL" || d.state === state;
     var matchesCat = currentRankCategory === "ALL" || d.priority_category === currentRankCategory;
     return matchesSearch && matchesState && matchesCat;
   });
-  renderPriorityTable(filtered);
+  applyPrioritySorting();
+  priorityPage = 1;
+  renderPriorityTable();
 }
 
 var rankSearchEl = document.getElementById("ranking-search");
@@ -1264,37 +1349,272 @@ for (var i = 0; i < rankFilterBtns.length; i++) {
   };
 }
 
+var prevRankBtn = document.getElementById("priority-prev-btn");
+if (prevRankBtn) {
+  prevRankBtn.onclick = function() {
+    if (priorityPage > 1) {
+      priorityPage--;
+      renderPriorityTable();
+    }
+  };
+}
+
+var nextRankBtn = document.getElementById("priority-next-btn");
+if (nextRankBtn) {
+  nextRankBtn.onclick = function() {
+    var totalPages = Math.ceil(currentFilteredPriority.length / priorityPageSize);
+    if (priorityPage < totalPages) {
+      priorityPage++;
+      renderPriorityTable();
+    }
+  };
+}
+
+var pageSizeSelect = document.getElementById("priority-page-size");
+if (pageSizeSelect) {
+  pageSizeSelect.onchange = function() {
+    priorityPageSize = parseInt(this.value, 10) || 50;
+    priorityPage = 1;
+    renderPriorityTable();
+  };
+}
+
+var prioritySortHeaders = document.querySelectorAll("#priority-table th.sortable");
+for (var sIdx = 0; sIdx < prioritySortHeaders.length; sIdx++) {
+  (function(th) {
+    th.onclick = function() {
+      var sortKey = th.getAttribute("data-sort");
+      if (sortKey) sortPriorityList(sortKey);
+    };
+  })(prioritySortHeaders[sIdx]);
+}
+
 // ========================================================
-// SECTION 4: REGIONAL AGRO-CLIMATIC CLUSTERS DATA & FILTER
+// SECTION 4: REGIONAL AGRO-CLIMATIC CLUSTERS & 2D PCA (732)
 // ========================================================
 var allClustersList = [];
+var clustersSummaryMeta = {};
+var currentClusterZone = "ALL";
+var clustersPage = 1;
+var clustersPageSize = 50;
+var clustersSortKey = "district";
+var clustersSortAsc = true;
+var currentFilteredClusters = [];
+
+var clusterColorMap = {
+  0: "#d9784f",
+  1: "#0f766e",
+  2: "#c0392b",
+  3: "#2e9e5b"
+};
 
 function loadClustersData() {
   fetch("/api/clusters/regions").then(function(r) { return r.json(); }).then(function(res) {
     allClustersList = res.districts_clustered || [];
-    renderClustersTable(allClustersList);
+    clustersSummaryMeta = res.clusters_summary || {};
+    if (res.pca_variance) {
+      var pc1El = document.getElementById("pca-var-pc1");
+      var pc2El = document.getElementById("pca-var-pc2");
+      var totEl = document.getElementById("pca-var-tot");
+      if (pc1El) pc1El.textContent = "PC1: " + (res.pca_variance.pc1 * 100).toFixed(2) + "% Var";
+      if (pc2El) pc2El.textContent = "PC2: " + (res.pca_variance.pc2 * 100).toFixed(2) + "% Var";
+      if (totEl) totEl.textContent = "Total 2D: " + (res.pca_variance.total * 100).toFixed(2) + "%";
+    }
+    renderClusterCardsStats(clustersSummaryMeta);
+    renderPcaScatterPlot(allClustersList);
+    filterClusters();
   }).catch(function(err) {
     console.error("Could not load regional clusters:", err);
   });
 }
 
-function renderClustersTable(list) {
+function renderClusterCardsStats(summary) {
+  for (var cid = 0; cid < 4; cid++) {
+    var info = summary[cid] || summary[String(cid)];
+    if (!info) continue;
+    var tEl = document.getElementById("c" + cid + "-temp");
+    var rEl = document.getElementById("c" + cid + "-rain");
+    var sEl = document.getElementById("c" + cid + "-soil");
+    var iEl = document.getElementById("c" + cid + "-ipi");
+    if (tEl) tEl.textContent = info.mean_temperature + " °C";
+    if (rEl) rEl.textContent = info.mean_rainfall + " mm";
+    if (sEl) sEl.textContent = info.mean_soil_moisture;
+    if (iEl) iEl.textContent = info.mean_priority_index;
+  }
+}
+
+function renderPcaScatterPlot(list) {
+  var svg = document.getElementById("pca-svg");
+  if (!svg || !list || list.length === 0) return;
+
+  var width = 840;
+  var height = 440;
+  var padLeft = 65;
+  var padRight = 30;
+  var padTop = 30;
+  var padBottom = 50;
+
+  var minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+  for (var i = 0; i < list.length; i++) {
+    var x = list[i].pca_x;
+    var y = list[i].pca_y;
+    if (x < minX) minX = x;
+    if (x > maxX) maxX = x;
+    if (y < minY) minY = y;
+    if (y > maxY) maxY = y;
+  }
+  minX -= 0.6; maxX += 0.6;
+  minY -= 0.6; maxY += 0.6;
+
+  function scaleX(val) {
+    return padLeft + ((val - minX) / (maxX - minX)) * (width - padLeft - padRight);
+  }
+  function scaleY(val) {
+    return height - padBottom - ((val - minY) / (maxY - minY)) * (height - padTop - padBottom);
+  }
+
+  var svgHtml = "";
+
+  // Grid Lines and Center Axis
+  var zeroX = scaleX(0);
+  var zeroY = scaleY(0);
+  svgHtml += "<line x1='" + padLeft + "' y1='" + zeroY + "' x2='" + (width - padRight) + "' y2='" + zeroY + "' stroke='var(--line)' stroke-dasharray='4 4' stroke-width='1.5'/>";
+  svgHtml += "<line x1='" + zeroX + "' y1='" + padTop + "' x2='" + zeroX + "' y2='" + (height - padBottom) + "' stroke='var(--line)' stroke-dasharray='4 4' stroke-width='1.5'/>";
+
+  // Border Box
+  svgHtml += "<rect x='" + padLeft + "' y='" + padTop + "' width='" + (width - padLeft - padRight) + "' height='" + (height - padTop - padBottom) + "' fill='none' stroke='var(--line)' stroke-width='1'/>";
+
+  // Axis Labels
+  svgHtml += "<text x='" + (padLeft + (width - padLeft - padRight) / 2) + "' y='" + (height - 14) + "' text-anchor='middle' font-size='12' font-weight='600' fill='var(--mute)'>Principal Component 1 (PC1: 49.59% Variance) &rarr; Moisture Deficit &amp; Evaporative Demand</text>";
+  svgHtml += "<text x='18' y='" + (padTop + (height - padTop - padBottom) / 2) + "' text-anchor='middle' transform='rotate(-90 18 " + (padTop + (height - padTop - padBottom) / 2) + ")' font-size='12' font-weight='600' fill='var(--mute)'>Principal Component 2 (PC2: 37.27%) &rarr; Thermal Profile</text>";
+
+  // Points (732 Districts)
+  for (var j = 0; j < list.length; j++) {
+    var d = list[j];
+    var cx = scaleX(d.pca_x).toFixed(1);
+    var cy = scaleY(d.pca_y).toFixed(1);
+    var col = clusterColorMap[d.cluster_id] || "var(--acc)";
+    svgHtml += "<circle class='pca-point' id='pca-pt-" + j + "' data-index='" + j + "' data-zone='" + d.cluster_id + "' cx='" + cx + "' cy='" + cy + "' r='4.5' fill='" + col + "' stroke='#ffffff' stroke-width='1' opacity='0.85'/>";
+  }
+
+  svg.innerHTML = svgHtml;
+  initPcaTooltipEvents(list);
+}
+
+function initPcaTooltipEvents(list) {
+  var svg = document.getElementById("pca-svg");
+  var tooltip = document.getElementById("pca-tooltip");
+  var container = document.getElementById("pca-scatter-container");
+  if (!svg || !tooltip || !container) return;
+
+  var points = svg.querySelectorAll(".pca-point");
+  for (var i = 0; i < points.length; i++) {
+    (function(pt) {
+      pt.onmouseenter = function(e) {
+        pt.setAttribute("r", "8");
+        pt.setAttribute("stroke-width", "2.5");
+        var idx = parseInt(pt.getAttribute("data-index"), 10);
+        var d = list[idx];
+        if (!d) return;
+
+        var col = clusterColorMap[d.cluster_id] || "var(--acc)";
+        var content = "<div class='pca-tooltip-title'>" + d.district + ", " + d.state + "</div>"
+                    + "<div class='pca-tooltip-zone' style='background:" + col + "25;color:" + col + ";border:1px solid " + col + "60;'>Zone " + d.cluster_id + ": " + d.cluster_name + "</div>"
+                    + "<div class='pca-tooltip-grid'>"
+                    + "<div><span class='lbl'>Primary Crop:</span> <b>" + (d.crop || "Mixed") + "</b></div>"
+                    + "<div><span class='lbl'>Priority Score:</span> <b style='color:" + (d.mean_priority_index >= 50 ? "var(--red)" : (d.mean_priority_index >= 35 ? "var(--amber)" : "var(--green)")) + ";'>" + d.mean_priority_index + "</b></div>"
+                    + "<div><span class='lbl'>Mean Temp:</span> <b>" + d.mean_temperature + " °C</b></div>"
+                    + "<div><span class='lbl'>Mean Rain:</span> <b>" + d.mean_rainfall + " mm</b></div>"
+                    + "<div><span class='lbl'>Soil Wetness:</span> <b>" + d.mean_soil_moisture + "</b></div>"
+                    + "<div><span class='lbl'>PCA Coords:</span> <b>(" + d.pca_x + ", " + d.pca_y + ")</b></div>"
+                    + "</div>";
+
+        tooltip.innerHTML = content;
+        tooltip.style.display = "block";
+        positionPcaTooltip(e);
+      };
+
+      pt.onmousemove = function(e) {
+        positionPcaTooltip(e);
+      };
+
+      pt.onmouseleave = function() {
+        pt.setAttribute("r", "4.5");
+        pt.setAttribute("stroke-width", "1");
+        tooltip.style.display = "none";
+      };
+
+      pt.onclick = function() {
+        var idx = parseInt(pt.getAttribute("data-index"), 10);
+        var d = list[idx];
+        if (!d) return;
+        var searchInput = document.getElementById("cluster-search");
+        if (searchInput) {
+          searchInput.value = d.district;
+          filterClusters();
+          var tableBox = document.getElementById("clusters-table");
+          if (tableBox) tableBox.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+      };
+    })(points[i]);
+  }
+}
+
+function positionPcaTooltip(e) {
+  var tooltip = document.getElementById("pca-tooltip");
+  var container = document.getElementById("pca-scatter-container");
+  if (!tooltip || !container) return;
+  var cRect = container.getBoundingClientRect();
+  var mouseX = e.clientX - cRect.left;
+  var mouseY = e.clientY - cRect.top;
+
+  var tipWidth = 240;
+  var tipHeight = 150;
+  var posX = mouseX + 16;
+  var posY = mouseY - 20;
+
+  if (posX + tipWidth > cRect.width) posX = mouseX - tipWidth - 16;
+  if (posY + tipHeight > cRect.height) posY = cRect.height - tipHeight - 10;
+  if (posY < 10) posY = 10;
+
+  tooltip.style.left = posX + "px";
+  tooltip.style.top = posY + "px";
+}
+
+function updateClusterPcaPointsDimming() {
+  var svg = document.getElementById("pca-svg");
+  if (!svg) return;
+  var points = svg.querySelectorAll(".pca-point");
+  for (var i = 0; i < points.length; i++) {
+    var pZone = points[i].getAttribute("data-zone");
+    if (currentClusterZone === "ALL" || pZone === String(currentClusterZone)) {
+      points[i].classList.remove("dimmed");
+      points[i].style.display = "";
+    } else {
+      points[i].classList.add("dimmed");
+    }
+  }
+}
+
+function renderClustersTable() {
   var tbody = document.getElementById("clusters-tbody");
   if (!tbody) return;
+  var list = currentFilteredClusters;
   if (!list || list.length === 0) {
-    tbody.innerHTML = "<tr><td colspan='8' style='text-align:center;padding:20px;color:var(--mute);'>No clustered districts matching criteria.</td></tr>";
+    tbody.innerHTML = "<tr><td colspan='9' style='text-align:center;padding:24px;color:var(--mute);'>No clustered districts matching criteria.</td></tr>";
+    updateClustersPagination(0, 0, 0);
     return;
   }
-  var clusterColors = {
-    0: "#d9784f",
-    1: "#0f766e",
-    2: "#c0392b",
-    3: "#2e9e5b"
-  };
+
+  var total = list.length;
+  var startIdx = (clustersPage - 1) * clustersPageSize;
+  var endIdx = Math.min(startIdx + clustersPageSize, total);
+  var pageItems = list.slice(startIdx, endIdx);
+
   var html = "";
-  for (var i = 0; i < list.length; i++) {
-    var c = list[i];
-    var col = clusterColors[c.cluster_id] || "var(--acc)";
+  for (var i = 0; i < pageItems.length; i++) {
+    var c = pageItems[i];
+    var col = clusterColorMap[c.cluster_id] || "var(--acc)";
     html += "<tr>"
           + "<td><b>" + c.district + "</b></td>"
           + "<td>" + c.state + "</td>"
@@ -1304,26 +1624,164 @@ function renderClustersTable(list) {
           + "<td class='mono'>" + c.mean_rainfall + " mm</td>"
           + "<td class='mono'>" + c.mean_soil_moisture + "</td>"
           + "<td class='mono'><b>" + c.mean_priority_index + "</b></td>"
+          + "<td class='mono'>(" + c.pca_x + ", " + c.pca_y + ")</td>"
           + "</tr>";
   }
   tbody.innerHTML = html;
+  updateClustersPagination(total, startIdx + 1, endIdx);
+}
+
+function updateClustersPagination(total, start, end) {
+  var infoEl = document.getElementById("clusters-pagination-info");
+  var pageNumEl = document.getElementById("clusters-page-num");
+  var prevBtn = document.getElementById("clusters-prev-btn");
+  var nextBtn = document.getElementById("clusters-next-btn");
+  if (!infoEl || !pageNumEl) return;
+
+  if (total === 0) {
+    infoEl.textContent = "Showing 0 of 0 districts";
+    pageNumEl.textContent = "Page 0 of 0";
+    if (prevBtn) prevBtn.disabled = true;
+    if (nextBtn) nextBtn.disabled = true;
+    return;
+  }
+
+  var totalPages = Math.ceil(total / clustersPageSize);
+  infoEl.textContent = "Showing " + start + "–" + end + " of " + total + " districts";
+  pageNumEl.textContent = "Page " + clustersPage + " of " + totalPages;
+  if (prevBtn) prevBtn.disabled = clustersPage <= 1;
+  if (nextBtn) nextBtn.disabled = clustersPage >= totalPages;
+}
+
+function sortClustersList(key) {
+  if (clustersSortKey === key) {
+    clustersSortAsc = !clustersSortAsc;
+  } else {
+    clustersSortKey = key;
+    clustersSortAsc = true;
+  }
+  updateClustersSortHeaders();
+  applyClustersSorting();
+  clustersPage = 1;
+  renderClustersTable();
+}
+
+function updateClustersSortHeaders() {
+  var headers = document.querySelectorAll("#clusters-table th.sortable");
+  for (var i = 0; i < headers.length; i++) {
+    var th = headers[i];
+    th.classList.remove("asc", "desc");
+    var icon = th.querySelector(".sort-icon");
+    if (icon) icon.innerHTML = "&#8597;";
+    if (th.getAttribute("data-sort") === clustersSortKey) {
+      th.classList.add(clustersSortAsc ? "asc" : "desc");
+      if (icon) icon.innerHTML = clustersSortAsc ? "&#9650;" : "&#9660;";
+    }
+  }
+}
+
+function applyClustersSorting() {
+  var key = clustersSortKey;
+  var asc = clustersSortAsc;
+  currentFilteredClusters.sort(function(a, b) {
+    var valA = a[key];
+    var valB = b[key];
+    if (typeof valA === "string") valA = valA.toLowerCase();
+    if (typeof valB === "string") valB = valB.toLowerCase();
+    if (valA < valB) return asc ? -1 : 1;
+    if (valA > valB) return asc ? 1 : -1;
+    return 0;
+  });
 }
 
 function filterClusters() {
   var search = (document.getElementById("cluster-search").value || "").toLowerCase().trim();
-  var zone = document.getElementById("cluster-zone-filter").value;
-  var filtered = allClustersList.filter(function(d) {
+  var zone = currentClusterZone;
+  currentFilteredClusters = allClustersList.filter(function(d) {
     var matchesSearch = !search || d.district.toLowerCase().indexOf(search) !== -1 || d.state.toLowerCase().indexOf(search) !== -1;
     var matchesZone = zone === "ALL" || String(d.cluster_id) === String(zone);
     return matchesSearch && matchesZone;
   });
-  renderClustersTable(filtered);
+  applyClustersSorting();
+  clustersPage = 1;
+  renderClustersTable();
+  updateClusterPcaPointsDimming();
 }
 
 var clusterSearchEl = document.getElementById("cluster-search");
 if (clusterSearchEl) clusterSearchEl.oninput = filterClusters;
+
 var clusterZoneEl = document.getElementById("cluster-zone-filter");
-if (clusterZoneEl) clusterZoneEl.onchange = filterClusters;
+if (clusterZoneEl) {
+  clusterZoneEl.onchange = function() {
+    currentClusterZone = this.value;
+    updatePillButtonsState(currentClusterZone);
+    filterClusters();
+  };
+}
+
+var clusterPillBtns = document.querySelectorAll(".cluster-pill-btn");
+for (var pIdx = 0; pIdx < clusterPillBtns.length; pIdx++) {
+  (function(btn) {
+    btn.onclick = function() {
+      currentClusterZone = btn.getAttribute("data-zone") || "ALL";
+      updatePillButtonsState(currentClusterZone);
+      if (clusterZoneEl) clusterZoneEl.value = currentClusterZone;
+      filterClusters();
+    };
+  })(clusterPillBtns[pIdx]);
+}
+
+function updatePillButtonsState(zone) {
+  for (var i = 0; i < clusterPillBtns.length; i++) {
+    var b = clusterPillBtns[i];
+    if (b.getAttribute("data-zone") === String(zone)) {
+      b.classList.add("active");
+    } else {
+      b.classList.remove("active");
+    }
+  }
+}
+
+var prevClustersBtn = document.getElementById("clusters-prev-btn");
+if (prevClustersBtn) {
+  prevClustersBtn.onclick = function() {
+    if (clustersPage > 1) {
+      clustersPage--;
+      renderClustersTable();
+    }
+  };
+}
+
+var nextClustersBtn = document.getElementById("clusters-next-btn");
+if (nextClustersBtn) {
+  nextClustersBtn.onclick = function() {
+    var totalPages = Math.ceil(currentFilteredClusters.length / clustersPageSize);
+    if (clustersPage < totalPages) {
+      clustersPage++;
+      renderClustersTable();
+    }
+  };
+}
+
+var clustersPageSizeSelect = document.getElementById("clusters-page-size");
+if (clustersPageSizeSelect) {
+  clustersPageSizeSelect.onchange = function() {
+    clustersPageSize = parseInt(this.value, 10) || 50;
+    clustersPage = 1;
+    renderClustersTable();
+  };
+}
+
+var clustersSortHeaders = document.querySelectorAll("#clusters-table th.sortable");
+for (var csIdx = 0; csIdx < clustersSortHeaders.length; csIdx++) {
+  (function(th) {
+    th.onclick = function() {
+      var sortKey = th.getAttribute("data-sort");
+      if (sortKey) sortClustersList(sortKey);
+    };
+  })(clustersSortHeaders[csIdx]);
+}
 
 // ========================================================
 // ADVANCED MOTION: 3D CARD TILT ON CURSOR HOVER
