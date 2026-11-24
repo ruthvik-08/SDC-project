@@ -21,17 +21,18 @@ The project follows a clean academic architecture:
 
 ## 2. Machine Learning Workflow in Kaggle
 
-The notebook `SDC_Kaggle_Notebook.ipynb` executes the complete ML pipeline in 14 straightforward steps:
+The notebook `SDC_Kaggle_Notebook.ipynb` executes the complete ML pipeline across 32 beginner-friendly code cells with zero comments and zero markdown cells:
 
-1. **Import Libraries**: Loads NumPy, Pandas, Matplotlib, Seaborn, Scikit-learn, and Joblib.
-2. **Load Dataset**: Reads `krishijal_master_dataset.csv` from `/kaggle/input/` or local directory.
+### Original Benchmarks (159 Districts & 1,331 Test Samples)
+1. **Import Libraries**: Loads NumPy, Pandas, Matplotlib, Seaborn, Scikit-learn (KMeans, PCA, Random Forest), and Joblib.
+2. **Load Master Dataset**: Reads `krishijal_master_dataset.csv` from `/kaggle/input/` or local directory.
 3. **Display Dataset Information**: Shows `.head()`, `.info()`, and `.describe()`.
 4. **Check Missing Values**: Inspects missing counts across columns.
 5. **Handle Missing Values**: Cleans missing records and drops duplicates.
-6. **Remove Unnecessary Columns**: Selects core observable features.
+6. **Feature Selection**: Selects 14 observable agronomic and weather features.
 7. **Encode Categorical Columns**: Uses `LabelEncoder` for `crop_type` and `growth_stage`.
 8. **Visualizations**: Generates Count plots, Histograms, Correlation heatmaps, and Box plots.
-9. **Train-Test Split & Scaling**: 80/20 train/test split with `StandardScaler`.
+9. **Train-Test Split & Scaling**: 80/20 train/test split with `StandardScaler` (1,331 test samples).
 10. **Train Classification Models**:
     - Logistic Regression
     - Decision Tree Classifier
@@ -43,21 +44,33 @@ The notebook `SDC_Kaggle_Notebook.ipynb` executes the complete ML pipeline in 14
     - Decision Tree Regressor
     - Random Forest Regressor
 14. **Compare Regression Performance & Actual vs Predicted**: Evaluates MAE, MSE, RMSE, and R² Score, with a scatter plot.
-15. **Hyperparameter Tuning**: Performs simple tuning with `GridSearchCV`.
-16. **Save Trained Models**: Saves `.pkl` model files to `/kaggle/working/models/saved_models/`.
+15. **Hyperparameter Tuning**: Performs parameter tuning with `GridSearchCV`.
+16. **Save Trained Models**: Saves `.pkl` model files with `joblib.dump()`.
+
+### All-India 732-District Expansion
+17. **Load 732 Districts Dataset**: Reads `india_district_agriculture.csv` covering all 732 districts of India.
+18. **Feature Vector Derivation**: Computes the 14 required physical and agronomic features for all 732 districts.
+19. **All-India Priority Ranking**: Generates Random Forest regression and classification predictions, ranks districts from Rank 1 to Rank 732, and categorizes into High, Medium, and Low Priority.
+20. **Top 10 Districts Priority Chart**: Plots the top 10 highest irrigation priority districts in India.
+21. **Priority Distribution Summary**: Displays exact distribution counts across priority categories.
+22. **Agro-Climatic K-Means Clustering (K=4)**: Performs unsupervised clustering into 4 agro-climatic zones with `KMeans(n_clusters=4, random_state=42)`.
+23. **2D PCA Projection**: Projects all 732 districts onto 2 principal components with explained variance calculation.
+24. **2D PCA Scatter Visualization**: Plots the 732-district cluster distribution with distinct color styling.
+25. **Empirical Zone Characterization**: Computes mean temperature, rainfall, humidity, soil moisture, and priority index for each zone.
+26. **Export Full Dataset**: Exports `all_india_732_districts_priority_and_clusters.csv` with all 732 ranked districts.
 
 ---
 
-## 3. How to Run on Kaggle
+## 3. How to Update Your Existing Kaggle Notebook (Preserve Identity & URL)
 
-1. Go to [kaggle.com](https://www.kaggle.com) and click **+ Create** -> **New Dataset**.
-2. Upload `krishijal_master_dataset.csv` and name the dataset `krishijal-dataset`.
-3. Create a **New Notebook** (`+ Create` -> `New Notebook`).
-4. In the right panel under **Input**, click **+ Add Input** and add your `krishijal-dataset`.
-5. In the top menu, click **File** -> **Import Notebook**, and select `SDC_Kaggle_Notebook.ipynb`.
-6. Click **Run All** (or press `Shift + Enter` on each cell).
-7. The notebook will run all cells in order and save all trained models into `/kaggle/working/models/saved_models/`.
-8. To download the saved models: In the right panel under **Output**, click the three dots next to `/kaggle/working/` and click **Download**.
+To update your existing Kaggle notebook without creating a duplicate or changing its URL:
+
+1. Open your existing notebook on [kaggle.com](https://www.kaggle.com) in your browser.
+2. In the top editor menu bar, click **File** -> **Upload Notebook** (or **Import Notebook**).
+3. Select your local file: `SDC_KAGGLE/SDC_Kaggle_Notebook.ipynb`.
+4. Kaggle will replace the notebook contents in-place, keeping your existing URL, title, metadata, version history, and attached datasets.
+5. Click **Save Version** -> Choose **Save & Run All (Commit)** -> Click **Save**.
+6. The notebook will run all 32 cells from start to finish, generating all benchmark tables, plots, 732-district rankings, K-Means clusters, PCA projection, and saving all trained models to `/kaggle/working/`.
 
 ---
 
