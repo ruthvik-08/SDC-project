@@ -182,6 +182,19 @@ def test_5_api_endpoints():
     assert r5.status_code == 200
     assert "classification" in r5.json()
 
+    r_prof = client.get("/api/district-profile?state=Telangana&district=Karimnagar")
+    assert r_prof.status_code == 200
+    assert r_prof.json()["status"] == "success"
+    assert r_prof.json()["lgd_code"] == 508
+
+    r_cov = client.get("/api/coverage-report")
+    assert r_cov.status_code == 200
+    assert r_cov.json()["total_districts"] >= 700
+
+    r_all = client.get("/api/districts/all")
+    assert r_all.status_code == 200
+    assert r_all.json()["total_authentic_districts"] >= 700
+
     # Main ML Prediction POST (/predict) with 14 features
     pred_payload_14 = {
         "temperature": 32.0,

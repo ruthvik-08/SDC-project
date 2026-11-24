@@ -641,6 +641,101 @@ table.data-table tr:last-child td { border-bottom: none; }
 .advisory-card h5 { margin: 0 0 4px; font-size: 13.5px; font-weight: 700; color: var(--acc); }
 .advisory-card p { margin: 0; font-size: 13px; line-height: 1.5; color: var(--ink); }
 
+.pred-search-input {
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--ink);
+  font-size: 12px;
+  font-family: inherit;
+  margin-bottom: 6px;
+  width: 100%;
+  box-sizing: border-box;
+  transition: border-color var(--dur-fast), box-shadow var(--dur-fast);
+}
+.pred-search-input:focus {
+  border-color: var(--acc);
+  box-shadow: 0 0 0 2px rgba(181, 87, 58, 0.14);
+  outline: none;
+}
+.district-profile-card {
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 20px;
+  animation: fadeIn 0.3s ease;
+}
+.profile-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+.profile-title {
+  font-size: 12.5px;
+  font-weight: 800;
+  color: var(--acc);
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+}
+.profile-badge {
+  font-size: 11px;
+  font-weight: 700;
+  font-family: 'JetBrains Mono', monospace;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  color: var(--mute);
+}
+.profile-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  font-size: 13px;
+}
+.profile-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.profile-item span.lbl {
+  font-size: 10.5px;
+  color: var(--mute);
+  text-transform: uppercase;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+}
+.profile-item b {
+  font-size: 13.5px;
+  color: var(--ink);
+}
+.profile-apy {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--line);
+  font-size: 12px;
+  color: var(--mute);
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.profile-apy b {
+  color: var(--ink);
+}
+.profile-hint {
+  margin-top: 10px;
+  font-size: 11.5px;
+  color: var(--green);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+}
+
 @media (max-width: 900px) {
   .predictor-layout { grid-template-columns: 1fr; }
 }

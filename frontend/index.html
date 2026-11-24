@@ -226,11 +226,37 @@
             <div class="form-grid-2">
               <div class="form-field">
                 <label for="pred-state">State / UT</label>
+                <input type="text" id="pred-state-search" placeholder="🔍 Filter states..." class="pred-search-input">
                 <select id="pred-state" required></select>
               </div>
               <div class="form-field">
                 <label for="pred-district">District (732+)</label>
+                <input type="text" id="pred-district-search" placeholder="🔍 Filter districts..." class="pred-search-input">
                 <select id="pred-district" required></select>
+              </div>
+            </div>
+
+            <!-- Verified District Baseline Profile Card -->
+            <div class="district-profile-card" id="pred-district-profile">
+              <div class="profile-header">
+                <span class="profile-title">✓ Verified District Profile</span>
+                <span class="profile-badge" id="profile-lgd-badge">LGD Code: 508</span>
+              </div>
+              <div class="profile-grid">
+                <div class="profile-item"><span class="lbl">Dominant Crop</span><b id="profile-crop">Rice</b></div>
+                <div class="profile-item"><span class="lbl">Soil Type</span><b id="profile-soil">Black Clay</b></div>
+                <div class="profile-item"><span class="lbl">Irrigation Coverage</span><b id="profile-irrig">51.2%</b></div>
+                <div class="profile-item"><span class="lbl">Annual Rainfall</span><b id="profile-rain">1290 mm</b></div>
+                <div class="profile-item"><span class="lbl">Mean Temperature</span><b id="profile-temp">26.7 °C</b></div>
+                <div class="profile-item"><span class="lbl">Mean Humidity</span><b id="profile-hum">63%</b></div>
+              </div>
+              <div class="profile-apy" id="profile-apy-row">
+                <span>APY Area: <b id="profile-area">63,315 Ha</b></span>
+                <span>Production: <b id="profile-prod">262,124 MT</b></span>
+                <span>Yield: <b id="profile-yield">4.14 MT/Ha</b></span>
+              </div>
+              <div class="profile-hint">
+                ⚡ Auto-populated verified baseline values into model sliders below
               </div>
             </div>
 

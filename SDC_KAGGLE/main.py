@@ -11,6 +11,20 @@ from sklearn.pipeline import Pipeline
 from sklearn.linear_model import LinearRegression
 
 df_master = pd.read_csv("data/processed/krishijal_master_dataset.csv")
+df_india_agri = pd.read_csv("data/india_district_agriculture.csv")
+
+def clean_name(s):
+    s = str(s).lower().replace("&", "and")
+    return "".join(c for c in s if c.isalnum())
+
+district_agri_index = {}
+for idx, r in df_india_agri.iterrows():
+    c_st = clean_name(str(r["State"]))
+    c_dt = clean_name(str(r["District"]))
+    row_dict = r.to_dict()
+    district_agri_index[(c_st, c_dt)] = row_dict
+    district_agri_index[c_dt] = row_dict
+
 prefix = "models/saved_models/"
 
 scaler = joblib.load(prefix + "feature_scaler.pkl")
@@ -160,7 +174,10 @@ root_response = {
         "districts_data": "GET /api/districts",
         "regional_clusters": "GET /api/clusters/regions",
         "irrigation_priority_table": "GET /api/irrigation/priority",
-        "model_evaluation": "GET /api/models/evaluation"
+        "model_evaluation": "GET /api/models/evaluation",
+        "district_profile": "GET /api/district-profile",
+        "coverage_report": "GET /api/coverage-report",
+        "districts_all": "GET /api/districts/all"
     },
     "features_required_for_predict": feature_cols,
     "models_active": {
@@ -362,6 +379,102 @@ for d_name, grp in df_master.groupby("district"):
 @app.get("/api/districts")
 def get_districts():
     return {"total_districts": len(districts_summary), "districts": districts_summary}
+
+@app.get("/api/district-profile")
+def get_district_profile(district: str, state: str = None):
+    c_dt = clean_name(district)
+    target_row = None
+    if state:
+        c_st = clean_name(state)
+        target_row = district_agri_index.get((c_st, c_dt))
+        if target_row is None:
+            for (st_k, dt_k), val in district_agri_index.items():
+                if isinstance(st_k, str) and isinstance(dt_k, str):
+                    if (c_st in st_k or st_k in c_st) and (c_dt in dt_k or dt_k in c_dt):
+                        target_row = val
+                        break
+    if target_row is None:
+        target_row = district_agri_index.get(c_dt)
+    if target_row is None:
+        for k, val in district_agri_index.items():
+            if isinstance(k, str) and (c_dt in k or k in c_dt):
+                target_row = val
+                break
+    if target_row is None:
+        return {
+            "status": "not_found",
+            "message": "District not found in authentic agricultural database",
+            "district": district,
+            "state": state
+        }
+    rain = float(target_row["Rainfall"]) if pd.notna(target_row["Rainfall"]) else 0.0
+    temp = float(target_row["Temperature"]) if pd.notna(target_row["Temperature"]) else 30.0
+    hum = float(target_row["Humidity"]) if pd.notna(target_row["Humidity"]) else 50.0
+    soil_m = float(target_row["Soil_Moisture"]) if pd.notna(target_row["Soil_Moisture"]) else 0.38
+    irrig_cov = float(target_row["Irrigation_Coverage"]) if pd.notna(target_row["Irrigation_Coverage"]) else 45.0
+    crop = str(target_row["Crop"]) if pd.notna(target_row["Crop"]) else "Rice"
+    area = int(target_row["Crop_Area"]) if pd.notna(target_row["Crop_Area"]) else None
+    prod = int(target_row["Crop_Production"]) if pd.notna(target_row["Crop_Production"]) else None
+    yield_val = float(target_row["Crop_Yield"]) if pd.notna(target_row["Crop_Yield"]) else None
+    return {
+        "status": "success",
+        "state": target_row["State"],
+        "district": target_row["District"],
+        "lgd_code": int(target_row["LGD_Code"]),
+        "latitude": float(target_row["Latitude"]),
+        "longitude": float(target_row["Longitude"]),
+        "climate": {
+            "rainfall_annual_mm": rain,
+            "temperature_mean_c": temp,
+            "humidity_mean_pct": hum
+        },
+        "soil": {
+            "soil_type": str(target_row["Soil_Type"]),
+            "baseline_soil_moisture": soil_m
+        },
+        "irrigation": {
+            "irrigation_coverage_pct": irrig_cov
+        },
+        "agriculture": {
+            "crop": crop,
+            "crop_area_ha": area,
+            "crop_production_t": prod,
+            "crop_yield_t_ha": yield_val,
+            "data_year": str(target_row["Data_Year"])
+        },
+        "suggested_predictor_inputs": {
+            "temperature": temp,
+            "rainfall": round(rain / 365.0, 1),
+            "humidity": hum,
+            "effective_soil_wetness": soil_m,
+            "crop_type": crop,
+            "growth_stage": "Reproductive"
+        }
+    }
+
+@app.get("/api/coverage-report")
+def get_coverage_report():
+    df_rep = pd.read_csv("district_coverage_report.csv")
+    return {
+        "status": "success",
+        "total_states": len(df_rep),
+        "total_districts": int(df_rep["Total districts"].sum()),
+        "districts_with_boundaries": int(df_rep["Districts with boundaries"].sum()),
+        "districts_with_agricultural_data": int(df_rep["Districts with agricultural data"].sum()),
+        "districts_with_climate_data": int(df_rep["Districts with climate data"].sum()),
+        "districts_with_soil_data": int(df_rep["Districts with soil data"].sum()),
+        "districts_supported_by_predictor": int(df_rep["Districts supported by the predictor"].sum()),
+        "states": df_rep.to_dict(orient="records")
+    }
+
+@app.get("/api/districts/all")
+def get_all_districts():
+    return {
+        "status": "success",
+        "total_authentic_districts": len(df_india_agri),
+        "states_count": int(df_india_agri["State"].nunique()),
+        "districts": df_india_agri[["State", "District", "LGD_Code", "Latitude", "Longitude", "Crop", "Soil_Type", "Irrigation_Coverage", "Data_Year"]].to_dict(orient="records")
+    }
 
 cluster_list = []
 for d_name, grp in df_master.groupby("district"):

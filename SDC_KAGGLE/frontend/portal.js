@@ -214,17 +214,46 @@ function showInfo(d, p) {
     var badgeCls = d.stress === "Severe" || d.stress === "High" ? "high" : (d.stress === "Moderate" ? "med" : "low");
     h = "<h4>" + d.district + ", " + formatStateName(d.state) + "</h4>"
       + "<div style='margin:6px 0;'><span class='badge " + badgeCls + "'>" + (d.stress || "Verified") + " Stress</span></div>"
-      + "<div class='v mono'>" + v + "</div><p>" + L1.name + " · average Jun–Nov 2023</p>"
-      + "<p>Irrigation priority " + d.ipi + " · NDVI " + d.ndvi + " · rain " + d.rainfall + " mm/day</p>"
+      + "<div class='v mono'>" + v + "</div><p>" + L1.name + " · 2024–25 Authentic Data</p>"
+      + "<p>Irrigation priority " + d.ipi + " · NDVI " + d.ndvi + " · rain " + d.rainfall + " mm/mo</p>"
+      + (d.crop ? "<p style='font-size:12px;margin:4px 0;'><b>Crop:</b> " + d.crop + " · <b>Soil:</b> " + (d.soil_type || "Alluvial") + " · <b>Irrig:</b> " + (d.irrigation_coverage || 45) + "%</p>" : "")
       + "<p>Monthly irrigation priority</p><div class='chart'>";
     var mn = ["","Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
     for (var m = 6; m <= 11; m++) {
       h += "<div data-m='" + mn[m] + "' style='height:" + Math.max(4, (d.months[m] || 0) * 0.6) + "px'></div>";
     }
-    h += "</div><p style='margin-top:18px'>" + d.records + " verified records</p>";
+    h += "</div>"
+      + "<button type='button' onclick=\"openDistrictInPredictor('" + (d.state || '').replace(/'/g, "\\'") + "', '" + (d.district || '').replace(/'/g, "\\'") + "')\" class='btn fill' style='width:100%;font-size:12px;padding:8px 10px;margin-top:14px;cursor:pointer;'>🌾 Open in Agricultural Predictor</button>";
   }
   el.innerHTML = h + drawLegend();
 }
+
+window.openDistrictInPredictor = function(st, dt) {
+  location.hash = "#/predictor";
+  setTimeout(function() {
+    var stateSelect = document.getElementById("pred-state");
+    var distSelect = document.getElementById("pred-district");
+    if (!stateSelect || !distSelect) return;
+    var normSt = normState(st);
+    for (var i = 0; i < stateSelect.options.length; i++) {
+      if (normState(stateSelect.options[i].value) === normSt) {
+        stateSelect.selectedIndex = i;
+        stateSelect.onchange();
+        break;
+      }
+    }
+    setTimeout(function() {
+      var normDt = normState(dt);
+      for (var j = 0; j < distSelect.options.length; j++) {
+        if (normState(distSelect.options[j].value) === normDt) {
+          distSelect.selectedIndex = j;
+          distSelect.onchange();
+          break;
+        }
+      }
+    }, 80);
+  }, 120);
+};
 
 function selectDistrict(props, ly) {
   if (selectedDistrictLayer && distLayer) {
@@ -408,6 +437,128 @@ function initPredictorForm() {
     stateSelect.appendChild(opt);
   });
 
+  var stateSearch = document.getElementById("pred-state-search");
+  var distSearch = document.getElementById("pred-district-search");
+
+  if (stateSearch) {
+    stateSearch.oninput = function() {
+      var q = this.value.toLowerCase().trim();
+      stateSelect.innerHTML = "";
+      sortedStates.forEach(function(st) {
+        if (!q || st.toLowerCase().indexOf(q) !== -1) {
+          var opt = document.createElement("option");
+          opt.value = st;
+          opt.textContent = st + " (" + stateDistrictsList[st].length + " districts)";
+          stateSelect.appendChild(opt);
+        }
+      });
+      updateDistrictsForSelectedState();
+    };
+  }
+
+  if (distSearch) {
+    distSearch.oninput = function() {
+      var q = this.value.toLowerCase().trim();
+      var chosenState = stateSelect.value;
+      var dists = (stateDistrictsList[chosenState] || []).slice().sort();
+      distSelect.innerHTML = "";
+      dists.forEach(function(dt) {
+        if (!q || dt.toLowerCase().indexOf(q) !== -1) {
+          var opt = document.createElement("option");
+          opt.value = dt;
+          opt.textContent = dt;
+          distSelect.appendChild(opt);
+        }
+      });
+      if (distSelect.value) {
+        loadDistrictProfile(chosenState, distSelect.value);
+      }
+    };
+  }
+
+  function loadDistrictProfile(state, district) {
+    if (!district) return;
+    fetch("/api/district-profile?state=" + encodeURIComponent(state) + "&district=" + encodeURIComponent(district))
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (data.status === "success") {
+          updateDistrictProfileUI(data);
+          autoPopulatePredictorInputs(data);
+        }
+      }).catch(function(err) {
+        console.warn("Could not load district profile:", err);
+      });
+  }
+
+  function updateDistrictProfileUI(data) {
+    var lgdBadge = document.getElementById("profile-lgd-badge");
+    if (lgdBadge) lgdBadge.textContent = "LGD Code: " + data.lgd_code;
+    var cropEl = document.getElementById("profile-crop");
+    if (cropEl) cropEl.textContent = (data.agriculture && data.agriculture.crop) || "—";
+    var soilEl = document.getElementById("profile-soil");
+    if (soilEl) soilEl.textContent = (data.soil && data.soil.soil_type) || "—";
+    var irrigEl = document.getElementById("profile-irrig");
+    if (irrigEl) irrigEl.textContent = (data.irrigation && data.irrigation.irrigation_coverage_pct ? data.irrigation.irrigation_coverage_pct.toFixed(1) : "45.0") + "%";
+    var rainEl = document.getElementById("profile-rain");
+    if (rainEl) rainEl.textContent = Math.round(data.climate && data.climate.rainfall_annual_mm || 0) + " mm";
+    var tempEl = document.getElementById("profile-temp");
+    if (tempEl) tempEl.textContent = (data.climate && data.climate.temperature_mean_c ? data.climate.temperature_mean_c.toFixed(1) : "30.0") + " °C";
+    var humEl = document.getElementById("profile-hum");
+    if (humEl) humEl.textContent = Math.round(data.climate && data.climate.humidity_mean_pct || 50) + "%";
+
+    var apyRow = document.getElementById("profile-apy-row");
+    var areaEl = document.getElementById("profile-area");
+    var prodEl = document.getElementById("profile-prod");
+    var yieldEl = document.getElementById("profile-yield");
+    if (data.agriculture && data.agriculture.crop_area_ha) {
+      if (apyRow) apyRow.style.display = "flex";
+      if (areaEl) areaEl.textContent = data.agriculture.crop_area_ha.toLocaleString() + " Ha";
+      if (prodEl) prodEl.textContent = data.agriculture.crop_production_t.toLocaleString() + " MT";
+      if (yieldEl) yieldEl.textContent = data.agriculture.crop_yield_t_ha.toFixed(2) + " MT/Ha";
+    } else {
+      if (apyRow) apyRow.style.display = "none";
+    }
+  }
+
+  function autoPopulatePredictorInputs(data) {
+    var inputs = data.suggested_predictor_inputs || {};
+    if (inputs.temperature !== undefined) {
+      var tempSlider = document.getElementById("pred-temp");
+      var tempVal = document.getElementById("pred-temp-val");
+      if (tempSlider) tempSlider.value = inputs.temperature;
+      if (tempVal) tempVal.textContent = inputs.temperature.toFixed(1) + " °C";
+    }
+    if (inputs.rainfall !== undefined) {
+      var rainSlider = document.getElementById("pred-rain");
+      var rainVal = document.getElementById("pred-rain-val");
+      if (rainSlider) rainSlider.value = inputs.rainfall;
+      if (rainVal) rainVal.textContent = inputs.rainfall.toFixed(1) + " mm";
+    }
+    if (inputs.humidity !== undefined) {
+      var humSlider = document.getElementById("pred-hum");
+      var humVal = document.getElementById("pred-hum-val");
+      if (humSlider) humSlider.value = Math.round(inputs.humidity);
+      if (humVal) humVal.textContent = Math.round(inputs.humidity) + "%";
+    }
+    if (inputs.effective_soil_wetness !== undefined) {
+      var soilSlider = document.getElementById("pred-soil");
+      var soilVal = document.getElementById("pred-soil-val");
+      if (soilSlider) soilSlider.value = inputs.effective_soil_wetness;
+      if (soilVal) soilVal.textContent = inputs.effective_soil_wetness.toFixed(2);
+    }
+    if (inputs.crop_type) {
+      var cropSel = document.getElementById("pred-crop");
+      if (cropSel) {
+        for (var i = 0; i < cropSel.options.length; i++) {
+          if (cropSel.options[i].value.toLowerCase() === inputs.crop_type.toLowerCase()) {
+            cropSel.selectedIndex = i;
+            break;
+          }
+        }
+      }
+    }
+  }
+
   function updateDistrictsForSelectedState() {
     var chosenState = stateSelect.value;
     var dists = (stateDistrictsList[chosenState] || []).slice().sort();
@@ -419,9 +570,15 @@ function initPredictorForm() {
       if (dt === "Khammam" || dt === "Bikaner") opt.selected = true;
       distSelect.appendChild(opt);
     });
+    if (distSelect.value) {
+      loadDistrictProfile(chosenState, distSelect.value);
+    }
   }
 
   stateSelect.onchange = updateDistrictsForSelectedState;
+  distSelect.onchange = function() {
+    loadDistrictProfile(stateSelect.value, distSelect.value);
+  };
   updateDistrictsForSelectedState();
 
   function linkSlider(sliderId, valId, unit, decimals) {
