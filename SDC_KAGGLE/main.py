@@ -25,6 +25,13 @@ for idx, r in df_india_agri.iterrows():
     district_agri_index[(c_st, c_dt)] = row_dict
     district_agri_index[c_dt] = row_dict
 
+master_district_soil = {}
+for (st, dt), grp in df_master.groupby(["state", "district"]):
+    master_district_soil[(clean_name(st), clean_name(dt))] = {
+        "ph": round(float(grp["soil_ph"].iloc[0]), 1) if "soil_ph" in grp else 7.4,
+        "soc": round(float(grp["soil_organic_carbon"].iloc[0]), 2) if "soil_organic_carbon" in grp else 0.48
+    }
+
 prefix = "models/saved_models/"
 
 scaler = joblib.load(prefix + "feature_scaler.pkl")
@@ -416,6 +423,13 @@ def get_district_profile(district: str, state: str = None):
     area = int(target_row["Crop_Area"]) if pd.notna(target_row["Crop_Area"]) else None
     prod = int(target_row["Crop_Production"]) if pd.notna(target_row["Crop_Production"]) else None
     yield_val = float(target_row["Crop_Yield"]) if pd.notna(target_row["Crop_Yield"]) else None
+    s_ph = 7.4
+    s_soc = 0.48
+    c_st_lookup = clean_name(str(target_row["State"]))
+    c_dt_lookup = clean_name(str(target_row["District"]))
+    if (c_st_lookup, c_dt_lookup) in master_district_soil:
+        s_ph = master_district_soil[(c_st_lookup, c_dt_lookup)]["ph"]
+        s_soc = master_district_soil[(c_st_lookup, c_dt_lookup)]["soc"]
     return {
         "status": "success",
         "state": target_row["State"],
@@ -430,7 +444,9 @@ def get_district_profile(district: str, state: str = None):
         },
         "soil": {
             "soil_type": str(target_row["Soil_Type"]),
-            "baseline_soil_moisture": soil_m
+            "baseline_soil_moisture": soil_m,
+            "soil_ph": s_ph,
+            "soil_organic_carbon": s_soc
         },
         "irrigation": {
             "irrigation_coverage_pct": irrig_cov
@@ -447,6 +463,8 @@ def get_district_profile(district: str, state: str = None):
             "rainfall": round(rain / 365.0, 1),
             "humidity": hum,
             "effective_soil_wetness": soil_m,
+            "soil_ph": s_ph,
+            "soil_organic_carbon": s_soc,
             "crop_type": crop,
             "growth_stage": "Reproductive"
         }

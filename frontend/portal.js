@@ -223,7 +223,7 @@ function showInfo(d, p) {
       h += "<div data-m='" + mn[m] + "' style='height:" + Math.max(4, (d.months[m] || 0) * 0.6) + "px'></div>";
     }
     h += "</div>"
-      + "<button type='button' onclick=\"openDistrictInPredictor('" + (d.state || '').replace(/'/g, "\\'") + "', '" + (d.district || '').replace(/'/g, "\\'") + "')\" class='btn fill' style='width:100%;font-size:12px;padding:8px 10px;margin-top:14px;cursor:pointer;'>🌾 Open in Agricultural Predictor</button>";
+      + "<button type='button' onclick=\"openDistrictInPredictor('" + (d.state || '').replace(/'/g, "\\'") + "', '" + (d.district || '').replace(/'/g, "\\'") + "')\" class='btn fill' style='width:100%;font-size:12px;padding:8px 10px;margin-top:14px;cursor:pointer;'>Open in Predictor</button>";
   }
   el.innerHTML = h + drawLegend();
 }
@@ -520,31 +520,196 @@ function initPredictorForm() {
     }
   }
 
+  var knobControllers = {};
+
+  function initKnobs() {
+    var knobEls = document.querySelectorAll(".knob-control");
+    knobEls.forEach(function(el) {
+      var id = el.getAttribute("data-id");
+      var min = parseFloat(el.getAttribute("data-min"));
+      var max = parseFloat(el.getAttribute("data-max"));
+      var step = parseFloat(el.getAttribute("data-step")) || 1;
+      var decimals = parseInt(el.getAttribute("data-decimals"), 10) || 0;
+      var unit = el.getAttribute("data-unit") || "";
+
+      var dialBox = el.querySelector(".knob-dial-box");
+      var progressCircle = el.querySelector(".knob-progress");
+      var rotor = el.querySelector(".knob-rotor");
+      var displayVal = el.querySelector(".knob-display-val");
+      var numInput = document.getElementById(id);
+
+      if (!dialBox || !numInput) return;
+
+      var fullTrack = 216.77;
+      var fullCirc = 289.03;
+
+      function clamp(val) {
+        if (isNaN(val)) val = min;
+        return Math.min(Math.max(val, min), max);
+      }
+
+      function roundToStep(val) {
+        var inv = 1.0 / step;
+        return Math.round(val * inv) / inv;
+      }
+
+      function render(val, updateInput) {
+        val = clamp(val);
+        var fraction = (val - min) / (max - min);
+        if (fraction < 0) fraction = 0;
+        if (fraction > 1) fraction = 1;
+
+        var progressLen = (fraction * fullTrack).toFixed(2);
+        if (progressCircle) {
+          progressCircle.style.strokeDasharray = progressLen + " " + fullCirc;
+        }
+
+        var angle = -135 + (fraction * 270);
+        if (rotor) {
+          rotor.style.transform = "rotate(" + angle.toFixed(1) + "deg)";
+        }
+
+        var formatted = decimals > 0 ? val.toFixed(decimals) : Math.round(val).toString();
+        if (displayVal) {
+          displayVal.textContent = formatted;
+        }
+
+        dialBox.setAttribute("aria-valuenow", formatted);
+
+        if (updateInput && numInput && parseFloat(numInput.value) !== val) {
+          numInput.value = formatted;
+        }
+      }
+
+      var ctrl = {
+        id: id,
+        min: min,
+        max: max,
+        step: step,
+        decimals: decimals,
+        getValue: function() {
+          return parseFloat(numInput.value) || min;
+        },
+        setValue: function(val) {
+          var v = roundToStep(clamp(val));
+          render(v, true);
+        }
+      };
+      knobControllers[id] = ctrl;
+
+      var initialVal = parseFloat(numInput.value);
+      if (isNaN(initialVal)) initialVal = min;
+      ctrl.setValue(initialVal);
+
+      numInput.oninput = function() {
+        var v = parseFloat(this.value);
+        if (!isNaN(v)) {
+          render(clamp(v), false);
+        }
+      };
+      numInput.onchange = function() {
+        var v = parseFloat(this.value);
+        ctrl.setValue(isNaN(v) ? min : v);
+      };
+
+      var isDragging = false;
+      var startY = 0;
+      var startVal = 0;
+
+      function onPointerDown(e) {
+        isDragging = true;
+        dialBox.focus();
+        dialBox.classList.add("dragging");
+        startY = e.clientY !== undefined ? e.clientY : (e.touches && e.touches[0] ? e.touches[0].clientY : 0);
+        startVal = ctrl.getValue();
+        document.body.style.userSelect = "none";
+        window.addEventListener("mousemove", onPointerMove);
+        window.addEventListener("mouseup", onPointerUp);
+        window.addEventListener("touchmove", onPointerMove, { passive: false });
+        window.addEventListener("touchend", onPointerUp);
+      }
+
+      function onPointerMove(e) {
+        if (!isDragging) return;
+        if (e.preventDefault && e.cancelable) e.preventDefault();
+        var currentY = e.clientY !== undefined ? e.clientY : (e.touches && e.touches[0] ? e.touches[0].clientY : 0);
+        var deltaY = startY - currentY;
+        var range = max - min;
+        var change = (deltaY / 140) * range;
+        var newVal = roundToStep(clamp(startVal + change));
+        render(newVal, true);
+      }
+
+      function onPointerUp() {
+        if (!isDragging) return;
+        isDragging = false;
+        dialBox.classList.remove("dragging");
+        document.body.style.userSelect = "";
+        window.removeEventListener("mousemove", onPointerMove);
+        window.removeEventListener("mouseup", onPointerUp);
+        window.removeEventListener("touchmove", onPointerMove);
+        window.removeEventListener("touchend", onPointerUp);
+      }
+
+      dialBox.addEventListener("mousedown", onPointerDown);
+      dialBox.addEventListener("touchstart", onPointerDown, { passive: true });
+
+      dialBox.addEventListener("wheel", function(e) {
+        e.preventDefault();
+        var dir = e.deltaY < 0 ? 1 : -1;
+        var current = ctrl.getValue();
+        var newVal = roundToStep(clamp(current + dir * step));
+        ctrl.setValue(newVal);
+      }, { passive: false });
+
+      dialBox.addEventListener("keydown", function(e) {
+        var current = ctrl.getValue();
+        var newVal = current;
+        if (e.key === "ArrowUp" || e.key === "ArrowRight") {
+          e.preventDefault();
+          newVal = current + step;
+        } else if (e.key === "ArrowDown" || e.key === "ArrowLeft") {
+          e.preventDefault();
+          newVal = current - step;
+        } else if (e.key === "PageUp") {
+          e.preventDefault();
+          newVal = current + (step * 5);
+        } else if (e.key === "PageDown") {
+          e.preventDefault();
+          newVal = current - (step * 5);
+        } else if (e.key === "Home") {
+          e.preventDefault();
+          newVal = min;
+        } else if (e.key === "End") {
+          e.preventDefault();
+          newVal = max;
+        } else {
+          return;
+        }
+        ctrl.setValue(newVal);
+      });
+    });
+  }
+
   function autoPopulatePredictorInputs(data) {
     var inputs = data.suggested_predictor_inputs || {};
-    if (inputs.temperature !== undefined) {
-      var tempSlider = document.getElementById("pred-temp");
-      var tempVal = document.getElementById("pred-temp-val");
-      if (tempSlider) tempSlider.value = inputs.temperature;
-      if (tempVal) tempVal.textContent = inputs.temperature.toFixed(1) + " °C";
+    if (knobControllers["pred-temp"] && inputs.temperature !== undefined) {
+      knobControllers["pred-temp"].setValue(inputs.temperature);
     }
-    if (inputs.rainfall !== undefined) {
-      var rainSlider = document.getElementById("pred-rain");
-      var rainVal = document.getElementById("pred-rain-val");
-      if (rainSlider) rainSlider.value = inputs.rainfall;
-      if (rainVal) rainVal.textContent = inputs.rainfall.toFixed(1) + " mm";
+    if (knobControllers["pred-hum"] && inputs.humidity !== undefined) {
+      knobControllers["pred-hum"].setValue(inputs.humidity);
     }
-    if (inputs.humidity !== undefined) {
-      var humSlider = document.getElementById("pred-hum");
-      var humVal = document.getElementById("pred-hum-val");
-      if (humSlider) humSlider.value = Math.round(inputs.humidity);
-      if (humVal) humVal.textContent = Math.round(inputs.humidity) + "%";
+    if (knobControllers["pred-rain"] && inputs.rainfall !== undefined) {
+      knobControllers["pred-rain"].setValue(inputs.rainfall);
     }
-    if (inputs.effective_soil_wetness !== undefined) {
-      var soilSlider = document.getElementById("pred-soil");
-      var soilVal = document.getElementById("pred-soil-val");
-      if (soilSlider) soilSlider.value = inputs.effective_soil_wetness;
-      if (soilVal) soilVal.textContent = inputs.effective_soil_wetness.toFixed(2);
+    if (knobControllers["pred-soil"] && inputs.effective_soil_wetness !== undefined) {
+      knobControllers["pred-soil"].setValue(inputs.effective_soil_wetness);
+    }
+    if (knobControllers["pred-ph"] && inputs.soil_ph !== undefined) {
+      knobControllers["pred-ph"].setValue(inputs.soil_ph);
+    }
+    if (knobControllers["pred-soc"] && inputs.soil_organic_carbon !== undefined) {
+      knobControllers["pred-soc"].setValue(inputs.soil_organic_carbon);
     }
     if (inputs.crop_type) {
       var cropSel = document.getElementById("pred-crop");
@@ -581,50 +746,47 @@ function initPredictorForm() {
   };
   updateDistrictsForSelectedState();
 
-  function linkSlider(sliderId, valId, unit, decimals) {
-    var slider = document.getElementById(sliderId);
-    var valEl = document.getElementById(valId);
-    if (!slider || !valEl) return;
-    slider.oninput = function() {
-      var n = parseFloat(this.value);
-      valEl.textContent = (decimals > 0 ? n.toFixed(decimals) : n) + (unit ? " " + unit : "");
-    };
-  }
+  initKnobs();
 
-  linkSlider("pred-soil", "pred-soil-val", "", 2);
-  linkSlider("pred-temp", "pred-temp-val", "°C", 1);
-  linkSlider("pred-rain", "pred-rain-val", "mm", 1);
-  linkSlider("pred-hum", "pred-hum-val", "%", 0);
-
-  function applyPreset(soil, temp, rain, hum, crop, stage) {
-    document.getElementById("pred-soil").value = soil;
-    document.getElementById("pred-soil-val").textContent = soil.toFixed(2);
-    document.getElementById("pred-temp").value = temp;
-    document.getElementById("pred-temp-val").textContent = temp.toFixed(1) + " °C";
-    document.getElementById("pred-rain").value = rain;
-    document.getElementById("pred-rain-val").textContent = rain.toFixed(1) + " mm";
-    document.getElementById("pred-hum").value = hum;
-    document.getElementById("pred-hum-val").textContent = hum + "%";
-    if (crop) document.getElementById("pred-crop").value = crop;
-    if (stage) document.getElementById("pred-stage").value = stage;
+  function applyPreset(soil, temp, rain, hum, crop, stage, ph, soc) {
+    if (knobControllers["pred-soil"] && soil !== undefined) knobControllers["pred-soil"].setValue(soil);
+    if (knobControllers["pred-temp"] && temp !== undefined) knobControllers["pred-temp"].setValue(temp);
+    if (knobControllers["pred-rain"] && rain !== undefined) knobControllers["pred-rain"].setValue(rain);
+    if (knobControllers["pred-hum"] && hum !== undefined) knobControllers["pred-hum"].setValue(hum);
+    if (knobControllers["pred-ph"] && ph !== undefined) knobControllers["pred-ph"].setValue(ph);
+    if (knobControllers["pred-soc"] && soc !== undefined) knobControllers["pred-soc"].setValue(soc);
+    if (crop) {
+      var cEl = document.getElementById("pred-crop");
+      if (cEl) cEl.value = crop;
+    }
+    if (stage) {
+      var sEl = document.getElementById("pred-stage");
+      if (sEl) sEl.value = stage;
+    }
   }
 
   var btnArid = document.getElementById("preset-arid");
   if (btnArid) {
     btnArid.onclick = function() {
-      applyPreset(0.18, 39.0, 0.0, 22, "Cotton", "Reproductive");
+      applyPreset(0.18, 39.0, 0.0, 22, "Cotton", "Reproductive", 8.2, 0.30);
     };
   }
   var btnDry = document.getElementById("preset-dry");
   if (btnDry) {
     btnDry.onclick = function() {
-      applyPreset(0.30, 33.5, 0.0, 38, "Cotton", "Reproductive");
+      applyPreset(0.30, 33.5, 0.0, 38, "Cotton", "Reproductive", 7.5, 0.45);
     };
   }
   var btnMonsoon = document.getElementById("preset-monsoon");
   if (btnMonsoon) {
     btnMonsoon.onclick = function() {
-      applyPreset(0.58, 28.0, 24.0, 78, "Rice", "Vegetative");
+      applyPreset(0.58, 28.0, 24.0, 78, "Rice", "Vegetative", 6.8, 0.65);
+    };
+  }
+  var btnReset = document.getElementById("preset-reset");
+  if (btnReset) {
+    btnReset.onclick = function() {
+      loadDistrictProfile(stateSelect.value, distSelect.value);
     };
   }
 
@@ -645,10 +807,38 @@ function runPredictionInference() {
   var dt = document.getElementById("pred-district").value;
   var crop = document.getElementById("pred-crop").value;
   var stage = document.getElementById("pred-stage").value;
-  var soil = parseFloat(document.getElementById("pred-soil").value);
+
   var temp = parseFloat(document.getElementById("pred-temp").value);
-  var rain = parseFloat(document.getElementById("pred-rain").value);
   var hum = parseFloat(document.getElementById("pred-hum").value);
+  var rain = parseFloat(document.getElementById("pred-rain").value);
+  var soil = parseFloat(document.getElementById("pred-soil").value);
+  var ph = parseFloat(document.getElementById("pred-ph").value);
+  var soc = parseFloat(document.getElementById("pred-soc").value);
+
+  if (isNaN(temp) || temp < 15 || temp > 48) {
+    alert("Please enter a valid temperature between 15 °C and 48 °C.");
+    return;
+  }
+  if (isNaN(hum) || hum < 10 || hum > 95) {
+    alert("Please enter a valid humidity between 10% and 95%.");
+    return;
+  }
+  if (isNaN(rain) || rain < 0 || rain > 100) {
+    alert("Please enter a valid daily rainfall between 0 and 100 mm.");
+    return;
+  }
+  if (isNaN(soil) || soil < 0.10 || soil > 0.85) {
+    alert("Please enter a valid soil moisture index between 0.10 and 0.85.");
+    return;
+  }
+  if (isNaN(ph) || ph < 4.5 || ph > 9.5) {
+    alert("Please enter a valid soil pH between 4.5 and 9.5.");
+    return;
+  }
+  if (isNaN(soc) || soc < 0.10 || soc > 1.50) {
+    alert("Please enter a valid soil organic carbon between 0.10% and 1.50%.");
+    return;
+  }
 
   var payload = {
     state: st,
@@ -658,11 +848,13 @@ function runPredictionInference() {
     effective_soil_wetness: soil,
     temperature: temp,
     rainfall: rain,
-    humidity: hum
+    humidity: hum,
+    soil_ph: ph,
+    soil_organic_carbon: soc
   };
 
   btnRun.disabled = true;
-  btnRun.textContent = "⏳ Running Random Forest Models...";
+  btnRun.textContent = "Processing Prediction...";
 
   fetch("/predict", {
     method: "POST",
@@ -673,11 +865,11 @@ function runPredictionInference() {
     return r.json();
   }).then(function(res) {
     btnRun.disabled = false;
-    btnRun.textContent = "⚡ Run Agricultural Prediction";
+    btnRun.textContent = "Predict";
     renderPredictionResults(res, payload);
   }).catch(function(err) {
     btnRun.disabled = false;
-    btnRun.textContent = "⚡ Run Agricultural Prediction";
+    btnRun.textContent = "Predict";
     alert("Prediction failed: " + err.message + ". Please verify input parameters.");
   });
 }
@@ -741,6 +933,23 @@ function renderPredictionResults(res, payload) {
   document.getElementById("res-et0").textContent = (agro.reference_et0_mm || 0.0).toFixed(2) + " mm";
   document.getElementById("res-etc").textContent = (agro.crop_etc_mm || 0.0).toFixed(2) + " mm";
   document.getElementById("res-ndvi").textContent = (agro.vegetation_ndvi || 0.0).toFixed(3);
+
+  var sumLoc = document.getElementById("sum-loc");
+  if (sumLoc) sumLoc.textContent = payload.district + ", " + payload.state;
+  var sumCrop = document.getElementById("sum-crop");
+  if (sumCrop) sumCrop.textContent = payload.crop_type + " · " + payload.growth_stage;
+  var sumTemp = document.getElementById("sum-temp");
+  if (sumTemp) sumTemp.textContent = payload.temperature.toFixed(1) + " °C";
+  var sumHum = document.getElementById("sum-hum");
+  if (sumHum) sumHum.textContent = Math.round(payload.humidity) + " %";
+  var sumRain = document.getElementById("sum-rain");
+  if (sumRain) sumRain.textContent = payload.rainfall.toFixed(1) + " mm";
+  var sumSoil = document.getElementById("sum-soil");
+  if (sumSoil) sumSoil.textContent = payload.effective_soil_wetness.toFixed(2);
+  var sumPh = document.getElementById("sum-ph");
+  if (sumPh) sumPh.textContent = (payload.soil_ph !== undefined ? payload.soil_ph.toFixed(1) : "7.4") + " pH";
+  var sumSoc = document.getElementById("sum-soc");
+  if (sumSoc) sumSoc.textContent = (payload.soil_organic_carbon !== undefined ? payload.soil_organic_carbon.toFixed(2) : "0.48") + " %";
 }
 
 function navigatePredictionToMap() {

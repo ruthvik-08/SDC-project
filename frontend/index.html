@@ -17,7 +17,7 @@
     <div class="nav-links-wrap" id="nav-links-wrap">
       <a href="#/" class="nav-link" id="nav-home">Home</a>
       <a href="#/map" class="nav-link" id="nav-map">Geospatial Map</a>
-      <a href="#/predictor" class="nav-link" id="nav-predictor">AI Predictor</a>
+      <a href="#/predictor" class="nav-link" id="nav-predictor">Predictor</a>
       <a href="#/ranking" class="nav-link" id="nav-ranking">Irrigation Priority</a>
       <a href="#/benchmarks" class="nav-link" id="nav-benchmarks">ML Benchmarks</a>
       <a href="#/clusters" class="nav-link" id="nav-clusters">Agro-Climatic Clusters</a>
@@ -36,10 +36,10 @@
         <h1>Open data for climate-resilient agriculture</h1>
         <p class="lead">KrishiJal unifies machine learning and satellite remote sensing to forecast crop water stress, compute district-level irrigation priority indices, and identify agro-climatic zones across 36 Indian States &amp; UTs.</p>
         <div class="hero-btns">
-          <a class="btn fill" href="#/map">🗺️ Launch Geospatial Map</a>
-          <a class="btn outline" href="#/predictor">🌾 AI Predictor</a>
-          <a class="btn outline" href="#/ranking">📊 Irrigation Rankings</a>
-          <a class="btn outline" href="#/benchmarks">📈 ML Benchmarks</a>
+          <a class="btn fill" href="#/map">Launch Geospatial Map</a>
+          <a class="btn outline" href="#/predictor">Predictor</a>
+          <a class="btn outline" href="#/ranking">Irrigation Rankings</a>
+          <a class="btn outline" href="#/benchmarks">ML Benchmarks</a>
         </div>
       </div>
     </section>
@@ -206,32 +206,36 @@
   </div>
 
   <!-- ======================================================== -->
-  <!-- VIEW: AGRICULTURAL DECISION PREDICTOR                    -->
+  <!-- VIEW: PREDICTOR                                          -->
   <!-- ======================================================== -->
   <section id="view-predictor" class="subview">
     <div class="view-header">
-      <span class="tag">AI Decision Engine</span>
-      <h1>Agricultural Decision Predictor</h1>
-      <p>Real-time machine learning inference using trained Random Forest models to forecast localized crop water stress, compute dynamic irrigation priority indices, and calculate water deficits for any of India’s 732 districts.</p>
+      <span class="tag">Decision Engine</span>
+      <h1>Predictor</h1>
+      <p>Agricultural monitoring control station delivering real-time machine learning inference via trained Random Forest models to forecast localized crop water stress, compute dynamic irrigation priority indices, and calculate water deficits across Indian districts.</p>
     </div>
 
     <div class="sec" style="padding-top:0;">
       <div class="predictor-layout">
-        <!-- Left: Input Form Card -->
+        <!-- Left: Control Station Card -->
         <div class="pred-card">
-          <h3>Agronomic Configuration</h3>
-          <p class="sub">Select location across 732 districts and tune environmental indicators to run verified Random Forest inferences.</p>
+          <div class="station-header">
+            <h3>Agricultural Control Station</h3>
+            <span class="station-status-pill">Active Telemetry</span>
+          </div>
+          <p class="sub">Select location across 732 districts and tune environmental indicators using rotary control knobs to execute real-time model predictions.</p>
 
           <form id="pred-form" onsubmit="return false;">
+            <!-- Location & Crop Management -->
             <div class="form-grid-2">
               <div class="form-field">
                 <label for="pred-state">State / UT</label>
-                <input type="text" id="pred-state-search" placeholder="🔍 Filter states..." class="pred-search-input">
+                <input type="text" id="pred-state-search" placeholder="Filter states..." class="pred-search-input">
                 <select id="pred-state" required></select>
               </div>
               <div class="form-field">
                 <label for="pred-district">District (732+)</label>
-                <input type="text" id="pred-district-search" placeholder="🔍 Filter districts..." class="pred-search-input">
+                <input type="text" id="pred-district-search" placeholder="Filter districts..." class="pred-search-input">
                 <select id="pred-district" required></select>
               </div>
             </div>
@@ -239,7 +243,7 @@
             <!-- Verified District Baseline Profile Card -->
             <div class="district-profile-card" id="pred-district-profile">
               <div class="profile-header">
-                <span class="profile-title">✓ Verified District Profile</span>
+                <span class="profile-title">Verified District Profile</span>
                 <span class="profile-badge" id="profile-lgd-badge">LGD Code: 508</span>
               </div>
               <div class="profile-grid">
@@ -256,7 +260,7 @@
                 <span>Yield: <b id="profile-yield">4.14 MT/Ha</b></span>
               </div>
               <div class="profile-hint">
-                ⚡ Auto-populated verified baseline values into model sliders below
+                Baseline indicators auto-populated into rotary control knobs below
               </div>
             </div>
 
@@ -286,54 +290,223 @@
               </div>
             </div>
 
-            <!-- Effective Soil Wetness Slider -->
-            <div class="form-field">
-              <label for="pred-soil">Effective Soil Wetness (0.10 – 0.80)</label>
-              <div class="range-wrap">
-                <input type="range" id="pred-soil" min="0.10" max="0.80" step="0.01" value="0.32">
-                <span class="range-val" id="pred-soil-val">0.32</span>
+            <!-- Rotary Station 1: Weather Parameters -->
+            <div class="control-module">
+              <div class="module-header">
+                <span class="module-title">Atmospheric &amp; Weather Station</span>
+                <span class="module-badge">3 Rotary Channels</span>
+              </div>
+              <div class="knobs-grid">
+                <!-- Knob 1: Temperature -->
+                <div class="knob-control" data-id="pred-temp" data-min="15" data-max="48" data-step="0.5" data-decimals="1" data-unit="°C">
+                  <div class="knob-label">Air Temperature</div>
+                  <div class="knob-dial-box" tabindex="0" role="slider" aria-label="Air Temperature" aria-valuemin="15" aria-valuemax="48" aria-valuenow="30.0">
+                    <svg class="knob-svg" viewBox="0 0 120 120">
+                      <circle class="knob-track" cx="60" cy="60" r="46"/>
+                      <circle class="knob-progress" cx="60" cy="60" r="46"/>
+                      <g class="knob-rotor">
+                        <circle class="knob-cap" cx="60" cy="60" r="34"/>
+                        <line class="knob-pointer" x1="60" y1="28" x2="60" y2="38"/>
+                        <circle class="knob-pivot" cx="60" cy="60" r="5"/>
+                      </g>
+                    </svg>
+                    <div class="knob-center-readout">
+                      <span class="knob-display-val" id="pred-temp-display">30.0</span>
+                      <span class="knob-unit">°C</span>
+                    </div>
+                  </div>
+                  <div class="knob-range-row">
+                    <span>15 °C</span>
+                    <span>48 °C</span>
+                  </div>
+                  <div class="knob-exact-field">
+                    <label for="pred-temp">Exact Value</label>
+                    <div class="num-input-wrap">
+                      <input type="number" id="pred-temp" class="knob-num-input" min="15" max="48" step="0.5" value="30.0">
+                      <span class="num-unit">°C</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Knob 2: Relative Humidity -->
+                <div class="knob-control" data-id="pred-hum" data-min="10" data-max="95" data-step="1" data-decimals="0" data-unit="%">
+                  <div class="knob-label">Relative Humidity</div>
+                  <div class="knob-dial-box" tabindex="0" role="slider" aria-label="Relative Humidity" aria-valuemin="10" aria-valuemax="95" aria-valuenow="50">
+                    <svg class="knob-svg" viewBox="0 0 120 120">
+                      <circle class="knob-track" cx="60" cy="60" r="46"/>
+                      <circle class="knob-progress" cx="60" cy="60" r="46"/>
+                      <g class="knob-rotor">
+                        <circle class="knob-cap" cx="60" cy="60" r="34"/>
+                        <line class="knob-pointer" x1="60" y1="28" x2="60" y2="38"/>
+                        <circle class="knob-pivot" cx="60" cy="60" r="5"/>
+                      </g>
+                    </svg>
+                    <div class="knob-center-readout">
+                      <span class="knob-display-val" id="pred-hum-display">50</span>
+                      <span class="knob-unit">%</span>
+                    </div>
+                  </div>
+                  <div class="knob-range-row">
+                    <span>10 %</span>
+                    <span>95 %</span>
+                  </div>
+                  <div class="knob-exact-field">
+                    <label for="pred-hum">Exact Value</label>
+                    <div class="num-input-wrap">
+                      <input type="number" id="pred-hum" class="knob-num-input" min="10" max="95" step="1" value="50">
+                      <span class="num-unit">%</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Knob 3: Daily Rainfall -->
+                <div class="knob-control" data-id="pred-rain" data-min="0" data-max="100" data-step="0.5" data-decimals="1" data-unit="mm">
+                  <div class="knob-label">Daily Rainfall</div>
+                  <div class="knob-dial-box" tabindex="0" role="slider" aria-label="Daily Rainfall" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0.0">
+                    <svg class="knob-svg" viewBox="0 0 120 120">
+                      <circle class="knob-track" cx="60" cy="60" r="46"/>
+                      <circle class="knob-progress" cx="60" cy="60" r="46"/>
+                      <g class="knob-rotor">
+                        <circle class="knob-cap" cx="60" cy="60" r="34"/>
+                        <line class="knob-pointer" x1="60" y1="28" x2="60" y2="38"/>
+                        <circle class="knob-pivot" cx="60" cy="60" r="5"/>
+                      </g>
+                    </svg>
+                    <div class="knob-center-readout">
+                      <span class="knob-display-val" id="pred-rain-display">0.0</span>
+                      <span class="knob-unit">mm</span>
+                    </div>
+                  </div>
+                  <div class="knob-range-row">
+                    <span>0 mm</span>
+                    <span>100 mm</span>
+                  </div>
+                  <div class="knob-exact-field">
+                    <label for="pred-rain">Exact Value</label>
+                    <div class="num-input-wrap">
+                      <input type="number" id="pred-rain" class="knob-num-input" min="0" max="100" step="0.5" value="0.0">
+                      <span class="num-unit">mm</span>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
 
-            <!-- Temperature Slider -->
-            <div class="form-field">
-              <label for="pred-temp">Air Temperature (15 – 48 °C)</label>
-              <div class="range-wrap">
-                <input type="range" id="pred-temp" min="15" max="48" step="0.5" value="33.5">
-                <span class="range-val" id="pred-temp-val">33.5 °C</span>
+            <!-- Rotary Station 2: Soil Moisture & Chemistry -->
+            <div class="control-module">
+              <div class="module-header">
+                <span class="module-title">Soil Moisture &amp; Chemistry Station</span>
+                <span class="module-badge">3 Rotary Channels</span>
+              </div>
+              <div class="knobs-grid">
+                <!-- Knob 4: Soil Moisture (Effective Soil Wetness) -->
+                <div class="knob-control" data-id="pred-soil" data-min="0.10" data-max="0.85" data-step="0.01" data-decimals="2" data-unit="Index">
+                  <div class="knob-label">Soil Moisture (Wetness)</div>
+                  <div class="knob-dial-box" tabindex="0" role="slider" aria-label="Soil Moisture" aria-valuemin="0.10" aria-valuemax="0.85" aria-valuenow="0.38">
+                    <svg class="knob-svg" viewBox="0 0 120 120">
+                      <circle class="knob-track" cx="60" cy="60" r="46"/>
+                      <circle class="knob-progress" cx="60" cy="60" r="46"/>
+                      <g class="knob-rotor">
+                        <circle class="knob-cap" cx="60" cy="60" r="34"/>
+                        <line class="knob-pointer" x1="60" y1="28" x2="60" y2="38"/>
+                        <circle class="knob-pivot" cx="60" cy="60" r="5"/>
+                      </g>
+                    </svg>
+                    <div class="knob-center-readout">
+                      <span class="knob-display-val" id="pred-soil-display">0.38</span>
+                      <span class="knob-unit">Index</span>
+                    </div>
+                  </div>
+                  <div class="knob-range-row">
+                    <span>0.10</span>
+                    <span>0.85</span>
+                  </div>
+                  <div class="knob-exact-field">
+                    <label for="pred-soil">Exact Value</label>
+                    <div class="num-input-wrap">
+                      <input type="number" id="pred-soil" class="knob-num-input" min="0.10" max="0.85" step="0.01" value="0.38">
+                      <span class="num-unit">0–1</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Knob 5: Soil pH -->
+                <div class="knob-control" data-id="pred-ph" data-min="4.5" data-max="9.5" data-step="0.1" data-decimals="1" data-unit="pH">
+                  <div class="knob-label">Soil pH Level</div>
+                  <div class="knob-dial-box" tabindex="0" role="slider" aria-label="Soil pH" aria-valuemin="4.5" aria-valuemax="9.5" aria-valuenow="7.4">
+                    <svg class="knob-svg" viewBox="0 0 120 120">
+                      <circle class="knob-track" cx="60" cy="60" r="46"/>
+                      <circle class="knob-progress" cx="60" cy="60" r="46"/>
+                      <g class="knob-rotor">
+                        <circle class="knob-cap" cx="60" cy="60" r="34"/>
+                        <line class="knob-pointer" x1="60" y1="28" x2="60" y2="38"/>
+                        <circle class="knob-pivot" cx="60" cy="60" r="5"/>
+                      </g>
+                    </svg>
+                    <div class="knob-center-readout">
+                      <span class="knob-display-val" id="pred-ph-display">7.4</span>
+                      <span class="knob-unit">pH</span>
+                    </div>
+                  </div>
+                  <div class="knob-range-row">
+                    <span>4.5 pH</span>
+                    <span>9.5 pH</span>
+                  </div>
+                  <div class="knob-exact-field">
+                    <label for="pred-ph">Exact Value</label>
+                    <div class="num-input-wrap">
+                      <input type="number" id="pred-ph" class="knob-num-input" min="4.5" max="9.5" step="0.1" value="7.4">
+                      <span class="num-unit">pH</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Knob 6: Soil Organic Carbon -->
+                <div class="knob-control" data-id="pred-soc" data-min="0.10" data-max="1.50" data-step="0.05" data-decimals="2" data-unit="%">
+                  <div class="knob-label">Soil Organic Carbon</div>
+                  <div class="knob-dial-box" tabindex="0" role="slider" aria-label="Soil Organic Carbon" aria-valuemin="0.10" aria-valuemax="1.50" aria-valuenow="0.48">
+                    <svg class="knob-svg" viewBox="0 0 120 120">
+                      <circle class="knob-track" cx="60" cy="60" r="46"/>
+                      <circle class="knob-progress" cx="60" cy="60" r="46"/>
+                      <g class="knob-rotor">
+                        <circle class="knob-cap" cx="60" cy="60" r="34"/>
+                        <line class="knob-pointer" x1="60" y1="28" x2="60" y2="38"/>
+                        <circle class="knob-pivot" cx="60" cy="60" r="5"/>
+                      </g>
+                    </svg>
+                    <div class="knob-center-readout">
+                      <span class="knob-display-val" id="pred-soc-display">0.48</span>
+                      <span class="knob-unit">%</span>
+                    </div>
+                  </div>
+                  <div class="knob-range-row">
+                    <span>0.10 %</span>
+                    <span>1.50 %</span>
+                  </div>
+                  <div class="knob-exact-field">
+                    <label for="pred-soc">Exact Value</label>
+                    <div class="num-input-wrap">
+                      <input type="number" id="pred-soc" class="knob-num-input" min="0.10" max="1.50" step="0.05" value="0.48">
+                      <span class="num-unit">%</span>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
 
-            <!-- Rainfall Slider -->
-            <div class="form-field">
-              <label for="pred-rain">Daily Rainfall (0 – 100 mm)</label>
-              <div class="range-wrap">
-                <input type="range" id="pred-rain" min="0" max="100" step="0.5" value="0.0">
-                <span class="range-val" id="pred-rain-val">0.0 mm</span>
+            <!-- Simulation Baseline Scenarios -->
+            <div class="presets-section" style="margin-top:14px;">
+              <span class="presets-title" style="font-size:11px;font-weight:700;color:var(--mute);text-transform:uppercase;letter-spacing:0.5px;">Simulation Baseline Scenarios:</span>
+              <div class="preset-chips" style="margin-top:8px;">
+                <button type="button" class="preset-chip" id="preset-arid">Arid Drought Spell</button>
+                <button type="button" class="preset-chip" id="preset-dry">Moderate Water Deficit</button>
+                <button type="button" class="preset-chip" id="preset-monsoon">Adequate Monsoon</button>
+                <button type="button" class="preset-chip" id="preset-reset">District Baseline</button>
               </div>
             </div>
 
-            <!-- Humidity Slider -->
-            <div class="form-field">
-              <label for="pred-hum">Relative Humidity (10 – 95%)</label>
-              <div class="range-wrap">
-                <input type="range" id="pred-hum" min="10" max="95" step="1" value="42">
-                <span class="range-val" id="pred-hum-val">42%</span>
-              </div>
-            </div>
-
-            <!-- Simulation Presets -->
-            <div style="margin-top:10px;">
-              <span style="font-size:11px;font-weight:700;color:var(--mute);text-transform:uppercase;letter-spacing:0.5px;">Quick Simulation Presets:</span>
-              <div class="preset-chips">
-                <button type="button" class="preset-chip" id="preset-arid">🌵 Arid Drought Spell</button>
-                <button type="button" class="preset-chip" id="preset-dry">☀️ Moderate Water Deficit</button>
-                <button type="button" class="preset-chip" id="preset-monsoon">🌧️ Adequate Monsoon</button>
-              </div>
-            </div>
-
-            <button type="button" id="btn-run-predict" class="btn fill" style="width:100%;font-size:15px;margin-top:10px;">
-              ⚡ Run Agricultural Prediction
+            <button type="button" id="btn-run-predict" class="btn fill btn-predict" style="width:100%;font-size:15px;margin-top:12px;padding:12px;">
+              Predict
             </button>
           </form>
         </div>
@@ -341,9 +514,14 @@
         <!-- Right: Results Card -->
         <div class="pred-card" id="pred-results-container">
           <div class="results-empty" id="results-empty">
-            <div class="empty-icon">🌾</div>
+            <div class="empty-icon-svg" style="margin-bottom:12px;opacity:0.75;">
+              <svg viewBox="0 0 64 64" width="48" height="48" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="32" cy="32" r="28" stroke="var(--line)"/>
+                <path d="M32 14 v36 M20 28 l12-14 12 14 M20 42 l12-10 12 10" stroke="var(--knob-accent)"/>
+              </svg>
+            </div>
             <h4>Ready to Forecast Agricultural Stress</h4>
-            <p>Select any of India’s 732 districts, configure agronomic indicators, and run real-time inference using the trained Random Forest classifier and regressor.</p>
+            <p>Select any of India’s 732 districts, adjust rotary control knobs or enter precise parameters, and run real-time inference using the trained Random Forest model.</p>
           </div>
 
           <div class="results-content" id="results-content">
@@ -416,9 +594,24 @@
               <span>Model: <b class="mono" style="color:var(--teal);">RandomForestClassifier (.pkl)</b></span>
             </div>
 
+            <!-- Input Summary Section -->
+            <div class="input-summary-card">
+              <div class="summary-header">Input Parameters Summary</div>
+              <div class="summary-grid">
+                <div><span>Location:</span> <b id="sum-loc">Khammam, Telangana</b></div>
+                <div><span>Crop / Stage:</span> <b id="sum-crop">Cotton · Reproductive</b></div>
+                <div><span>Temperature:</span> <b id="sum-temp">30.0 °C</b></div>
+                <div><span>Humidity:</span> <b id="sum-hum">50 %</b></div>
+                <div><span>Rainfall:</span> <b id="sum-rain">0.0 mm</b></div>
+                <div><span>Soil Moisture:</span> <b id="sum-soil">0.38</b></div>
+                <div><span>Soil pH:</span> <b id="sum-ph">7.4 pH</b></div>
+                <div><span>Organic Carbon:</span> <b id="sum-soc">0.48 %</b></div>
+              </div>
+            </div>
+
             <!-- View on Map Button -->
-            <button type="button" id="btn-view-on-map" class="btn fill" style="background:var(--teal);border-color:var(--teal);width:100%;font-size:15px;">
-              🗺️ View &amp; Highlight District on India Map &rarr;
+            <button type="button" id="btn-view-on-map" class="btn fill" style="background:var(--teal);border-color:var(--teal);width:100%;font-size:15px;margin-top:16px;">
+              View &amp; Highlight District on India Map &rarr;
             </button>
           </div>
         </div>
@@ -505,7 +698,7 @@
 
       <!-- Peak-End Takeaway Banner -->
       <div class="takeaway-banner">
-        <div class="takeaway-icon">💧</div>
+        <div class="takeaway-icon"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg></div>
         <div class="takeaway-text">
           <h4>Actionable Irrigation Takeaway (Decision Insight)</h4>
           <p>Districts with Irrigation Priority Index &ge; 50.0 (e.g. Bikaner and Jodhpur in the Arid Belt) require immediate high-priority allocation of 40–50 mm water depth to prevent root-zone moisture depletion, while 150 low-deficit districts can maintain routine conservation schedules.</p>
@@ -703,7 +896,7 @@
 
       <!-- Peak-End Takeaway Banner -->
       <div class="takeaway-banner">
-        <div class="takeaway-icon">🎯</div>
+        <div class="takeaway-icon"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg></div>
         <div class="takeaway-text">
           <h4>Model Selection Summary (Evaluation Takeaway)</h4>
           <p>Hyperparameter-tuned Random Forest delivers 99.62% classification accuracy and 0.9954 regression R² score, providing calibrated decision support for all 14 physical agro-climatic parameters without overfitting.</p>
@@ -807,7 +1000,7 @@
 
       <!-- Peak-End Takeaway Banner -->
       <div class="takeaway-banner">
-        <div class="takeaway-icon">🌾</div>
+        <div class="takeaway-icon"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/></svg></div>
         <div class="takeaway-text">
           <h4>Zonation Strategy Summary (Actionable Policy Insight)</h4>
           <p>Regional clustering demonstrates that uniform irrigation protocols are inefficient across India. High-efficiency micro-sprinklers must be prioritized for Zone 2 (Arid Deficit Belt), furrow irrigation for Zone 0 (Central Belt), and drainage canal regulation for Zone 1 (Coastal Belt).</p>
