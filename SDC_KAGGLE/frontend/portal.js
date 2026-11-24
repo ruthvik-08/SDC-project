@@ -15,15 +15,6 @@ var BASEMAP_CONFIG = {
       maxZoom: 19
     }
   },
-  dark: {
-    name: "Dark",
-    url: "https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png",
-    options: {
-      subdomains: "abcd",
-      attribution: "&copy; <a href=\"https://www.openstreetmap.org/copyright\">OpenStreetMap</a> contributors &copy; <a href=\"https://carto.com/attributions\">CARTO</a>",
-      maxZoom: 19
-    }
-  },
   clean: {
     name: "Clean",
     url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
@@ -59,9 +50,7 @@ function setBasemap(styleKey) {
   currentBasemap = styleKey;
   
   var mapEl = document.getElementById("map");
-  if (styleKey === "dark") {
-    mapEl.style.backgroundColor = "#12100f";
-  } else if (styleKey === "satellite") {
+  if (styleKey === "satellite") {
     mapEl.style.backgroundColor = "#0b101b";
   } else {
     mapEl.style.backgroundColor = "#fafaf8";
@@ -84,7 +73,7 @@ function setBasemap(styleKey) {
   if (distLayer) distLayer.setStyle(styleDist);
   if (stateLayer) stateLayer.setStyle(styleState);
   if (selectedDistrictLayer) {
-    var selColor = currentBasemap === "satellite" ? "#ffd700" : (currentBasemap === "dark" ? "#ffd700" : "#b5573a");
+    var selColor = currentBasemap === "satellite" ? "#ffd700" : "#b5573a";
     selectedDistrictLayer.setStyle({ weight: 3.5, color: selColor });
   }
   showInfo(selected ? dataFor(selected) : null, selected);
@@ -93,7 +82,7 @@ function setBasemap(styleKey) {
 setBasemap("clean");
 
 function colorFor(d) {
-  if (!d) return currentBasemap === "dark" ? "#221f1d" : (currentBasemap === "satellite" ? "#000000" : "#e6e2dc");
+  if (!d) return currentBasemap === "satellite" ? "#000000" : "#e6e2dc";
   var L1 = LAYERS[layer];
   if (layer === "stress") return L1.cat[L1.labels.indexOf(d.stress)] || "#e6c229";
   var r = ranges[layer], t = (d[L1.key] - r[0]) / ((r[1] - r[0]) || 1);
@@ -127,15 +116,6 @@ function styleState(f) {
       opacity: isCurrent ? 1 : 0.75
     };
   }
-  if (currentBasemap === "dark") {
-    return {
-      fillColor: "transparent",
-      fillOpacity: 0,
-      color: isCurrent ? "#ffd700" : "#e8873a",
-      weight: isCurrent ? 2.4 : 1.3,
-      opacity: isCurrent ? 1 : 0.75
-    };
-  }
   return {
     fillColor: "transparent",
     fillOpacity: 0,
@@ -160,15 +140,6 @@ function styleDist(f) {
       opacity: isStateDimmed ? 0.2 : 0.8
     };
   }
-  if (currentBasemap === "dark") {
-    return {
-      fillColor: fill,
-      fillOpacity: isStateDimmed ? 0.12 : (hasData ? 0.90 : 0.60),
-      color: isStateDimmed ? "#221f1d" : (hasData ? "#383430" : "#383430"),
-      weight: hasData ? 0.8 : 0.6,
-      opacity: isStateDimmed ? 0.3 : 0.9
-    };
-  }
   return {
     fillColor: fill,
     fillOpacity: isStateDimmed ? 0.10 : (hasData ? 0.88 : 0.45),
@@ -182,7 +153,7 @@ function drawLegend() {
   var L1 = LAYERS[layer], c = layer === "stress" ? L1.cat : L1.ramp, h = "";
   for (var i = 0; i < c.length; i++) h += "<div style='background:" + c[i] + "'></div>";
   var lo = layer === "stress" ? "LOW" : "LOW", hi = layer === "stress" ? "SEVERE" : "HIGH";
-  var noDataColor = currentBasemap === "dark" ? "#221f1d" : (currentBasemap === "satellite" ? "#000000" : "#e6e2dc");
+  var noDataColor = currentBasemap === "satellite" ? "#000000" : "#e6e2dc";
   return "<div class='leg'><div style='background:" + noDataColor + ";flex:.5'></div>" + h + "</div><div class='legl'><span>NO DATA</span><span>" + lo + "</span><span>" + hi + "</span></div>";
 }
 
@@ -261,7 +232,7 @@ function selectDistrict(props, ly) {
   }
   selectedDistrictLayer = ly;
   selected = props;
-  var selColor = currentBasemap === "satellite" ? "#ffd700" : (currentBasemap === "dark" ? "#ffd700" : "#b5573a");
+  var selColor = currentBasemap === "satellite" ? "#ffd700" : "#b5573a";
   ly.setStyle({
     weight: 3.5,
     color: selColor,
@@ -316,7 +287,7 @@ function recolor() {
   if (distLayer) distLayer.setStyle(styleDist);
   if (stateLayer) stateLayer.setStyle(styleState);
   if (selectedDistrictLayer) {
-    var selColor = currentBasemap === "satellite" ? "#ffd700" : (currentBasemap === "dark" ? "#ffd700" : "#b5573a");
+    var selColor = currentBasemap === "satellite" ? "#ffd700" : "#b5573a";
     selectedDistrictLayer.setStyle({ weight: 3.5, color: selColor });
   }
   showInfo(selected ? dataFor(selected) : null, selected);
