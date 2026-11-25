@@ -1,8 +1,11 @@
+import os
 import json
 import pandas as pd
 import numpy as np
 import joblib
-from fastapi import FastAPI
+import mysql.connector
+from dotenv import load_dotenv
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
@@ -12,6 +15,21 @@ from sklearn.pipeline import Pipeline
 from sklearn.linear_model import LinearRegression
 from sklearn.cluster import KMeans
 from sklearn.decomposition import PCA
+
+load_dotenv()
+
+def get_db_connection():
+    try:
+        conn = mysql.connector.connect(
+            host=os.getenv("MYSQL_HOST", "127.0.0.1"),
+            port=int(os.getenv("MYSQL_PORT", "3306")),
+            user=os.getenv("MYSQL_USER", "root"),
+            password=os.getenv("MYSQL_PASSWORD", ""),
+            database=os.getenv("MYSQL_DATABASE", "crop_stress_db")
+        )
+        return conn, None
+    except mysql.connector.Error as err:
+        return None, str(err)
 
 df_master = pd.read_csv("data/processed/krishijal_master_dataset.csv")
 df_dist_base = df_master[df_master["granularity"] == "district_baseline"].copy()
@@ -154,6 +172,127 @@ class PredictRequest(BaseModel):
     water_deficit: float = None
     state: str = None
     district: str = None
+    farmer_id: int = None
+    farmer_name: str = None
+    farmer_phone: str = ""
+    farmer_village: str = ""
+
+class FarmerRequest(BaseModel):
+    farmer_name: str
+    phone: str = ""
+    village: str = ""
+    state_name: str
+    district_name: str
+    primary_crop: str = "Cotton"
+    soil_type: str = "Loamy"
+    land_area_acres: float = 2.5
+
+def save_prediction_to_mysql(item, raw_df, stress_code, stress_label, priority_index, priority_category, recommended_depth, daily_deficit, advisory):
+    conn, err = get_db_connection()
+    if conn is None:
+        return None, None, False, err
+    cursor = conn.cursor(dictionary=True)
+    try:
+        state_val = (item.state or "Telangana").strip() or "Telangana"
+        district_val = (item.district or "Khammam").strip() or "Khammam"
+        crop_val = (item.crop_type or "Cotton").strip() or "Cotton"
+        stage_val = (item.growth_stage or "Reproductive").strip() or "Reproductive"
+
+        info = district_agri_index.get((clean_name(state_val), clean_name(district_val))) or district_agri_index.get(clean_name(district_val)) or {}
+        lgd_code = int(info["LGD_Code"]) if info.get("LGD_Code") is not None and pd.notna(info.get("LGD_Code")) else None
+        soil_type = str(info.get("Soil_Type") or "Loamy")
+        avg_temp = float(info.get("Temperature") or float(raw_df["temperature"].iloc[0]))
+        avg_rain = float(info.get("Rainfall") or float(raw_df["rainfall"].iloc[0]))
+        avg_hum = float(info.get("Humidity") or float(raw_df["humidity"].iloc[0]))
+
+        cursor.execute(
+            "SELECT district_id FROM districts WHERE state_name = %s AND district_name = %s LIMIT 1",
+            (state_val, district_val)
+        )
+        dist_row = cursor.fetchone()
+        if dist_row:
+            district_id = dist_row["district_id"]
+        else:
+            cursor.execute(
+                "INSERT INTO districts (state_name, district_name, lgd_code, avg_temperature, avg_rainfall, avg_humidity) VALUES (%s, %s, %s, %s, %s, %s)",
+                (state_val, district_val, lgd_code, avg_temp, avg_rain, avg_hum)
+            )
+            district_id = cursor.lastrowid
+
+        cursor.execute(
+            "SELECT crop_id FROM crops WHERE crop_name = %s AND growth_stage = %s LIMIT 1",
+            (crop_val, stage_val)
+        )
+        crop_row = cursor.fetchone()
+        if crop_row:
+            crop_id = crop_row["crop_id"]
+        else:
+            cursor.execute(
+                "INSERT INTO crops (crop_name, growth_stage) VALUES (%s, %s)",
+                (crop_val, stage_val)
+            )
+            crop_id = cursor.lastrowid
+
+        soil_moist = float(raw_df["effective_soil_wetness"].iloc[0])
+        soil_ph_val = float(raw_df["soil_ph"].iloc[0])
+        soil_soc_val = float(raw_df["soil_organic_carbon"].iloc[0])
+        cursor.execute(
+            "INSERT INTO soil_info (district_id, soil_type, soil_moisture, soil_ph, soil_organic_carbon) VALUES (%s, %s, %s, %s, %s)",
+            (district_id, soil_type, soil_moist, soil_ph_val, soil_soc_val)
+        )
+        soil_id = cursor.lastrowid
+
+        saved_farmer_id = None
+        if item.farmer_id is not None:
+            cursor.execute("SELECT farmer_id FROM farmers WHERE farmer_id = %s LIMIT 1", (item.farmer_id,))
+            farmer_row = cursor.fetchone()
+            if farmer_row:
+                saved_farmer_id = farmer_row["farmer_id"]
+        elif item.farmer_name and item.farmer_name.strip():
+            f_name = item.farmer_name.strip()
+            f_phone = (item.farmer_phone or "").strip()
+            f_village = (item.farmer_village or "").strip()
+            cursor.execute(
+                "SELECT farmer_id FROM farmers WHERE farmer_name = %s AND state_name = %s AND district_name = %s LIMIT 1",
+                (f_name, state_val, district_val)
+            )
+            farmer_row = cursor.fetchone()
+            if farmer_row:
+                saved_farmer_id = farmer_row["farmer_id"]
+            else:
+                cursor.execute(
+                    "INSERT INTO farmers (farmer_name, phone, village, state_name, district_name, primary_crop, soil_type) VALUES (%s, %s, %s, %s, %s, %s, %s)",
+                    (f_name, f_phone, f_village, state_val, district_val, crop_val, soil_type)
+                )
+                saved_farmer_id = cursor.lastrowid
+
+        temp_val = float(raw_df["temperature"].iloc[0])
+        hum_val = float(raw_df["humidity"].iloc[0])
+        rain_val = float(raw_df["rainfall"].iloc[0])
+        cursor.execute(
+            "INSERT INTO irrigation_predictions (farmer_id, district_id, crop_id, soil_id, temperature, humidity, rainfall, soil_moisture, soil_ph, soil_organic_carbon, stress_level, stress_code, priority_index, priority_category, recommended_depth, daily_deficit, advisory) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
+            (
+                saved_farmer_id, district_id, crop_id, soil_id,
+                temp_val, hum_val, rain_val, soil_moist, soil_ph_val, soil_soc_val,
+                stress_label, stress_code, priority_index, priority_category,
+                recommended_depth, daily_deficit, advisory
+            )
+        )
+        prediction_id = cursor.lastrowid
+
+        action_note = f"{stress_label} stress (Priority {priority_index}) for {crop_val} in {district_val}, {state_val}"
+        cursor.execute(
+            "INSERT INTO prediction_history (prediction_id, farmer_id, action_note) VALUES (%s, %s, %s)",
+            (prediction_id, saved_farmer_id, action_note)
+        )
+        conn.commit()
+        return prediction_id, saved_farmer_id, True, "Prediction saved to MySQL"
+    except Exception as exc:
+        conn.rollback()
+        return None, None, False, str(exc)
+    finally:
+        cursor.close()
+        conn.close()
 
 class CropStressSimRequest(BaseModel):
     temperature: float = 32.5
@@ -267,13 +406,18 @@ def predict(item: PredictRequest):
     recommended_depth = "45–55 mm" if priority_index >= 60.0 else ("35–45 mm" if priority_index >= 45.0 else ("20–30 mm" if priority_index >= 30.0 else "Routine / Nil"))
     advisory = "CRITICAL: Severe moisture exhaustion. Immediate canal or tubewell release required." if priority_index >= 60.0 else ("HIGH: Rapid soil moisture depletion observed. Schedule irrigation within 24–48 hours." if priority_index >= 45.0 else ("MODERATE: Soil moisture depleting. Plan irrigation cycle within 3–4 days." if priority_index >= 30.0 else "ADEQUATE: Moisture levels optimal. Continue standard crop monitoring."))
     daily_deficit = max(0.0, round(etc_val - (rain_val + soil_val * etc_val), 2))
+    stress_label = stress_label_map.get(stress_code, "Moderate")
+    pred_id, saved_farmer_id, db_saved, db_msg = save_prediction_to_mysql(
+        item, raw_df, stress_code, stress_label, priority_index,
+        priority_category, recommended_depth, daily_deficit, advisory
+    )
     return {
         "status": "success",
         "location": {"state": item.state, "district": item.district},
         "input_features": {col: float(raw_df[col].iloc[0]) for col in feature_cols},
         "crop_stress_prediction": {
             "stress_level_code": stress_code,
-            "stress_level": stress_label_map.get(stress_code, "Moderate"),
+            "stress_level": stress_label,
             "stress_probabilities": stress_probs,
             "condition_summary": condition_summary
         },
@@ -292,6 +436,12 @@ def predict(item: PredictRequest):
         "models_used": {
             "classifier": "SMOTE + RFE + Tuned Random Forest Pipeline (.pkl)",
             "regressor": "Tuned RandomForestRegressor (.pkl)"
+        },
+        "database": {
+            "saved": db_saved,
+            "prediction_id": pred_id,
+            "farmer_id": saved_farmer_id,
+            "message": db_msg
         }
     }
 
@@ -824,5 +974,253 @@ evaluation_metrics = {
 @app.get("/api/models/evaluation")
 def get_models_evaluation():
     return evaluation_metrics
+
+@app.get("/api/db/health")
+def get_db_health():
+    db_name = os.getenv("MYSQL_DATABASE", "crop_stress_db")
+    conn, err = get_db_connection()
+    if conn is None:
+        return {"connected": False, "database": db_name, "error": err}
+    cursor = conn.cursor(dictionary=True)
+    try:
+        cursor.execute("SELECT COUNT(*) AS count FROM farmers")
+        farmers_count = cursor.fetchone()["count"]
+        cursor.execute("SELECT COUNT(*) AS count FROM irrigation_predictions")
+        predictions_count = cursor.fetchone()["count"]
+        return {
+            "connected": True,
+            "database": db_name,
+            "farmers_count": farmers_count,
+            "predictions_count": predictions_count
+        }
+    except mysql.connector.Error as query_err:
+        return {"connected": False, "database": db_name, "error": str(query_err)}
+    finally:
+        cursor.close()
+        conn.close()
+
+@app.get("/api/farmers")
+def list_farmers(search: str = ""):
+    conn, err = get_db_connection()
+    if conn is None:
+        raise HTTPException(status_code=503, detail=f"MySQL connection error: {err}")
+    cursor = conn.cursor(dictionary=True)
+    try:
+        query_text = search.strip()
+        if query_text:
+            like_val = f"%{query_text}%"
+            sql = """
+                SELECT f.farmer_id, f.farmer_name, f.phone, f.village, f.state_name,
+                       f.district_name, f.primary_crop, f.soil_type, f.land_area_acres,
+                       f.created_at, f.updated_at, COUNT(p.prediction_id) AS total_predictions
+                FROM farmers f
+                LEFT JOIN irrigation_predictions p ON f.farmer_id = p.farmer_id
+                WHERE f.farmer_name LIKE %s OR f.district_name LIKE %s OR f.state_name LIKE %s
+                   OR f.village LIKE %s OR f.primary_crop LIKE %s
+                GROUP BY f.farmer_id
+                ORDER BY f.farmer_id DESC
+            """
+            cursor.execute(sql, (like_val, like_val, like_val, like_val, like_val))
+        else:
+            sql = """
+                SELECT f.farmer_id, f.farmer_name, f.phone, f.village, f.state_name,
+                       f.district_name, f.primary_crop, f.soil_type, f.land_area_acres,
+                       f.created_at, f.updated_at, COUNT(p.prediction_id) AS total_predictions
+                FROM farmers f
+                LEFT JOIN irrigation_predictions p ON f.farmer_id = p.farmer_id
+                GROUP BY f.farmer_id
+                ORDER BY f.farmer_id DESC
+            """
+            cursor.execute(sql)
+        rows = cursor.fetchall()
+        for row in rows:
+            row["land_area_acres"] = float(row["land_area_acres"]) if row["land_area_acres"] is not None else 0.0
+            row["created_at"] = row["created_at"].strftime("%Y-%m-%d %H:%M") if row.get("created_at") else ""
+            row["updated_at"] = row["updated_at"].strftime("%Y-%m-%d %H:%M") if row.get("updated_at") else ""
+        return {"status": "success", "total": len(rows), "farmers": rows}
+    except mysql.connector.Error as query_err:
+        raise HTTPException(status_code=500, detail=str(query_err))
+    finally:
+        cursor.close()
+        conn.close()
+
+@app.post("/api/farmers")
+def create_farmer(item: FarmerRequest):
+    if not item.farmer_name.strip():
+        raise HTTPException(status_code=400, detail="Farmer name is required.")
+    conn, err = get_db_connection()
+    if conn is None:
+        raise HTTPException(status_code=503, detail=f"MySQL connection error: {err}")
+    cursor = conn.cursor(dictionary=True)
+    try:
+        sql = """
+            INSERT INTO farmers (farmer_name, phone, village, state_name, district_name, primary_crop, soil_type, land_area_acres)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+        """
+        values = (
+            item.farmer_name.strip(),
+            item.phone.strip(),
+            item.village.strip(),
+            item.state_name.strip(),
+            item.district_name.strip(),
+            item.primary_crop.strip(),
+            item.soil_type.strip(),
+            item.land_area_acres
+        )
+        cursor.execute(sql, values)
+        conn.commit()
+        new_id = cursor.lastrowid
+        cursor.execute("SELECT * FROM farmers WHERE farmer_id = %s", (new_id,))
+        row = cursor.fetchone()
+        if row:
+            row["land_area_acres"] = float(row["land_area_acres"]) if row["land_area_acres"] is not None else 0.0
+            row["created_at"] = row["created_at"].strftime("%Y-%m-%d %H:%M") if row.get("created_at") else ""
+            row["updated_at"] = row["updated_at"].strftime("%Y-%m-%d %H:%M") if row.get("updated_at") else ""
+        return {"status": "success", "message": "Farmer saved successfully.", "farmer": row}
+    except mysql.connector.Error as query_err:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail=str(query_err))
+    finally:
+        cursor.close()
+        conn.close()
+
+@app.put("/api/farmers/{farmer_id}")
+def update_farmer(farmer_id: int, item: FarmerRequest):
+    if not item.farmer_name.strip():
+        raise HTTPException(status_code=400, detail="Farmer name is required.")
+    conn, err = get_db_connection()
+    if conn is None:
+        raise HTTPException(status_code=503, detail=f"MySQL connection error: {err}")
+    cursor = conn.cursor(dictionary=True)
+    try:
+        cursor.execute("SELECT farmer_id FROM farmers WHERE farmer_id = %s", (farmer_id,))
+        if not cursor.fetchone():
+            raise HTTPException(status_code=404, detail="Farmer record not found.")
+        sql = """
+            UPDATE farmers
+            SET farmer_name = %s, phone = %s, village = %s, state_name = %s,
+                district_name = %s, primary_crop = %s, soil_type = %s, land_area_acres = %s
+            WHERE farmer_id = %s
+        """
+        values = (
+            item.farmer_name.strip(),
+            item.phone.strip(),
+            item.village.strip(),
+            item.state_name.strip(),
+            item.district_name.strip(),
+            item.primary_crop.strip(),
+            item.soil_type.strip(),
+            item.land_area_acres,
+            farmer_id
+        )
+        cursor.execute(sql, values)
+        conn.commit()
+        cursor.execute("SELECT * FROM farmers WHERE farmer_id = %s", (farmer_id,))
+        row = cursor.fetchone()
+        if row:
+            row["land_area_acres"] = float(row["land_area_acres"]) if row["land_area_acres"] is not None else 0.0
+            row["created_at"] = row["created_at"].strftime("%Y-%m-%d %H:%M") if row.get("created_at") else ""
+            row["updated_at"] = row["updated_at"].strftime("%Y-%m-%d %H:%M") if row.get("updated_at") else ""
+        return {"status": "success", "message": "Farmer updated successfully.", "farmer": row}
+    except HTTPException:
+        raise
+    except mysql.connector.Error as query_err:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail=str(query_err))
+    finally:
+        cursor.close()
+        conn.close()
+
+@app.delete("/api/farmers/{farmer_id}")
+def delete_farmer(farmer_id: int):
+    conn, err = get_db_connection()
+    if conn is None:
+        raise HTTPException(status_code=503, detail=f"MySQL connection error: {err}")
+    cursor = conn.cursor()
+    try:
+        cursor.execute("DELETE FROM farmers WHERE farmer_id = %s", (farmer_id,))
+        conn.commit()
+        if cursor.rowcount == 0:
+            raise HTTPException(status_code=404, detail="Farmer record not found.")
+        return {"status": "success", "message": "Farmer deleted successfully.", "farmer_id": farmer_id}
+    except HTTPException:
+        raise
+    except mysql.connector.Error as query_err:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail=str(query_err))
+    finally:
+        cursor.close()
+        conn.close()
+
+@app.get("/api/predictions/history")
+def list_prediction_history(farmer_id: int = None, search: str = ""):
+    conn, err = get_db_connection()
+    if conn is None:
+        raise HTTPException(status_code=503, detail=f"MySQL connection error: {err}")
+    cursor = conn.cursor(dictionary=True)
+    try:
+        sql = """
+            SELECT p.prediction_id, p.farmer_id,
+                   COALESCE(f.farmer_name, 'Guest / District Check') AS farmer_name,
+                   COALESCE(f.phone, '') AS phone,
+                   COALESCE(f.village, '') AS village,
+                   d.state_name, d.district_name, c.crop_name, c.growth_stage,
+                   s.soil_type, p.temperature, p.humidity, p.rainfall,
+                   p.soil_moisture, p.soil_ph, p.soil_organic_carbon,
+                   p.stress_level, p.stress_code, p.priority_index,
+                   p.priority_category, p.recommended_depth, p.daily_deficit,
+                   p.advisory, h.action_note, p.predicted_at
+            FROM irrigation_predictions p
+            LEFT JOIN farmers f ON p.farmer_id = f.farmer_id
+            JOIN districts d ON p.district_id = d.district_id
+            JOIN crops c ON p.crop_id = c.crop_id
+            JOIN soil_info s ON p.soil_id = s.soil_id
+            LEFT JOIN prediction_history h ON p.prediction_id = h.prediction_id
+        """
+        conditions = []
+        params = []
+        if farmer_id is not None:
+            conditions.append("p.farmer_id = %s")
+            params.append(farmer_id)
+        if search.strip():
+            like_val = f"%{search.strip()}%"
+            conditions.append("(COALESCE(f.farmer_name, '') LIKE %s OR d.district_name LIKE %s OR d.state_name LIKE %s OR c.crop_name LIKE %s OR p.stress_level LIKE %s)")
+            params.extend([like_val, like_val, like_val, like_val, like_val])
+        if conditions:
+            sql += " WHERE " + " AND ".join(conditions)
+        sql += " ORDER BY p.prediction_id DESC LIMIT 100"
+        cursor.execute(sql, tuple(params))
+        rows = cursor.fetchall()
+        for row in rows:
+            for key in ["temperature", "humidity", "rainfall", "soil_moisture", "soil_ph", "soil_organic_carbon", "priority_index", "daily_deficit"]:
+                row[key] = float(row[key]) if row.get(key) is not None else 0.0
+            row["predicted_at"] = row["predicted_at"].strftime("%Y-%m-%d %H:%M") if row.get("predicted_at") else ""
+        return {"status": "success", "total": len(rows), "history": rows}
+    except mysql.connector.Error as query_err:
+        raise HTTPException(status_code=500, detail=str(query_err))
+    finally:
+        cursor.close()
+        conn.close()
+
+@app.delete("/api/predictions/{prediction_id}")
+def delete_prediction(prediction_id: int):
+    conn, err = get_db_connection()
+    if conn is None:
+        raise HTTPException(status_code=503, detail=f"MySQL connection error: {err}")
+    cursor = conn.cursor()
+    try:
+        cursor.execute("DELETE FROM irrigation_predictions WHERE prediction_id = %s", (prediction_id,))
+        conn.commit()
+        if cursor.rowcount == 0:
+            raise HTTPException(status_code=404, detail="Prediction record not found.")
+        return {"status": "success", "message": "Prediction deleted successfully.", "prediction_id": prediction_id}
+    except HTTPException:
+        raise
+    except mysql.connector.Error as query_err:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail=str(query_err))
+    finally:
+        cursor.close()
+        conn.close()
 
 app.mount("/app", StaticFiles(directory="frontend", html=True), name="frontend")

@@ -21,6 +21,7 @@
       <a href="#/ranking" class="nav-link" id="nav-ranking">Irrigation Priority</a>
       <a href="#/benchmarks" class="nav-link" id="nav-benchmarks">ML Benchmarks</a>
       <a href="#/clusters" class="nav-link" id="nav-clusters">Agro-Climatic Clusters</a>
+      <a href="#/farmers" class="nav-link" id="nav-farmers">Farmer Records</a>
       <div class="nav-indicator" id="nav-indicator"></div>
     </div>
   </nav>
@@ -40,6 +41,7 @@
           <a class="btn outline" href="#/predictor">Predictor</a>
           <a class="btn outline" href="#/ranking">Irrigation Rankings</a>
           <a class="btn outline" href="#/benchmarks">ML Benchmarks</a>
+          <a class="btn outline" href="#/farmers">Farmer Records</a>
         </div>
       </div>
     </section>
@@ -226,6 +228,34 @@
           <p class="sub">Select location across 732 districts and tune environmental indicators using rotary control knobs to execute real-time model predictions.</p>
 
           <form id="pred-form" onsubmit="return false;">
+            <!-- Optional Farmer Record for Auto-Saving to MySQL -->
+            <div class="control-module" style="margin-bottom:16px;">
+              <div class="module-header">
+                <span class="module-title">Farmer Record (Auto-Save to MySQL)</span>
+                <span class="module-badge">Optional</span>
+              </div>
+              <div class="form-field" style="margin-bottom:12px;">
+                <label for="pred-farmer-select">Select Saved Farmer</label>
+                <select id="pred-farmer-select">
+                  <option value="">-- New or Guest Farmer --</option>
+                </select>
+              </div>
+              <div class="form-grid-2" style="margin-bottom:0;">
+                <div class="form-field" style="margin-bottom:8px;">
+                  <label for="pred-farmer-name">Farmer Name</label>
+                  <input type="text" id="pred-farmer-name" placeholder="e.g. Ramesh Kumar">
+                </div>
+                <div class="form-field" style="margin-bottom:8px;">
+                  <label for="pred-farmer-phone">Phone / Village</label>
+                  <input type="text" id="pred-farmer-phone" placeholder="e.g. 9876543210">
+                </div>
+              </div>
+              <div class="form-field" style="margin-bottom:0;">
+                <label for="pred-farmer-village">Village Name</label>
+                <input type="text" id="pred-farmer-village" placeholder="e.g. Madhira">
+              </div>
+            </div>
+
             <!-- Location & Crop Management -->
             <div class="form-grid-2">
               <div class="form-field">
@@ -610,7 +640,12 @@
             </div>
 
             <!-- View on Map Button -->
-            <button type="button" id="btn-view-on-map" class="btn fill" style="background:var(--teal);border-color:var(--teal);width:100%;font-size:15px;margin-top:16px;">
+            <div class="pred-db-pill" id="res-db-pill" style="display:none;margin-top:14px;">
+              <span id="res-db-text">Saved to MySQL crop_stress_db</span>
+              <a href="#/farmers" style="color:var(--teal);font-weight:700;text-decoration:underline;">View History &rarr;</a>
+            </div>
+
+            <button type="button" id="btn-view-on-map" class="btn fill" style="background:var(--teal);border-color:var(--teal);width:100%;font-size:15px;margin-top:12px;">
               View &amp; Highlight District on India Map &rarr;
             </button>
           </div>
@@ -1113,6 +1148,185 @@
         <div class="takeaway-text">
           <h4>Zonation Strategy Summary (Actionable Policy Insight)</h4>
           <p>Regional clustering demonstrates that uniform irrigation protocols are inefficient across India. High-efficiency micro-sprinklers must be prioritized for Zone 2 (Arid Deficit Belt), furrow irrigation for Zone 0 (Central Belt), and drainage canal regulation for Zone 1 (Coastal Belt).</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ======================================================== -->
+  <!-- VIEW 5: FARMER RECORDS & MYSQL PREDICTION HISTORY        -->
+  <!-- ======================================================== -->
+  <section id="view-farmers" class="subview">
+    <div class="view-header">
+      <span class="tag">MySQL CRUD Database</span>
+      <h1>Farmer Records &amp; Prediction History</h1>
+      <p>Manage registered farmer profiles, soil types, and district crop details in MySQL (<code style="font-family:'JetBrains Mono',monospace;">crop_stress_db</code>), and inspect full ML prediction logs.</p>
+    </div>
+
+    <div class="sec" style="padding-top:0;">
+      <div class="db-status-banner ok" id="db-status-banner">
+        <div>
+          <span class="db-status-dot ok" id="db-status-dot"></span>
+          <b id="db-status-title">Checking MySQL Connection...</b>
+          <span id="db-status-detail" style="margin-left:8px;color:var(--mute);"></span>
+        </div>
+        <button type="button" class="tbl-btn" id="btn-refresh-db">Refresh Database</button>
+      </div>
+
+      <div class="kpi-row">
+        <div class="kpi-card">
+          <div class="kpi-lbl">Registered Farmers</div>
+          <div class="kpi-num" id="kpi-farmers-total" style="color:var(--teal);">0</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-lbl">Saved ML Predictions</div>
+          <div class="kpi-num" id="kpi-preds-total" style="color:var(--ink);">0</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-lbl">High / Severe Alerts</div>
+          <div class="kpi-num" id="kpi-preds-alerts" style="color:var(--red);">0</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-lbl">Mean Priority Score</div>
+          <div class="kpi-num" id="kpi-preds-avg" style="color:var(--acc);">0.0</div>
+        </div>
+      </div>
+
+      <!-- Add / Edit Farmer Form Card -->
+      <div class="pred-card" style="margin-bottom:28px;">
+        <div class="station-header">
+          <h3 id="farmer-form-title">Add New Farmer</h3>
+          <span class="station-status-pill" id="farmer-form-mode">Create Record</span>
+        </div>
+        <p class="sub">Enter farmer details below or click <b>Edit</b> on any table row to update existing details.</p>
+
+        <form id="farmer-form" onsubmit="return false;">
+          <input type="hidden" id="farmer-edit-id" value="">
+          <div class="form-grid-2">
+            <div class="form-field">
+              <label for="farmer-name">Farmer Name *</label>
+              <input type="text" id="farmer-name" placeholder="e.g. Suresh Reddy" required>
+            </div>
+            <div class="form-field">
+              <label for="farmer-phone">Phone Number</label>
+              <input type="text" id="farmer-phone" placeholder="e.g. 9876543210">
+            </div>
+          </div>
+
+          <div class="form-grid-2">
+            <div class="form-field">
+              <label for="farmer-village">Village</label>
+              <input type="text" id="farmer-village" placeholder="e.g. Kothagudem">
+            </div>
+            <div class="form-field">
+              <label for="farmer-area">Land Area (Acres)</label>
+              <input type="number" id="farmer-area" step="0.1" min="0.1" max="500" value="2.5">
+            </div>
+          </div>
+
+          <div class="form-grid-2">
+            <div class="form-field">
+              <label for="farmer-state">State / UT *</label>
+              <select id="farmer-state" required></select>
+            </div>
+            <div class="form-field">
+              <label for="farmer-district">District *</label>
+              <select id="farmer-district" required></select>
+            </div>
+          </div>
+
+          <div class="form-grid-2">
+            <div class="form-field">
+              <label for="farmer-crop">Primary Crop</label>
+              <select id="farmer-crop">
+                <option value="Cotton">Cotton</option>
+                <option value="Rice">Rice</option>
+                <option value="Wheat">Wheat</option>
+                <option value="Sugarcane">Sugarcane</option>
+                <option value="Maize">Maize</option>
+                <option value="Pulses">Pulses</option>
+                <option value="Groundnut">Groundnut</option>
+                <option value="Mustard">Mustard</option>
+                <option value="Barley">Barley</option>
+              </select>
+            </div>
+            <div class="form-field">
+              <label for="farmer-soil">Soil Type</label>
+              <select id="farmer-soil">
+                <option value="Loamy">Loamy</option>
+                <option value="Black Clay">Black Clay</option>
+                <option value="Red Loam">Red Loam</option>
+                <option value="Alluvial">Alluvial</option>
+                <option value="Sandy">Sandy</option>
+                <option value="Laterite">Laterite</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="farmer-form-actions">
+            <button type="submit" id="btn-save-farmer" class="btn fill">Save Farmer</button>
+            <button type="button" id="btn-cancel-farmer-edit" class="btn outline" style="display:none;color:var(--ink);border-color:var(--line);">Cancel Edit</button>
+            <span id="farmer-form-msg" style="font-size:13px;font-weight:600;margin-left:6px;"></span>
+          </div>
+        </form>
+      </div>
+
+      <!-- Registered Farmers Table -->
+      <div class="chart-box">
+        <h3>Registered Farmers Directory</h3>
+        <div class="toolbar">
+          <input type="text" id="farmers-search" placeholder="Search farmer by name, district, state, village, or crop...">
+        </div>
+        <div class="table-wrapper" style="box-shadow:none;border:none;">
+          <table class="data-table" id="farmers-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Farmer Name</th>
+                <th>Phone &amp; Village</th>
+                <th>District &amp; State</th>
+                <th>Crop &amp; Soil</th>
+                <th>Land (Acres)</th>
+                <th>Predictions</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="farmers-tbody">
+              <tr><td colspan="8" style="text-align:center;padding:24px;">Loading farmers from MySQL...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Saved ML Prediction History Table -->
+      <div class="chart-box">
+        <h3>Saved Irrigation Prediction History</h3>
+        <div class="toolbar">
+          <input type="text" id="history-search" placeholder="Filter prediction history by farmer, district, crop, or stress level...">
+          <select id="history-farmer-filter">
+            <option value="">All Farmers &amp; Checks</option>
+          </select>
+        </div>
+        <div class="table-wrapper" style="box-shadow:none;border:none;">
+          <table class="data-table" id="history-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Date</th>
+                <th>Farmer</th>
+                <th>District, State</th>
+                <th>Crop &amp; Soil</th>
+                <th>Weather / Soil</th>
+                <th>Stress</th>
+                <th>Priority</th>
+                <th>Depth</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="history-tbody">
+              <tr><td colspan="10" style="text-align:center;padding:24px;">Loading prediction history from MySQL...</td></tr>
+            </tbody>
+          </table>
         </div>
       </div>
     </div>

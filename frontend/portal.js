@@ -821,6 +821,52 @@ function initPredictorForm() {
   if (btnMap) {
     btnMap.onclick = navigatePredictionToMap;
   }
+
+  var predFarmerSel = document.getElementById("pred-farmer-select");
+  if (predFarmerSel) {
+    predFarmerSel.onchange = function() {
+      var fid = parseInt(this.value, 10);
+      var fObj = null;
+      for (var i = 0; i < allFarmersList.length; i++) {
+        if (allFarmersList[i].farmer_id === fid) {
+          fObj = allFarmersList[i];
+          break;
+        }
+      }
+      var nameIn = document.getElementById("pred-farmer-name");
+      var phoneIn = document.getElementById("pred-farmer-phone");
+      var villIn = document.getElementById("pred-farmer-village");
+      if (fObj) {
+        if (nameIn) nameIn.value = fObj.farmer_name || "";
+        if (phoneIn) phoneIn.value = fObj.phone || "";
+        if (villIn) villIn.value = fObj.village || "";
+        if (fObj.state_name && stateSelect) {
+          for (var j = 0; j < stateSelect.options.length; j++) {
+            if (stateSelect.options[j].value.toLowerCase() === fObj.state_name.toLowerCase()) {
+              stateSelect.selectedIndex = j;
+              updateDistrictsForSelectedState();
+              break;
+            }
+          }
+        }
+        if (fObj.district_name && distSelect) {
+          for (var k = 0; k < distSelect.options.length; k++) {
+            if (distSelect.options[k].value.toLowerCase() === fObj.district_name.toLowerCase()) {
+              distSelect.selectedIndex = k;
+              loadDistrictProfile(stateSelect.value, distSelect.value);
+              break;
+            }
+          }
+        }
+      } else {
+        if (nameIn) nameIn.value = "";
+        if (phoneIn) phoneIn.value = "";
+        if (villIn) villIn.value = "";
+      }
+    };
+  }
+
+  populateFarmerLocationDropdowns();
 }
 
 function runPredictionInference() {
@@ -862,6 +908,12 @@ function runPredictionInference() {
     return;
   }
 
+  var farmerSelEl = document.getElementById("pred-farmer-select");
+  var farmerNameEl = document.getElementById("pred-farmer-name");
+  var farmerPhoneEl = document.getElementById("pred-farmer-phone");
+  var farmerVillEl = document.getElementById("pred-farmer-village");
+  var chosenFarmerId = farmerSelEl && farmerSelEl.value ? parseInt(farmerSelEl.value, 10) : null;
+
   var payload = {
     state: st,
     district: dt,
@@ -872,7 +924,11 @@ function runPredictionInference() {
     rainfall: rain,
     humidity: hum,
     soil_ph: ph,
-    soil_organic_carbon: soc
+    soil_organic_carbon: soc,
+    farmer_id: chosenFarmerId,
+    farmer_name: farmerNameEl ? farmerNameEl.value.trim() : "",
+    farmer_phone: farmerPhoneEl ? farmerPhoneEl.value.trim() : "",
+    farmer_village: farmerVillEl ? farmerVillEl.value.trim() : ""
   };
 
   btnRun.disabled = true;
@@ -972,6 +1028,21 @@ function renderPredictionResults(res, payload) {
   if (sumPh) sumPh.textContent = (payload.soil_ph !== undefined ? payload.soil_ph.toFixed(1) : "7.4") + " pH";
   var sumSoc = document.getElementById("sum-soc");
   if (sumSoc) sumSoc.textContent = (payload.soil_organic_carbon !== undefined ? payload.soil_organic_carbon.toFixed(2) : "0.48") + " %";
+
+  var dbPill = document.getElementById("res-db-pill");
+  var dbText = document.getElementById("res-db-text");
+  if (dbPill && dbText && res.database) {
+    dbPill.style.display = "flex";
+    if (res.database.saved) {
+      dbPill.className = "pred-db-pill saved";
+      dbText.textContent = "Saved to MySQL crop_stress_db (Prediction #" + res.database.prediction_id + ")";
+      loadFarmersData();
+      loadPredictionHistory();
+    } else {
+      dbPill.className = "pred-db-pill unsaved";
+      dbText.textContent = "Not saved to MySQL: " + (res.database.message || "Database unavailable");
+    }
+  }
 }
 
 function navigatePredictionToMap() {
@@ -1903,6 +1974,7 @@ function getTargetElementForHash(hash) {
   if (hash.indexOf("#/ranking") === 0) return document.getElementById("view-ranking");
   if (hash.indexOf("#/benchmarks") === 0) return document.getElementById("view-benchmarks");
   if (hash.indexOf("#/clusters") === 0) return document.getElementById("view-clusters");
+  if (hash.indexOf("#/farmers") === 0) return document.getElementById("view-farmers");
   return document.getElementById("view-home");
 }
 
@@ -1994,6 +2066,7 @@ function route() {
   var rankingEl = document.getElementById("view-ranking");
   var benchmarksEl = document.getElementById("view-benchmarks");
   var clustersEl = document.getElementById("view-clusters");
+  var farmersEl = document.getElementById("view-farmers");
 
   appEl.classList.remove("on");
   homeEl.classList.remove("on");
@@ -2001,6 +2074,7 @@ function route() {
   rankingEl.classList.remove("on");
   benchmarksEl.classList.remove("on");
   clustersEl.classList.remove("on");
+  if (farmersEl) farmersEl.classList.remove("on");
 
   var navLinks = document.querySelectorAll("nav.top a.nav-link");
   for (var i = 0; i < navLinks.length; i++) {
@@ -2015,6 +2089,7 @@ function route() {
     if (predictorEl) predictorEl.classList.add("on");
     var navPred = document.getElementById("nav-predictor");
     if (navPred) navPred.classList.add("active");
+    loadFarmersData();
     window.scrollTo({top:0, behavior:"smooth"});
   } else if (hash.indexOf("#/ranking") === 0) {
     rankingEl.classList.add("on");
@@ -2038,6 +2113,13 @@ function route() {
     document.getElementById("nav-clusters").classList.add("active");
     if (allClustersList.length === 0) loadClustersData();
     window.scrollTo({top:0, behavior:"smooth"});
+  } else if (hash.indexOf("#/farmers") === 0) {
+    if (farmersEl) farmersEl.classList.add("on");
+    var navFarmers = document.getElementById("nav-farmers");
+    if (navFarmers) navFarmers.classList.add("active");
+    populateFarmerLocationDropdowns();
+    loadDatabasePortalData();
+    window.scrollTo({top:0, behavior:"smooth"});
   } else {
     homeEl.classList.add("on");
     document.getElementById("nav-home").classList.add("active");
@@ -2047,12 +2129,422 @@ function route() {
   setTimeout(updateNavIndicator, 20);
 }
 
+var allFarmersList = [];
+var allHistoryList = [];
+
+function escHtml(str) {
+  return String(str === null || str === undefined ? "" : str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function populateFarmerLocationDropdowns() {
+  var stSel = document.getElementById("farmer-state");
+  var dtSel = document.getElementById("farmer-district");
+  if (!stSel || !dtSel) return;
+
+  var states = Object.keys(stateDistrictsList || {}).sort();
+  if (states.length === 0) {
+    fetch("/api/districts/all")
+      .then(function(r) { return r.json(); })
+      .then(function(res) {
+        var rows = res.districts || [];
+        rows.forEach(function(item) {
+          var s = item.state || "";
+          var d = item.district || "";
+          if (!s || !d) return;
+          if (!stateDistrictsList[s]) stateDistrictsList[s] = [];
+          if (stateDistrictsList[s].indexOf(d) === -1) stateDistrictsList[s].push(d);
+        });
+        fillFarmerStateSelect();
+      }).catch(function() {});
+  } else {
+    fillFarmerStateSelect();
+  }
+}
+
+function fillFarmerStateSelect() {
+  var stSel = document.getElementById("farmer-state");
+  var dtSel = document.getElementById("farmer-district");
+  if (!stSel || !dtSel) return;
+  var prevState = stSel.value;
+  var states = Object.keys(stateDistrictsList || {}).sort();
+  if (states.length === 0) return;
+  stSel.innerHTML = "";
+  states.forEach(function(st) {
+    var opt = document.createElement("option");
+    opt.value = st;
+    opt.textContent = st;
+    if (prevState && st === prevState) opt.selected = true;
+    else if (!prevState && st === "Telangana") opt.selected = true;
+    stSel.appendChild(opt);
+  });
+  stSel.onchange = function() {
+    fillFarmerDistrictSelect(this.value, "");
+  };
+  fillFarmerDistrictSelect(stSel.value, "");
+}
+
+function fillFarmerDistrictSelect(stateName, selectedDist) {
+  var dtSel = document.getElementById("farmer-district");
+  if (!dtSel) return;
+  var dists = (stateDistrictsList[stateName] || []).slice().sort();
+  dtSel.innerHTML = "";
+  dists.forEach(function(dt) {
+    var opt = document.createElement("option");
+    opt.value = dt;
+    opt.textContent = dt;
+    if (selectedDist && dt.toLowerCase() === selectedDist.toLowerCase()) opt.selected = true;
+    else if (!selectedDist && dt === "Khammam") opt.selected = true;
+    dtSel.appendChild(opt);
+  });
+}
+
+function checkDbHealth() {
+  var banner = document.getElementById("db-status-banner");
+  var dot = document.getElementById("db-status-dot");
+  var title = document.getElementById("db-status-title");
+  var detail = document.getElementById("db-status-detail");
+  fetch("/api/db/health")
+    .then(function(r) { return r.json(); })
+    .then(function(res) {
+      if (!banner || !dot || !title || !detail) return;
+      if (res.connected) {
+        banner.className = "db-status-banner ok";
+        dot.className = "db-status-dot ok";
+        title.textContent = "MySQL Connected (" + (res.database || "crop_stress_db") + ")";
+        detail.textContent = (res.farmers_count || 0) + " farmers · " + (res.predictions_count || 0) + " saved predictions";
+      } else {
+        banner.className = "db-status-banner err";
+        dot.className = "db-status-dot err";
+        title.textContent = "MySQL Offline (" + (res.database || "crop_stress_db") + ")";
+        detail.textContent = res.error || "Check .env credentials and run database/crop_stress_db.sql";
+      }
+    }).catch(function() {
+      if (banner && dot && title) {
+        banner.className = "db-status-banner err";
+        dot.className = "db-status-dot err";
+        title.textContent = "Could not reach backend database health endpoint.";
+      }
+    });
+}
+
+function syncFarmerSelectDropdowns() {
+  var predSel = document.getElementById("pred-farmer-select");
+  if (predSel) {
+    var prevVal = predSel.value;
+    predSel.innerHTML = '<option value="">-- New or Guest Farmer --</option>';
+    allFarmersList.forEach(function(f) {
+      var opt = document.createElement("option");
+      opt.value = String(f.farmer_id);
+      opt.textContent = f.farmer_name + " (" + f.district_name + ", " + f.primary_crop + ")";
+      if (prevVal && prevVal === String(f.farmer_id)) opt.selected = true;
+      predSel.appendChild(opt);
+    });
+  }
+  var histSel = document.getElementById("history-farmer-filter");
+  if (histSel) {
+    var prevHist = histSel.value;
+    histSel.innerHTML = '<option value="">All Farmers &amp; Checks</option>';
+    allFarmersList.forEach(function(f) {
+      var opt = document.createElement("option");
+      opt.value = String(f.farmer_id);
+      opt.textContent = f.farmer_name + " (" + f.district_name + ")";
+      if (prevHist && prevHist === String(f.farmer_id)) opt.selected = true;
+      histSel.appendChild(opt);
+    });
+  }
+}
+
+function loadFarmersData() {
+  var searchEl = document.getElementById("farmers-search");
+  var q = searchEl ? searchEl.value.trim() : "";
+  var tbody = document.getElementById("farmers-tbody");
+  fetch("/api/farmers?search=" + encodeURIComponent(q))
+    .then(function(r) {
+      if (!r.ok) return r.json().then(function(e) { throw new Error(e.detail || ("HTTP " + r.status)); });
+      return r.json();
+    })
+    .then(function(res) {
+      allFarmersList = res.farmers || [];
+      var kpiTotal = document.getElementById("kpi-farmers-total");
+      if (kpiTotal) kpiTotal.textContent = String(allFarmersList.length);
+      syncFarmerSelectDropdowns();
+      if (!tbody) return;
+      if (allFarmersList.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--mute);">No farmer records found yet. Add a farmer using the form above.</td></tr>';
+        return;
+      }
+      var html = "";
+      allFarmersList.forEach(function(f) {
+        html += "<tr>";
+        html += '<td class="mono">#' + escHtml(f.farmer_id) + "</td>";
+        html += "<td><b>" + escHtml(f.farmer_name) + "</b></td>";
+        html += "<td>" + escHtml(f.phone || "—") + "<br><small style='color:var(--mute);'>" + escHtml(f.village || "—") + "</small></td>";
+        html += "<td><b>" + escHtml(f.district_name) + "</b><br><small style='color:var(--mute);'>" + escHtml(f.state_name) + "</small></td>";
+        html += "<td>" + escHtml(f.primary_crop) + "<br><small style='color:var(--mute);'>" + escHtml(f.soil_type) + "</small></td>";
+        html += '<td class="mono">' + Number(f.land_area_acres || 0).toFixed(1) + " ac</td>";
+        html += '<td class="mono"><span class="badge">' + escHtml(f.total_predictions || 0) + "</span></td>";
+        html += '<td><div class="tbl-actions">';
+        html += '<button type="button" class="tbl-btn use" onclick="useFarmerInPredictor(' + Number(f.farmer_id) + ')">Predict</button>';
+        html += '<button type="button" class="tbl-btn edit" onclick="editFarmerRecord(' + Number(f.farmer_id) + ')">Edit</button>';
+        html += '<button type="button" class="tbl-btn del" onclick="deleteFarmerRecord(' + Number(f.farmer_id) + ')">Delete</button>';
+        html += "</div></td>";
+        html += "</tr>";
+      });
+      tbody.innerHTML = html;
+    })
+    .catch(function(err) {
+      if (tbody) {
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--red);">MySQL unavailable: ' + escHtml(err.message) + "</td></tr>";
+      }
+    });
+}
+
+function loadPredictionHistory() {
+  var searchEl = document.getElementById("history-search");
+  var filterEl = document.getElementById("history-farmer-filter");
+  var q = searchEl ? searchEl.value.trim() : "";
+  var fid = filterEl ? filterEl.value : "";
+  var url = "/api/predictions/history?search=" + encodeURIComponent(q);
+  if (fid) url += "&farmer_id=" + encodeURIComponent(fid);
+
+  var tbody = document.getElementById("history-tbody");
+  fetch(url)
+    .then(function(r) {
+      if (!r.ok) return r.json().then(function(e) { throw new Error(e.detail || ("HTTP " + r.status)); });
+      return r.json();
+    })
+    .then(function(res) {
+      allHistoryList = res.history || [];
+      var alerts = 0;
+      var ipiSum = 0;
+      allHistoryList.forEach(function(item) {
+        if (item.stress_level === "High" || item.stress_level === "Severe") alerts += 1;
+        ipiSum += Number(item.priority_index || 0);
+      });
+      var kPred = document.getElementById("kpi-preds-total");
+      var kAlert = document.getElementById("kpi-preds-alerts");
+      var kAvg = document.getElementById("kpi-preds-avg");
+      if (kPred) kPred.textContent = String(allHistoryList.length);
+      if (kAlert) kAlert.textContent = String(alerts);
+      if (kAvg) kAvg.textContent = allHistoryList.length > 0 ? (ipiSum / allHistoryList.length).toFixed(1) : "0.0";
+
+      if (!tbody) return;
+      if (allHistoryList.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:24px;color:var(--mute);">No predictions saved yet. Run a prediction from the Predictor tab to store it in MySQL.</td></tr>';
+        return;
+      }
+      var html = "";
+      allHistoryList.forEach(function(row) {
+        var badgeCls = (row.stress_level === "Severe" || row.stress_level === "High") ? "high" : (row.stress_level === "Moderate" ? "med" : "low");
+        html += "<tr>";
+        html += '<td class="mono">#' + escHtml(row.prediction_id) + "</td>";
+        html += '<td class="mono" style="font-size:12px;">' + escHtml(row.predicted_at || "") + "</td>";
+        html += "<td><b>" + escHtml(row.farmer_name) + "</b>" + (row.village ? "<br><small style='color:var(--mute);'>" + escHtml(row.village) + "</small>" : "") + "</td>";
+        html += "<td><b>" + escHtml(row.district_name) + "</b><br><small style='color:var(--mute);'>" + escHtml(row.state_name) + "</small></td>";
+        html += "<td>" + escHtml(row.crop_name) + "<br><small style='color:var(--mute);'>" + escHtml(row.growth_stage) + " · " + escHtml(row.soil_type) + "</small></td>";
+        html += '<td class="mono" style="font-size:12px;">' + Number(row.temperature).toFixed(1) + "°C / " + Number(row.rainfall).toFixed(1) + "mm / " + Number(row.soil_moisture).toFixed(2) + "</td>";
+        html += '<td><span class="badge ' + badgeCls + '">' + escHtml(row.stress_level) + "</span></td>";
+        html += '<td class="mono"><b>' + Number(row.priority_index).toFixed(1) + "</b></td>";
+        html += '<td class="mono">' + escHtml(row.recommended_depth) + "</td>";
+        html += '<td><button type="button" class="tbl-btn del" onclick="deletePredictionRecord(' + Number(row.prediction_id) + ')">Delete</button></td>';
+        html += "</tr>";
+      });
+      tbody.innerHTML = html;
+    })
+    .catch(function(err) {
+      if (tbody) {
+        tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:24px;color:var(--red);">MySQL unavailable: ' + escHtml(err.message) + "</td></tr>";
+      }
+    });
+}
+
+function loadDatabasePortalData() {
+  checkDbHealth();
+  loadFarmersData();
+  loadPredictionHistory();
+}
+
+function resetFarmerForm() {
+  document.getElementById("farmer-edit-id").value = "";
+  document.getElementById("farmer-name").value = "";
+  document.getElementById("farmer-phone").value = "";
+  document.getElementById("farmer-village").value = "";
+  document.getElementById("farmer-area").value = "2.5";
+  document.getElementById("farmer-form-title").textContent = "Add New Farmer";
+  document.getElementById("farmer-form-mode").textContent = "Create Record";
+  document.getElementById("btn-save-farmer").textContent = "Save Farmer";
+  document.getElementById("btn-cancel-farmer-edit").style.display = "none";
+}
+
+function editFarmerRecord(farmerId) {
+  var fObj = null;
+  for (var i = 0; i < allFarmersList.length; i++) {
+    if (allFarmersList[i].farmer_id === farmerId) {
+      fObj = allFarmersList[i];
+      break;
+    }
+  }
+  if (!fObj) return;
+  populateFarmerLocationDropdowns();
+  document.getElementById("farmer-edit-id").value = String(fObj.farmer_id);
+  document.getElementById("farmer-name").value = fObj.farmer_name || "";
+  document.getElementById("farmer-phone").value = fObj.phone || "";
+  document.getElementById("farmer-village").value = fObj.village || "";
+  document.getElementById("farmer-area").value = String(fObj.land_area_acres || 2.5);
+
+  var stSel = document.getElementById("farmer-state");
+  if (stSel && fObj.state_name) {
+    for (var j = 0; j < stSel.options.length; j++) {
+      if (stSel.options[j].value.toLowerCase() === fObj.state_name.toLowerCase()) {
+        stSel.selectedIndex = j;
+        break;
+      }
+    }
+    fillFarmerDistrictSelect(stSel.value, fObj.district_name);
+  }
+  var cropSel = document.getElementById("farmer-crop");
+  if (cropSel && fObj.primary_crop) cropSel.value = fObj.primary_crop;
+  var soilSel = document.getElementById("farmer-soil");
+  if (soilSel && fObj.soil_type) soilSel.value = fObj.soil_type;
+
+  document.getElementById("farmer-form-title").textContent = "Edit Farmer #" + fObj.farmer_id;
+  document.getElementById("farmer-form-mode").textContent = "Update Record";
+  document.getElementById("btn-save-farmer").textContent = "Update Farmer";
+  document.getElementById("btn-cancel-farmer-edit").style.display = "inline-flex";
+  document.getElementById("farmer-form-msg").textContent = "";
+  document.getElementById("farmer-form").scrollIntoView({ behavior: "smooth", block: "center" });
+}
+
+function deleteFarmerRecord(farmerId) {
+  if (!confirm("Delete farmer #" + farmerId + " and all their saved prediction history?")) return;
+  fetch("/api/farmers/" + encodeURIComponent(farmerId), { method: "DELETE" })
+    .then(function(r) {
+      if (!r.ok) return r.json().then(function(e) { throw new Error(e.detail || "Delete failed"); });
+      return r.json();
+    })
+    .then(function() {
+      var msgEl = document.getElementById("farmer-form-msg");
+      if (msgEl) msgEl.textContent = "";
+      loadDatabasePortalData();
+    })
+    .catch(function(err) {
+      alert("Could not delete farmer: " + err.message);
+    });
+}
+
+function deletePredictionRecord(predictionId) {
+  if (!confirm("Delete prediction record #" + predictionId + "?")) return;
+  fetch("/api/predictions/" + encodeURIComponent(predictionId), { method: "DELETE" })
+    .then(function(r) {
+      if (!r.ok) return r.json().then(function(e) { throw new Error(e.detail || "Delete failed"); });
+      return r.json();
+    })
+    .then(function() {
+      loadDatabasePortalData();
+    })
+    .catch(function(err) {
+      alert("Could not delete prediction: " + err.message);
+    });
+}
+
+function useFarmerInPredictor(farmerId) {
+  var fObj = null;
+  for (var i = 0; i < allFarmersList.length; i++) {
+    if (allFarmersList[i].farmer_id === farmerId) {
+      fObj = allFarmersList[i];
+      break;
+    }
+  }
+  if (!fObj) return;
+  location.hash = "#/predictor";
+  setTimeout(function() {
+    var sel = document.getElementById("pred-farmer-select");
+    if (sel) {
+      sel.value = String(fObj.farmer_id);
+      if (typeof sel.onchange === "function") sel.onchange();
+    }
+    var cropEl = document.getElementById("pred-crop");
+    if (cropEl && fObj.primary_crop) cropEl.value = fObj.primary_crop;
+  }, 150);
+}
+
+function initFarmersView() {
+  var form = document.getElementById("farmer-form");
+  var msg = document.getElementById("farmer-form-msg");
+  if (form) {
+    form.onsubmit = function(e) {
+      e.preventDefault();
+      var editId = document.getElementById("farmer-edit-id").value.trim();
+      var payload = {
+        farmer_name: document.getElementById("farmer-name").value.trim(),
+        phone: document.getElementById("farmer-phone").value.trim(),
+        village: document.getElementById("farmer-village").value.trim(),
+        state_name: document.getElementById("farmer-state").value,
+        district_name: document.getElementById("farmer-district").value,
+        primary_crop: document.getElementById("farmer-crop").value,
+        soil_type: document.getElementById("farmer-soil").value,
+        land_area_acres: parseFloat(document.getElementById("farmer-area").value) || 2.5
+      };
+      if (!payload.farmer_name) {
+        if (msg) { msg.style.color = "var(--red)"; msg.textContent = "Please enter farmer name."; }
+        return;
+      }
+      var url = editId ? "/api/farmers/" + encodeURIComponent(editId) : "/api/farmers";
+      var method = editId ? "PUT" : "POST";
+      fetch(url, {
+        method: method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      })
+        .then(function(r) {
+          if (!r.ok) return r.json().then(function(e2) { throw new Error(e2.detail || "Save failed"); });
+          return r.json();
+        })
+        .then(function(res) {
+          if (msg) { msg.style.color = "var(--green)"; msg.textContent = res.message || "Saved!"; }
+          resetFarmerForm();
+          loadDatabasePortalData();
+        })
+        .catch(function(err) {
+          if (msg) { msg.style.color = "var(--red)"; msg.textContent = err.message; }
+        });
+    };
+  }
+
+  var cancelBtn = document.getElementById("btn-cancel-farmer-edit");
+  if (cancelBtn) cancelBtn.onclick = resetFarmerForm;
+
+  var refreshBtn = document.getElementById("btn-refresh-db");
+  if (refreshBtn) refreshBtn.onclick = loadDatabasePortalData;
+
+  var fSearch = document.getElementById("farmers-search");
+  if (fSearch) fSearch.oninput = loadFarmersData;
+
+  var hSearch = document.getElementById("history-search");
+  if (hSearch) hSearch.oninput = loadPredictionHistory;
+
+  var hFilter = document.getElementById("history-farmer-filter");
+  if (hFilter) hFilter.onchange = loadPredictionHistory;
+}
+
+window.editFarmerRecord = editFarmerRecord;
+window.deleteFarmerRecord = deleteFarmerRecord;
+window.deletePredictionRecord = deletePredictionRecord;
+window.useFarmerInPredictor = useFarmerInPredictor;
+
 window.onhashchange = route;
 
 route();
 initCardTilt();
 initGenieTransitions();
+initFarmersView();
 setTimeout(updateNavIndicator, 80);
 
 loadPriorityData();
 loadClustersData();
+loadFarmersData();
