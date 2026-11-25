@@ -209,7 +209,7 @@ root_response = {
     },
     "features_required_for_predict": feature_cols,
     "models_active": {
-        "classification": "Tuned RandomForestClassifier (.pkl)",
+        "classification": "SMOTE + RFE + Tuned Random Forest Pipeline (.pkl)",
         "regression": "Tuned RandomForestRegressor (.pkl)"
     },
     "total_records": len(df_master),
@@ -254,13 +254,14 @@ def get_health():
 def predict(item: PredictRequest):
     raw_df = build_feature_row(item.model_dump())
     scaled_df = pd.DataFrame(scaler.transform(raw_df), columns=feature_cols)
-    stress_code = int(model_rf.predict(scaled_df)[0])
+    clf_input = raw_df if (hasattr(model_rf, "steps") or hasattr(model_rf, "estimators")) else scaled_df
+    stress_code = int(model_rf.predict(clf_input)[0])
     raw_priority = float(model_reg.predict(scaled_df)[0])
     priority_index = round(float(np.clip(raw_priority, 0.0, 100.0)), 1)
     etc_val = float(raw_df["etc"].iloc[0])
     rain_val = float(raw_df["rainfall"].iloc[0])
     soil_val = float(raw_df["effective_soil_wetness"].iloc[0])
-    stress_probs = {stress_label_map.get(idx, str(idx)): round(float(p), 4) for idx, p in enumerate(model_rf.predict_proba(scaled_df)[0])} if hasattr(model_rf, "predict_proba") else {}
+    stress_probs = {stress_label_map.get(idx, str(idx)): round(float(p), 4) for idx, p in enumerate(model_rf.predict_proba(clf_input)[0])} if hasattr(model_rf, "predict_proba") else {}
     condition_summary = "Severe moisture exhaustion, immediate intervention needed." if priority_index >= 60.0 else ("High stress, significant water deficit impacting crop growth." if priority_index >= 45.0 else ("Mild to moderate stress, early signs of water limitation." if priority_index >= 30.0 else "Optimal conditions, crop is healthy."))
     priority_category = "Critical Priority" if priority_index >= 60.0 else ("High Priority" if priority_index >= 45.0 else ("Medium Priority" if priority_index >= 30.0 else "Low Priority"))
     recommended_depth = "45–55 mm" if priority_index >= 60.0 else ("35–45 mm" if priority_index >= 45.0 else ("20–30 mm" if priority_index >= 30.0 else "Routine / Nil"))
@@ -289,7 +290,7 @@ def predict(item: PredictRequest):
             "vegetation_ndvi": float(raw_df["ndvi"].iloc[0])
         },
         "models_used": {
-            "classifier": "Tuned RandomForestClassifier (.pkl)",
+            "classifier": "SMOTE + RFE + Tuned Random Forest Pipeline (.pkl)",
             "regressor": "Tuned RandomForestRegressor (.pkl)"
         }
     }
@@ -299,8 +300,9 @@ def predict_crop_stress(item: CropStressSimRequest):
     raw_df = build_feature_row(item.model_dump())
     scaled_df = pd.DataFrame(scaler.transform(raw_df), columns=feature_cols)
     chosen_clf = model_dt if "Tree" in (item.selected_model or "") else (model_logreg if "Logistic" in (item.selected_model or "") else (model_knn if "KNN" in (item.selected_model or "") else model_rf))
-    model_tag = "Decision Tree Classifier" if "Tree" in (item.selected_model or "") else ("Logistic Regression" if "Logistic" in (item.selected_model or "") else ("K-Nearest Neighbors" if "KNN" in (item.selected_model or "") else "Tuned Random Forest Classifier (.pkl)"))
-    stress_code = int(chosen_clf.predict(scaled_df)[0])
+    model_tag = "Decision Tree Classifier" if "Tree" in (item.selected_model or "") else ("Logistic Regression" if "Logistic" in (item.selected_model or "") else ("K-Nearest Neighbors" if "KNN" in (item.selected_model or "") else "SMOTE + RFE + Tuned Random Forest (.pkl)"))
+    clf_input = raw_df if (chosen_clf is model_rf and (hasattr(model_rf, "steps") or hasattr(model_rf, "estimators"))) else scaled_df
+    stress_code = int(chosen_clf.predict(clf_input)[0])
     raw_priority = float(model_reg.predict(scaled_df)[0])
     raw_deficit = float(model_poly_deficit.predict(scaled_df)[0])
     priority_index = round(float(np.clip(raw_priority, 0.0, 100.0)), 1)
@@ -577,7 +579,7 @@ X_732_df = pd.DataFrame(district_732_rows, columns=feature_cols)
 X_732_scaled = pd.DataFrame(scaler.transform(X_732_df), columns=feature_cols)
 
 preds_732_priority = model_reg.predict(X_732_scaled)
-preds_732_stress = model_rf.predict(X_732_scaled)
+preds_732_stress = model_rf.predict(X_732_df if (hasattr(model_rf, "steps") or hasattr(model_rf, "estimators")) else X_732_scaled)
 
 ranked_priority_list = []
 for i in range(len(district_732_meta)):
@@ -732,40 +734,51 @@ evaluation_metrics = {
     "feature_names": feature_cols,
     "n_features": 14,
     "classification": {
-        "Random Forest (Tuned)": {
-            "accuracy": 0.9962,
-            "precision": 0.9963,
-            "recall": 0.9962,
-            "f1_score": 0.9963,
-            "confusion_matrix": [[994, 3, 0, 0], [0, 180, 2, 0], [0, 0, 113, 0], [0, 0, 0, 39]]
+        "Best Overall Model (SMOTE + RFE + Tuned RF)": {
+            "accuracy": 0.9970,
+            "precision": 0.9970,
+            "recall": 0.9970,
+            "f1_score": 0.9970,
+            "macro_f1_score": 0.9932,
+            "roc_auc": 1.0000,
+            "confusion_matrix": [[994, 3, 0, 0], [0, 182, 0, 0], [0, 0, 113, 0], [0, 0, 1, 38]]
+        },
+        "Original Random Forest": {
+            "accuracy": 0.9955,
+            "precision": 0.9956,
+            "recall": 0.9955,
+            "f1_score": 0.9955,
+            "macro_f1_score": 0.9861,
+            "roc_auc": 0.9999,
+            "confusion_matrix": [[995, 2, 0, 0], [0, 180, 2, 0], [0, 0, 113, 0], [0, 0, 2, 37]]
         },
         "Decision Tree": {
-            "accuracy": 0.9880,
-            "precision": 0.9883,
-            "recall": 0.9880,
-            "f1_score": 0.9881,
-            "confusion_matrix": [[988, 9, 0, 0], [2, 179, 1, 0], [0, 2, 110, 1], [0, 0, 1, 38]]
+            "accuracy": 0.9947,
+            "precision": 0.9948,
+            "recall": 0.9947,
+            "f1_score": 0.9947,
+            "macro_f1_score": 0.9879
         },
         "Logistic Regression": {
-            "accuracy": 0.9594,
-            "precision": 0.9640,
-            "recall": 0.9594,
-            "f1_score": 0.9607,
-            "confusion_matrix": [[961, 36, 0, 0], [1, 172, 9, 0], [0, 4, 105, 4], [0, 0, 0, 39]]
+            "accuracy": 0.9602,
+            "precision": 0.9606,
+            "recall": 0.9602,
+            "f1_score": 0.9603,
+            "macro_f1_score": 0.9051
         },
         "KNN (k=5)": {
-            "accuracy": 0.9279,
-            "precision": 0.9362,
-            "recall": 0.9279,
-            "f1_score": 0.9307,
-            "confusion_matrix": [[944, 53, 0, 0], [9, 157, 16, 0], [1, 10, 97, 5], [0, 0, 2, 37]]
+            "accuracy": 0.9166,
+            "precision": 0.9128,
+            "recall": 0.9166,
+            "f1_score": 0.9126,
+            "macro_f1_score": 0.8271
         },
         "Gaussian Naive Bayes": {
-            "accuracy": 0.8114,
-            "precision": 0.8526,
-            "recall": 0.8114,
-            "f1_score": 0.8267,
-            "confusion_matrix": [[868, 119, 10, 0], [13, 121, 48, 0], [7, 22, 63, 21], [0, 0, 11, 28]]
+            "accuracy": 0.8445,
+            "precision": 0.8620,
+            "recall": 0.8445,
+            "f1_score": 0.8516,
+            "macro_f1_score": 0.6879
         }
     },
     "regression": {

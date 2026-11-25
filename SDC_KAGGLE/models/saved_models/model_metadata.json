@@ -1,0 +1,64 @@
+{
+  "project": "KrishiJal Crop Stress & Irrigation Priority Decision Support System",
+  "version": "2.3.0",
+  "feature_names": [
+    "temperature",
+    "temp_max",
+    "temp_min",
+    "rainfall",
+    "humidity",
+    "effective_soil_wetness",
+    "solar_radiation",
+    "soil_ph",
+    "soil_organic_carbon",
+    "ndvi",
+    "et0",
+    "etc",
+    "crop_code",
+    "stage_code"
+  ],
+  "n_features": 14,
+  "classifier": {
+    "model_name": "ImbPipeline(StandardScaler + SMOTE + RFE + RandomForestClassifier)",
+    "selected_rfe_features": [
+      "temperature",
+      "temp_min",
+      "humidity",
+      "effective_soil_wetness",
+      "ndvi"
+    ],
+    "best_params": {
+      "smote__sampling_strategy": "all",
+      "smote__k_neighbors": 5,
+      "rfe__n_features_to_select": 5,
+      "clf__n_estimators": 150,
+      "clf__min_samples_split": 2,
+      "clf__min_samples_leaf": 1,
+      "clf__max_features": "sqrt",
+      "clf__max_depth": 20,
+      "clf__criterion": "entropy",
+      "clf__class_weight": "balanced_subsample"
+    },
+    "cv_macro_f1": 0.9894,
+    "test_accuracy": 0.9970,
+    "test_weighted_f1": 0.9970,
+    "test_macro_f1": 0.9932,
+    "test_roc_auc": 1.0000,
+    "classes": [
+      "Low",
+      "Moderate",
+      "High",
+      "Severe"
+    ]
+  },
+  "regressor": {
+    "model_name": "RandomForestRegressor",
+    "best_params": {
+      "max_depth": 12,
+      "n_estimators": 100
+    },
+    "test_r2": 0.995235,
+    "test_mae": 0.453024,
+    "test_rmse": 0.954558
+  }
+}
