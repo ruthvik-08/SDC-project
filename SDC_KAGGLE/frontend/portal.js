@@ -31,9 +31,16 @@ var layer = "stress", DATA = {}, statesGeo, distsGeo, stateLayer = null, distLay
 var current = null, selected = null, selectedDistrictLayer = null, ranges = {};
 var districtMap = {}, stateBounds = {}, stateList = [], stateCounts = {};
 var lastGenieOrigin = null;
+var highlightStateBorders = true, hoveredState = null;
 
 var map = L.map("map", {zoomControl:false, zoomSnap:0.25}).setView([22.5, 80], 4.5);
 L.control.zoom({position:"bottomright"}).addTo(map);
+
+if (!map.getPane("stateBoundariesPane")) {
+  var statePane = map.createPane("stateBoundariesPane");
+  statePane.style.zIndex = "650";
+  statePane.style.pointerEvents = "none";
+}
 
 function normState(s) {
   return (s || "").toLowerCase().replace(/&/g, "and").replace(/[^a-z0-9]/g, "");
@@ -65,7 +72,7 @@ function setBasemap(styleKey) {
   if (distLayer) distLayer.bringToFront();
   if (stateLayer) stateLayer.bringToFront();
   
-  var btns = document.querySelectorAll(".map-switcher .ms-btn");
+  var btns = document.querySelectorAll(".map-switcher .ms-btn[data-style]");
   for (var i = 0; i < btns.length; i++) {
     btns[i].classList.toggle("active", btns[i].dataset.style === styleKey);
   }
@@ -106,22 +113,61 @@ function dataFor(p) {
 }
 
 function styleState(f) {
-  var isCurrent = current && normState(f.properties.state) === normState(current);
-  if (currentBasemap === "satellite") {
+  if (!highlightStateBorders) {
     return {
       fillColor: "transparent",
       fillOpacity: 0,
-      color: isCurrent ? "#ffd700" : "#ffffff",
-      weight: isCurrent ? 2.6 : 1.5,
-      opacity: isCurrent ? 1 : 0.75
+      weight: 0,
+      opacity: 0
+    };
+  }
+  var nSt = normState(f.properties.state);
+  var isCurrent = current && nSt === normState(current);
+  var isHovered = hoveredState && nSt === hoveredState;
+
+  if (currentBasemap === "satellite") {
+    if (isCurrent || isHovered) {
+      return {
+        fillColor: "transparent",
+        fillOpacity: 0,
+        color: "#fbbf24",
+        weight: isCurrent ? 4.2 : 3.6,
+        opacity: 1.0,
+        lineCap: "round",
+        lineJoin: "round"
+      };
+    }
+    return {
+      fillColor: "transparent",
+      fillOpacity: 0,
+      color: "#38bdf8",
+      weight: 2.8,
+      opacity: 0.95,
+      lineCap: "round",
+      lineJoin: "round"
+    };
+  }
+
+  // Clean / Light Basemap
+  if (isCurrent || isHovered) {
+    return {
+      fillColor: "transparent",
+      fillOpacity: 0,
+      color: "#b45309",
+      weight: isCurrent ? 4.2 : 3.6,
+      opacity: 1.0,
+      lineCap: "round",
+      lineJoin: "round"
     };
   }
   return {
     fillColor: "transparent",
     fillOpacity: 0,
-    color: isCurrent ? "#ffd700" : "#b5573a",
-    weight: isCurrent ? 2.4 : 1.3,
-    opacity: isCurrent ? 1 : 0.8
+    color: "#0f172a",
+    weight: 2.8,
+    opacity: 0.95,
+    lineCap: "round",
+    lineJoin: "round"
   };
 }
 
@@ -154,7 +200,12 @@ function drawLegend() {
   for (var i = 0; i < c.length; i++) h += "<div style='background:" + c[i] + "'></div>";
   var lo = layer === "stress" ? "LOW" : "LOW", hi = layer === "stress" ? "SEVERE" : "HIGH";
   var noDataColor = currentBasemap === "satellite" ? "#000000" : "#e6e2dc";
-  return "<div class='leg'><div style='background:" + noDataColor + ";flex:.5'></div>" + h + "</div><div class='legl'><span>NO DATA</span><span>" + lo + "</span><span>" + hi + "</span></div>";
+  var stateBdrColor = currentBasemap === "satellite" ? "#38bdf8" : "#0f172a";
+  return "<div class='leg'><div style='background:" + noDataColor + ";flex:.5'></div>" + h + "</div><div class='legl'><span>NO DATA</span><span>" + lo + "</span><span>" + hi + "</span></div>"
+    + "<div style='display:flex;align-items:center;gap:7px;margin-top:8px;padding-top:6px;border-top:1px dashed var(--line);font-size:11.5px;color:var(--ink);font-weight:600;'>"
+    + "<span style='display:inline-block;width:20px;height:4px;background:" + stateBdrColor + ";border-radius:2px;box-shadow:0 0 2px rgba(0,0,0,0.3);'></span>"
+    + "<span>State Boundaries (Highlighted)</span>"
+    + "</div>";
 }
 
 function showInfo(d, p) {
@@ -1058,11 +1109,15 @@ Promise.all([
             ly.bringToFront();
           }
         }
+        hoveredState = normState(f.properties.state);
+        if (stateLayer) stateLayer.setStyle(styleState);
       });
       ly.on("mouseout", function () {
         if (ly !== selectedDistrictLayer && distLayer) {
           distLayer.resetStyle(ly);
         }
+        hoveredState = null;
+        if (stateLayer) stateLayer.setStyle(styleState);
       });
 
       var distData = dataFor(f.properties);
@@ -1073,9 +1128,19 @@ Promise.all([
   }).addTo(map);
 
   stateLayer = L.geoJSON(statesGeo, {
+    pane: "stateBoundariesPane",
     style: styleState,
     interactive: false
   }).addTo(map);
+
+  var btnStateBorders = document.getElementById("btn-state-borders");
+  if (btnStateBorders) {
+    btnStateBorders.onclick = function () {
+      highlightStateBorders = !highlightStateBorders;
+      this.classList.toggle("active", highlightStateBorders);
+      if (stateLayer) stateLayer.setStyle(styleState);
+    };
+  }
 
   distLayer.bringToFront();
   stateLayer.bringToFront();
