@@ -1,0 +1,21 @@
+Best Pipeline: SMOTE + RFE + Tuned Random Forest
+Best CV Macro F1-Score: 0.9894
+Best Hyperparameters: {'smote__sampling_strategy': 'all', 'smote__k_neighbors': 5, 'rfe__n_features_to_select': 5, 'clf__n_estimators': 150, 'clf__min_samples_split': 2, 'clf__min_samples_leaf': 1, 'clf__max_features': 'sqrt', 'clf__max_depth': 20, 'clf__criterion': 'entropy', 'clf__class_weight': 'balanced_subsample'}
+Test Accuracy: 0.997
+Test Precision (Weighted): 0.997
+Test Recall (Weighted): 0.997
+Test Weighted F1-Score: 0.997
+Test Macro F1-Score: 0.9932
+Test ROC-AUC (Weighted OvR): 1.0
+
+              precision    recall  f1-score   support
+
+         Low     1.0000    0.9970    0.9985       997
+    Moderate     0.9838    1.0000    0.9918       182
+        High     0.9912    1.0000    0.9956       113
+      Severe     1.0000    0.9744    0.9870        39
+
+    accuracy                         0.9970      1331
+   macro avg     0.9938    0.9928    0.9932      1331
+weighted avg     0.9970    0.9970    0.9970      1331
+
