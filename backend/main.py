@@ -1,5 +1,6 @@
 import os
 import json
+from typing import Optional
 import pandas as pd
 import numpy as np
 import joblib
@@ -156,36 +157,36 @@ class PredictRequest(BaseModel):
     rainfall: float = 0.0
     humidity: float = 50.0
     effective_soil_wetness: float = 0.40
-    temp_max: float = None
-    temp_min: float = None
-    solar_radiation: float = None
-    soil_ph: float = None
-    soil_organic_carbon: float = None
-    ndvi: float = None
-    et0: float = None
-    etc: float = None
+    temp_max: Optional[float] = None
+    temp_min: Optional[float] = None
+    solar_radiation: Optional[float] = None
+    soil_ph: Optional[float] = None
+    soil_organic_carbon: Optional[float] = None
+    ndvi: Optional[float] = None
+    et0: Optional[float] = None
+    etc: Optional[float] = None
     crop_type: str = "Cotton"
     growth_stage: str = "Reproductive"
-    crop_code: int = None
-    stage_code: int = None
-    cwsi: float = None
-    water_deficit: float = None
-    state: str = None
-    district: str = None
-    farmer_id: int = None
-    farmer_name: str = None
-    farmer_phone: str = ""
-    farmer_village: str = ""
+    crop_code: Optional[int] = None
+    stage_code: Optional[int] = None
+    cwsi: Optional[float] = None
+    water_deficit: Optional[float] = None
+    state: Optional[str] = None
+    district: Optional[str] = None
+    farmer_id: Optional[int] = None
+    farmer_name: Optional[str] = None
+    farmer_phone: Optional[str] = ""
+    farmer_village: Optional[str] = ""
 
 class FarmerRequest(BaseModel):
     farmer_name: str
-    phone: str = ""
-    village: str = ""
+    phone: Optional[str] = ""
+    village: Optional[str] = ""
     state_name: str
     district_name: str
-    primary_crop: str = "Cotton"
-    soil_type: str = "Loamy"
-    land_area_acres: float = 2.5
+    primary_crop: Optional[str] = "Cotton"
+    soil_type: Optional[str] = "Loamy"
+    land_area_acres: Optional[float] = 2.5
 
 def save_prediction_to_mysql(item, raw_df, stress_code, stress_label, priority_index, priority_category, recommended_depth, daily_deficit, advisory):
     conn, err = get_db_connection()
@@ -1059,13 +1060,13 @@ def create_farmer(item: FarmerRequest):
         """
         values = (
             item.farmer_name.strip(),
-            item.phone.strip(),
-            item.village.strip(),
+            (item.phone or "").strip(),
+            (item.village or "").strip(),
             item.state_name.strip(),
             item.district_name.strip(),
-            item.primary_crop.strip(),
-            item.soil_type.strip(),
-            item.land_area_acres
+            (item.primary_crop or "Cotton").strip(),
+            (item.soil_type or "Loamy").strip(),
+            item.land_area_acres if item.land_area_acres is not None else 2.5
         )
         cursor.execute(sql, values)
         conn.commit()
@@ -1104,13 +1105,13 @@ def update_farmer(farmer_id: int, item: FarmerRequest):
         """
         values = (
             item.farmer_name.strip(),
-            item.phone.strip(),
-            item.village.strip(),
+            (item.phone or "").strip(),
+            (item.village or "").strip(),
             item.state_name.strip(),
             item.district_name.strip(),
-            item.primary_crop.strip(),
-            item.soil_type.strip(),
-            item.land_area_acres,
+            (item.primary_crop or "Cotton").strip(),
+            (item.soil_type or "Loamy").strip(),
+            item.land_area_acres if item.land_area_acres is not None else 2.5,
             farmer_id
         )
         cursor.execute(sql, values)
@@ -1153,7 +1154,7 @@ def delete_farmer(farmer_id: int):
         conn.close()
 
 @app.get("/api/predictions/history")
-def list_prediction_history(farmer_id: int = None, search: str = ""):
+def list_prediction_history(farmer_id: Optional[int] = None, search: str = ""):
     conn, err = get_db_connection()
     if conn is None:
         raise HTTPException(status_code=503, detail=f"MySQL connection error: {err}")

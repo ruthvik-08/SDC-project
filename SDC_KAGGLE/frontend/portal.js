@@ -925,11 +925,13 @@ function runPredictionInference() {
     humidity: hum,
     soil_ph: ph,
     soil_organic_carbon: soc,
-    farmer_id: chosenFarmerId,
     farmer_name: farmerNameEl ? farmerNameEl.value.trim() : "",
     farmer_phone: farmerPhoneEl ? farmerPhoneEl.value.trim() : "",
     farmer_village: farmerVillEl ? farmerVillEl.value.trim() : ""
   };
+  if (chosenFarmerId !== null && !isNaN(chosenFarmerId)) {
+    payload.farmer_id = chosenFarmerId;
+  }
 
   btnRun.disabled = true;
   btnRun.textContent = "Processing Prediction...";
