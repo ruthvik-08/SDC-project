@@ -1949,7 +1949,56 @@ function initCardTilt() {
 // ========================================================
 // ADVANCED MOTION: TOP NAVIGATION SLIDING INDICATOR
 // ========================================================
+var PORTAL_MODULES = [
+  { hash: "#/map", label: "Geospatial Map", kicker: "Flagship Module" },
+  { hash: "#/predictor", label: "Predictor", kicker: "ML Inference" },
+  { hash: "#/ranking", label: "Irrigation Priority", kicker: "Decision Support" },
+  { hash: "#/benchmarks", label: "ML Benchmarks", kicker: "Model Audit" },
+  { hash: "#/clusters", label: "Agro-Climatic Clusters", kicker: "Zonation" },
+  { hash: "#/farmers", label: "Farmer Records", kicker: "MySQL Database" }
+];
+
+function initModuleDocks() {
+  var viewIds = ["view-predictor", "view-ranking", "view-benchmarks", "view-clusters", "view-farmers"];
+  viewIds.forEach(function(vid) {
+    var sec = document.querySelector("#" + vid + " > .sec");
+    if (!sec || sec.querySelector(".module-dock")) return;
+    var dock = document.createElement("nav");
+    dock.className = "module-dock";
+    dock.setAttribute("aria-label", "All 6 Portal Modules");
+    var html = '<div class="module-dock-head"><span class="tag">All 6 Modules</span><a href="#/" style="font-size:12.5px;font-weight:700;color:var(--acc);">Back to Dashboard &rarr;</a></div>';
+    html += '<div class="module-dock-grid">';
+    PORTAL_MODULES.forEach(function(mod) {
+      html += '<a class="module-dock-btn" data-hash="' + mod.hash + '" href="' + mod.hash + '">';
+      html += '<span class="module-dock-kicker">' + mod.kicker + "</span>";
+      html += '<span class="module-dock-title">' + mod.label + "</span>";
+      html += "</a>";
+    });
+    html += "</div>";
+    dock.innerHTML = html;
+    sec.appendChild(dock);
+  });
+}
+
+function syncModuleDockState(hash) {
+  var btns = document.querySelectorAll(".module-dock-btn");
+  for (var i = 0; i < btns.length; i++) {
+    var h = btns[i].getAttribute("data-hash") || "";
+    if (h && hash.indexOf(h) === 0) {
+      btns[i].classList.add("active");
+      btns[i].setAttribute("aria-current", "page");
+    } else {
+      btns[i].classList.remove("active");
+      btns[i].removeAttribute("aria-current");
+    }
+  }
+}
+
 function updateNavIndicator() {
+  var topNav = document.querySelector("nav.top");
+  if (topNav) {
+    document.documentElement.style.setProperty("--nav-h", topNav.offsetHeight + "px");
+  }
   var indicator = document.getElementById("nav-indicator");
   var activeLink = document.querySelector("nav.top a.nav-link.active");
   if (!indicator || !activeLink) return;
@@ -1958,8 +2007,11 @@ function updateNavIndicator() {
   var wrapRect = wrap.getBoundingClientRect();
   var linkRect = activeLink.getBoundingClientRect();
   var left = linkRect.left - wrapRect.left;
+  var top = linkRect.bottom - wrapRect.top - 2;
   var width = linkRect.width;
   indicator.style.left = left + "px";
+  indicator.style.top = top + "px";
+  indicator.style.bottom = "auto";
   indicator.style.width = width + "px";
   indicator.style.opacity = "1";
 }
@@ -2079,21 +2131,30 @@ function route() {
   var navLinks = document.querySelectorAll("nav.top a.nav-link");
   for (var i = 0; i < navLinks.length; i++) {
     navLinks[i].classList.remove("active");
+    navLinks[i].removeAttribute("aria-current");
+  }
+
+  function activateNavLink(id) {
+    var el = document.getElementById(id);
+    if (el) {
+      el.classList.add("active");
+      el.setAttribute("aria-current", "page");
+    }
   }
 
   if (hash.indexOf("#/map") === 0) {
     appEl.classList.add("on");
-    document.getElementById("nav-map").classList.add("active");
+    activateNavLink("nav-map");
+    updateNavIndicator();
     setTimeout(function() { map.invalidateSize(); }, 60);
   } else if (hash.indexOf("#/predictor") === 0) {
     if (predictorEl) predictorEl.classList.add("on");
-    var navPred = document.getElementById("nav-predictor");
-    if (navPred) navPred.classList.add("active");
+    activateNavLink("nav-predictor");
     loadFarmersData();
     window.scrollTo({top:0, behavior:"smooth"});
   } else if (hash.indexOf("#/ranking") === 0) {
     rankingEl.classList.add("on");
-    document.getElementById("nav-ranking").classList.add("active");
+    activateNavLink("nav-ranking");
     if (allPriorityList.length === 0) {
       loadPriorityData();
     } else {
@@ -2102,7 +2163,7 @@ function route() {
     window.scrollTo({top:0, behavior:"smooth"});
   } else if (hash.indexOf("#/benchmarks") === 0) {
     benchmarksEl.classList.add("on");
-    document.getElementById("nav-benchmarks").classList.add("active");
+    activateNavLink("nav-benchmarks");
     var rfAcc = document.getElementById("bm-rf-acc");
     var rfR2 = document.getElementById("bm-rf-r2");
     if (rfAcc) animateNumber(rfAcc, 80.0, 99.62, 800, 2, "%");
@@ -2110,22 +2171,22 @@ function route() {
     window.scrollTo({top:0, behavior:"smooth"});
   } else if (hash.indexOf("#/clusters") === 0) {
     clustersEl.classList.add("on");
-    document.getElementById("nav-clusters").classList.add("active");
+    activateNavLink("nav-clusters");
     if (allClustersList.length === 0) loadClustersData();
     window.scrollTo({top:0, behavior:"smooth"});
   } else if (hash.indexOf("#/farmers") === 0) {
     if (farmersEl) farmersEl.classList.add("on");
-    var navFarmers = document.getElementById("nav-farmers");
-    if (navFarmers) navFarmers.classList.add("active");
+    activateNavLink("nav-farmers");
     populateFarmerLocationDropdowns();
     loadDatabasePortalData();
     window.scrollTo({top:0, behavior:"smooth"});
   } else {
     homeEl.classList.add("on");
-    document.getElementById("nav-home").classList.add("active");
+    activateNavLink("nav-home");
     window.scrollTo({top:0, behavior:"smooth"});
   }
 
+  syncModuleDockState(hash);
   setTimeout(updateNavIndicator, 20);
 }
 
@@ -2539,6 +2600,7 @@ window.useFarmerInPredictor = useFarmerInPredictor;
 
 window.onhashchange = route;
 
+initModuleDocks();
 route();
 initCardTilt();
 initGenieTransitions();

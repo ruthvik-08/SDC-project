@@ -11,7 +11,7 @@
 <body>
 
   <!-- Top Sticky Navigation Bar with Sliding Indicator -->
-  <nav class="top">
+  <nav class="top" aria-label="Primary">
     <b>Krishi<span>Jal</span></b>
     <span class="sp"></span>
     <div class="nav-links-wrap" id="nav-links-wrap">
@@ -37,23 +37,24 @@
         <h1>Open data for climate-resilient agriculture</h1>
         <p class="lead">KrishiJal unifies machine learning and satellite remote sensing to forecast crop water stress, compute district-level irrigation priority indices, and identify agro-climatic zones across 36 Indian States &amp; UTs.</p>
         <div class="hero-btns">
-          <a class="btn fill" href="#/map">Launch Geospatial Map</a>
-          <a class="btn outline" href="#/predictor">Predictor</a>
-          <a class="btn outline" href="#/ranking">Irrigation Rankings</a>
-          <a class="btn outline" href="#/benchmarks">ML Benchmarks</a>
-          <a class="btn outline" href="#/farmers">Farmer Records</a>
+          <a class="btn fill hero-shortcut" href="#/map">Geospatial Map</a>
+          <a class="btn outline hero-shortcut" href="#/predictor">Predictor</a>
+          <a class="btn outline hero-shortcut" href="#/ranking">Irrigation Priority</a>
+          <a class="btn outline hero-shortcut" href="#/benchmarks">ML Benchmarks</a>
+          <a class="btn outline hero-shortcut" href="#/clusters">Agro-Climatic Clusters</a>
+          <a class="btn outline hero-shortcut" href="#/farmers">Farmer Records</a>
         </div>
       </div>
     </section>
 
-    <!-- Thematic Portals Section (4 3D Tilt & Genie Thumbnail Cards) -->
+    <!-- Thematic Portals Section (6 3D Tilt & Genie Thumbnail Cards) -->
     <section class="sec" id="thematic-portals">
       <span class="tag">System Modules</span>
       <h2>Agricultural Intelligence &amp; Decision Portals</h2>
-      <p class="sec-desc">Explore verified empirical data, spatial boundaries, and machine learning models engineered for water conservation and precision irrigation.</p>
+      <p class="sec-desc">Explore verified empirical data, spatial boundaries, real-time ML forecasting, and farmer database records engineered for water conservation and precision irrigation.</p>
 
       <div class="cards-grid">
-        <!-- Thumbnail Card 1: Interactive Geospatial Map -->
+        <!-- Thumbnail Card 1: Geospatial Map -->
         <a class="nav-card" href="#/map" data-target="#/map" id="card-geo">
           <div class="card-preview geo-preview">
             <svg class="mini-map-svg" viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="1.8">
@@ -66,13 +67,43 @@
           </div>
           <div class="card-body">
             <span class="card-badge">FLAGSHIP MODULE</span>
-            <h3>Geospatial Intelligence</h3>
-            <p>Interactive India map with Satellite and Clean basemaps. Explore crop stress, irrigation priority, and soil wetness with district drilldowns.</p>
-            <span class="card-link">Launch Map <span class="arrow">&rarr;</span></span>
+            <h3>Geospatial Map</h3>
+            <p>Interactive India map with Satellite and Clean basemaps, state borders, and district drilldowns for crop stress, priority index, and soil wetness.</p>
+            <span class="card-link">Open Geospatial Map <span class="arrow">&rarr;</span></span>
           </div>
         </a>
 
-        <!-- Thumbnail Card 2: Irrigation Priority Ranking -->
+        <!-- Thumbnail Card 2: Predictor -->
+        <a class="nav-card" href="#/predictor" data-target="#/predictor" id="card-predictor">
+          <div class="card-preview pred-preview">
+            <div class="mini-metric-grid">
+              <div class="mini-metric-box">
+                <div class="mini-metric-val">RF</div>
+                <div class="mini-metric-lbl">Classifier</div>
+              </div>
+              <div class="mini-metric-box">
+                <div class="mini-metric-val">732</div>
+                <div class="mini-metric-lbl">Districts</div>
+              </div>
+              <div class="mini-metric-box">
+                <div class="mini-metric-val">ET₀</div>
+                <div class="mini-metric-lbl">Water Balance</div>
+              </div>
+              <div class="mini-metric-box">
+                <div class="mini-metric-val">Live</div>
+                <div class="mini-metric-lbl">Inference</div>
+              </div>
+            </div>
+          </div>
+          <div class="card-body">
+            <span class="card-badge">ML INFERENCE</span>
+            <h3>Predictor</h3>
+            <p>Control station with weather and soil rotary dials to predict crop stress, irrigation priority index, daily water deficit, and farmer advisories.</p>
+            <span class="card-link">Open Predictor <span class="arrow">&rarr;</span></span>
+          </div>
+        </a>
+
+        <!-- Thumbnail Card 3: Irrigation Priority -->
         <a class="nav-card" href="#/ranking" data-target="#/ranking" id="card-rank">
           <div class="card-preview rank-preview">
             <div class="mini-rank-bars">
@@ -102,11 +133,11 @@
             <span class="card-badge">DECISION SUPPORT</span>
             <h3>Irrigation Priority</h3>
             <p>All-India 732-district quantitative irrigation priority ranking sorted from highest to lowest need with recommended water depths (mm), search, and state filters.</p>
-            <span class="card-link">View Rankings <span class="arrow">&rarr;</span></span>
+            <span class="card-link">Open Irrigation Priority <span class="arrow">&rarr;</span></span>
           </div>
         </a>
 
-        <!-- Thumbnail Card 3: ML Evaluation Benchmarks -->
+        <!-- Thumbnail Card 4: ML Benchmarks -->
         <a class="nav-card" href="#/benchmarks" data-target="#/benchmarks" id="card-bench">
           <div class="card-preview ml-preview">
             <div class="mini-metric-grid">
@@ -130,27 +161,61 @@
           </div>
           <div class="card-body">
             <span class="card-badge">MODEL AUDIT</span>
-            <h3>ML Performance</h3>
-            <p>Verified accuracy, confusion matrix, precision, recall, and Actual vs Predicted charts across 5 classifiers and 4 regressors.</p>
-            <span class="card-link">Audit Models <span class="arrow">&rarr;</span></span>
+            <h3>ML Benchmarks</h3>
+            <p>Verified accuracy, confusion matrix, precision, recall, and regression comparisons across 5 classification and 4 regression models.</p>
+            <span class="card-link">Open ML Benchmarks <span class="arrow">&rarr;</span></span>
           </div>
         </a>
 
-        <!-- Thumbnail Card 4: Regional Agro-Climatic Clusters -->
+        <!-- Thumbnail Card 5: Agro-Climatic Clusters -->
         <a class="nav-card" href="#/clusters" data-target="#/clusters" id="card-clusters">
           <div class="card-preview cluster-preview">
             <div class="mini-clusters-grid">
-              <div class="mini-cluster-chip"><span class="mini-chip-dot" style="background:#d9784f;color:#d9784f;"></span>Central Zone</div>
-              <div class="mini-cluster-chip"><span class="mini-chip-dot" style="background:#0f766e;color:#0f766e;"></span>Coastal Belt</div>
-              <div class="mini-cluster-chip"><span class="mini-chip-dot" style="background:#c0392b;color:#c0392b;"></span>Arid Belt</div>
-              <div class="mini-cluster-chip"><span class="mini-chip-dot" style="background:#2e9e5b;color:#2e9e5b;"></span>Cool Plateau</div>
+              <div class="mini-cluster-chip"><span class="mini-chip-dot" style="background:#d9784f;color:#d9784f;"></span>Zone 0 Cool</div>
+              <div class="mini-cluster-chip"><span class="mini-chip-dot" style="background:#0f766e;color:#0f766e;"></span>Zone 1 Coastal</div>
+              <div class="mini-cluster-chip"><span class="mini-chip-dot" style="background:#c0392b;color:#c0392b;"></span>Zone 2 Arid</div>
+              <div class="mini-cluster-chip"><span class="mini-chip-dot" style="background:#2e9e5b;color:#2e9e5b;"></span>Zone 3 Wet</div>
             </div>
           </div>
           <div class="card-body">
             <span class="card-badge">ZONATION</span>
             <h3>Agro-Climatic Clusters</h3>
             <p>Unsupervised K-Means clustering (k=4) and 2D PCA mapping all 732 agricultural districts by evapotranspiration, rainfall patterns, and soil wetness.</p>
-            <span class="card-link">Explore Clusters <span class="arrow">&rarr;</span></span>
+            <span class="card-link">Open Clusters <span class="arrow">&rarr;</span></span>
+          </div>
+        </a>
+
+        <!-- Thumbnail Card 6: Farmer Records -->
+        <a class="nav-card" href="#/farmers" data-target="#/farmers" id="card-farmers">
+          <div class="card-preview farmer-preview">
+            <div class="mini-rank-bars">
+              <div class="mini-bar-row">
+                <span>Farmers DB</span>
+                <div class="mini-bar"><div class="mini-fill" style="width:92%;background:#4caf50"></div></div>
+                <span>CRUD</span>
+              </div>
+              <div class="mini-bar-row">
+                <span>Soil &amp; Crop</span>
+                <div class="mini-bar"><div class="mini-fill" style="width:78%;background:#e6c229"></div></div>
+                <span>FK</span>
+              </div>
+              <div class="mini-bar-row">
+                <span>Predictions</span>
+                <div class="mini-bar"><div class="mini-fill" style="width:86%;background:#38bdf8"></div></div>
+                <span>History</span>
+              </div>
+              <div class="mini-bar-row">
+                <span>MySQL 8</span>
+                <div class="mini-bar"><div class="mini-fill" style="width:100%;background:#2e9e5b"></div></div>
+                <span>Sync</span>
+              </div>
+            </div>
+          </div>
+          <div class="card-body">
+            <span class="card-badge">MYSQL DATABASE</span>
+            <h3>Farmer Records</h3>
+            <p>Create, edit, search, and delete farmer profiles, inspect soil records, and track saved ML irrigation prediction history in MySQL.</p>
+            <span class="card-link">Open Farmer Records <span class="arrow">&rarr;</span></span>
           </div>
         </a>
       </div>
@@ -660,7 +725,7 @@
   <section id="view-ranking" class="subview">
     <div class="view-header">
       <span class="tag">Decision Support Engine</span>
-      <h1>All-India Irrigation Priority Ranking</h1>
+      <h1>Irrigation Priority</h1>
       <p>Quantitative ranking of 732 agricultural districts across all 36 Indian States and Union Territories derived from trained Random Forest models, Crop Water Stress Index (CWSI), and daily soil moisture deficits.</p>
     </div>
 
@@ -764,7 +829,7 @@
   <section id="view-benchmarks" class="subview">
     <div class="view-header">
       <span class="tag">Empirical Audit</span>
-      <h1>Machine Learning Evaluation Benchmarks</h1>
+      <h1>ML Benchmarks</h1>
       <p>Rigorous offline evaluation on 6,654 records (5,323 training / 1,331 test split) comparing 5 classification and 4 regression algorithms across 14 engineered agro-climatic features.</p>
     </div>
 
@@ -962,7 +1027,7 @@
   <section id="view-clusters" class="subview">
     <div class="view-header">
       <span class="tag">Regional Zonation</span>
-      <h1>Regional Agro-Climatic Clusters</h1>
+      <h1>Agro-Climatic Clusters</h1>
       <p>Unsupervised K-Means clustering (k=4) and 2D Principal Component Analysis (PCA) grouping all 732 Indian agricultural districts across 10 standardized physical climate and soil features for regional water resource planning.</p>
     </div>
 
@@ -1159,7 +1224,7 @@
   <section id="view-farmers" class="subview">
     <div class="view-header">
       <span class="tag">MySQL CRUD Database</span>
-      <h1>Farmer Records &amp; Prediction History</h1>
+      <h1>Farmer Records</h1>
       <p>Manage registered farmer profiles, soil types, and district crop details in MySQL (<code style="font-family:'JetBrains Mono',monospace;">crop_stress_db</code>), and inspect full ML prediction logs.</p>
     </div>
 
