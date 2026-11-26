@@ -1222,7 +1222,7 @@ Promise.all([
   initPredictorForm();
 }).catch(function (err) {
   console.error("Map initialization failed:", err);
-  document.getElementById("info").innerHTML = "<h4>Could not load data</h4><p>Open this page through the FastAPI server at /app/portal.html.</p>";
+  document.getElementById("info").innerHTML = "<h4>Could not load data</h4><p>Open this page through the FastAPI server at /app/.</p>";
 });
 
 document.getElementById("lb").onclick = function () {
