@@ -1,4 +1,5 @@
 {
+  "source_notebook": "https://www.kaggle.com/code/ruthvikpasupunuri/crop-stress-and-irrigation-priority-decision-suppo",
   "dataset_source": "data/processed/krishijal_master_dataset.csv",
   "total_records": 6654,
   "train_records": 5323,
@@ -20,16 +21,19 @@
     "stage_code"
   ],
   "n_features": 14,
+  "best_classifier": "Random Forest Classifier",
+  "best_regressor": "Random Forest Regressor",
   "classification": {
-    "Random Forest (Tuned)": {
-      "accuracy": 0.9962,
-      "precision": 0.9963,
-      "recall": 0.9962,
-      "f1_score": 0.9963,
+    "Random Forest Classifier": {
+      "accuracy": 0.9955,
+      "precision": 0.9956,
+      "recall": 0.9955,
+      "f1_score": 0.9955,
+      "status": "Best Overall",
       "confusion_matrix": [
         [
-          994,
-          3,
+          995,
+          2,
           0,
           0
         ],
@@ -48,176 +52,58 @@
         [
           0,
           0,
-          0,
-          39
-        ]
-      ]
-    },
-    "Decision Tree": {
-      "accuracy": 0.988,
-      "precision": 0.9883,
-      "recall": 0.988,
-      "f1_score": 0.9881,
-      "confusion_matrix": [
-        [
-          988,
-          9,
-          0,
-          0
-        ],
-        [
-          2,
-          179,
-          1,
-          0
-        ],
-        [
-          0,
-          2,
-          110,
-          1
-        ],
-        [
-          0,
-          0,
-          1,
-          38
-        ]
-      ]
-    },
-    "Logistic Regression": {
-      "accuracy": 0.9594,
-      "precision": 0.964,
-      "recall": 0.9594,
-      "f1_score": 0.9607,
-      "confusion_matrix": [
-        [
-          961,
-          36,
-          0,
-          0
-        ],
-        [
-          1,
-          172,
-          9,
-          0
-        ],
-        [
-          0,
-          4,
-          105,
-          4
-        ],
-        [
-          0,
-          0,
-          0,
-          39
-        ]
-      ]
-    },
-    "KNN (k=5)": {
-      "accuracy": 0.9279,
-      "precision": 0.9362,
-      "recall": 0.9279,
-      "f1_score": 0.9307,
-      "confusion_matrix": [
-        [
-          944,
-          53,
-          0,
-          0
-        ],
-        [
-          9,
-          157,
-          16,
-          0
-        ],
-        [
-          1,
-          10,
-          97,
-          5
-        ],
-        [
-          0,
-          0,
           2,
           37
         ]
       ]
     },
-    "Gaussian Naive Bayes": {
-      "accuracy": 0.8114,
-      "precision": 0.8526,
-      "recall": 0.8114,
-      "f1_score": 0.8267,
-      "confusion_matrix": [
-        [
-          868,
-          119,
-          10,
-          0
-        ],
-        [
-          13,
-          121,
-          48,
-          0
-        ],
-        [
-          7,
-          22,
-          63,
-          21
-        ],
-        [
-          0,
-          0,
-          11,
-          28
-        ]
-      ]
+    "Decision Tree Classifier": {
+      "accuracy": 0.9947,
+      "precision": 0.9948,
+      "recall": 0.9947,
+      "f1_score": 0.9947,
+      "status": "Highly Accurate"
+    },
+    "Logistic Regression": {
+      "accuracy": 0.9602,
+      "precision": 0.9606,
+      "recall": 0.9602,
+      "f1_score": 0.9603,
+      "status": "Linear Baseline"
     }
   },
   "regression": {
-    "Random Forest Regressor (Tuned)": {
-      "mae": 0.4293,
-      "mse": 0.8831,
-      "rmse": 0.9398,
-      "r2_score": 0.9954
+    "Random Forest Regressor": {
+      "mae": 0.4538,
+      "mse": 0.9127,
+      "rmse": 0.9554,
+      "r2_score": 0.9952,
+      "status": "Best Regressor"
     },
     "Decision Tree Regressor": {
-      "mae": 0.8521,
-      "mse": 2.145,
-      "rmse": 1.4646,
-      "r2_score": 0.9888
-    },
-    "Polynomial Regression (Deg 2)": {
-      "mae": 2.5952,
-      "mse": 11.5902,
-      "rmse": 3.4044,
-      "r2_score": 0.9394
+      "mae": 1.1975,
+      "mse": 4.0257,
+      "rmse": 2.0064,
+      "r2_score": 0.9789,
+      "status": "Non-Linear"
     },
     "Linear Regression": {
       "mae": 4.8669,
       "mse": 37.1909,
       "rmse": 6.0984,
-      "r2_score": 0.8055
+      "r2_score": 0.8055,
+      "status": "Baseline"
     }
   },
   "clustering": {
     "K-Means (k=4)": {
-      "silhouette_score": 0.2174,
-      "davies_bouldin_score": 1.5201,
-      "inertia": 37403.38
+      "n_clusters": 4,
+      "districts_evaluated": 160
     },
     "PCA (2D Projection)": {
-      "total_explained_variance": 0.5698,
-      "pc1_explained_variance_ratio": 0.3919,
-      "pc2_explained_variance_ratio": 0.1779
+      "total_explained_variance": 0.7082,
+      "pc1_explained_variance_ratio": 0.4042,
+      "pc2_explained_variance_ratio": 0.304
     }
   }
 }

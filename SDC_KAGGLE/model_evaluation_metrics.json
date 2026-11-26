@@ -1,0 +1,109 @@
+{
+  "source_notebook": "https://www.kaggle.com/code/ruthvikpasupunuri/crop-stress-and-irrigation-priority-decision-suppo",
+  "dataset_source": "data/processed/krishijal_master_dataset.csv",
+  "total_records": 6654,
+  "train_records": 5323,
+  "test_records": 1331,
+  "feature_names": [
+    "temperature",
+    "temp_max",
+    "temp_min",
+    "rainfall",
+    "humidity",
+    "effective_soil_wetness",
+    "solar_radiation",
+    "soil_ph",
+    "soil_organic_carbon",
+    "ndvi",
+    "et0",
+    "etc",
+    "crop_code",
+    "stage_code"
+  ],
+  "n_features": 14,
+  "best_classifier": "Random Forest Classifier",
+  "best_regressor": "Random Forest Regressor",
+  "classification": {
+    "Random Forest Classifier": {
+      "accuracy": 0.9955,
+      "precision": 0.9956,
+      "recall": 0.9955,
+      "f1_score": 0.9955,
+      "status": "Best Overall",
+      "confusion_matrix": [
+        [
+          995,
+          2,
+          0,
+          0
+        ],
+        [
+          0,
+          180,
+          2,
+          0
+        ],
+        [
+          0,
+          0,
+          113,
+          0
+        ],
+        [
+          0,
+          0,
+          2,
+          37
+        ]
+      ]
+    },
+    "Decision Tree Classifier": {
+      "accuracy": 0.9947,
+      "precision": 0.9948,
+      "recall": 0.9947,
+      "f1_score": 0.9947,
+      "status": "Highly Accurate"
+    },
+    "Logistic Regression": {
+      "accuracy": 0.9602,
+      "precision": 0.9606,
+      "recall": 0.9602,
+      "f1_score": 0.9603,
+      "status": "Linear Baseline"
+    }
+  },
+  "regression": {
+    "Random Forest Regressor": {
+      "mae": 0.4538,
+      "mse": 0.9127,
+      "rmse": 0.9554,
+      "r2_score": 0.9952,
+      "status": "Best Regressor"
+    },
+    "Decision Tree Regressor": {
+      "mae": 1.1975,
+      "mse": 4.0257,
+      "rmse": 2.0064,
+      "r2_score": 0.9789,
+      "status": "Non-Linear"
+    },
+    "Linear Regression": {
+      "mae": 4.8669,
+      "mse": 37.1909,
+      "rmse": 6.0984,
+      "r2_score": 0.8055,
+      "status": "Baseline"
+    }
+  },
+  "clustering": {
+    "K-Means (k=4)": {
+      "n_clusters": 4,
+      "districts_evaluated": 160
+    },
+    "PCA (2D Projection)": {
+      "total_explained_variance": 0.7082,
+      "pc1_explained_variance_ratio": 0.4042,
+      "pc2_explained_variance_ratio": 0.304
+    }
+  }
+}

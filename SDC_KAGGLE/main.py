@@ -349,8 +349,8 @@ root_response = {
     },
     "features_required_for_predict": feature_cols,
     "models_active": {
-        "classification": "SMOTE + RFE + Tuned Random Forest Pipeline (.pkl)",
-        "regression": "Tuned RandomForestRegressor (.pkl)"
+        "classification": "Random Forest Classifier (n_estimators=100, max_depth=12)",
+        "regression": "Random Forest Regressor (n_estimators=100, max_depth=12)"
     },
     "total_records": len(df_master),
     "states_covered": int(df_master["state"].nunique()),
@@ -435,8 +435,8 @@ def predict(item: PredictRequest):
             "vegetation_ndvi": float(raw_df["ndvi"].iloc[0])
         },
         "models_used": {
-            "classifier": "SMOTE + RFE + Tuned Random Forest Pipeline (.pkl)",
-            "regressor": "Tuned RandomForestRegressor (.pkl)"
+            "classifier": "Random Forest Classifier (.pkl)",
+            "regressor": "Random Forest Regressor (.pkl)"
         },
         "database": {
             "saved": db_saved,
@@ -451,7 +451,7 @@ def predict_crop_stress(item: CropStressSimRequest):
     raw_df = build_feature_row(item.model_dump())
     scaled_df = pd.DataFrame(scaler.transform(raw_df), columns=feature_cols)
     chosen_clf = model_dt if "Tree" in (item.selected_model or "") else (model_logreg if "Logistic" in (item.selected_model or "") else (model_knn if "KNN" in (item.selected_model or "") else model_rf))
-    model_tag = "Decision Tree Classifier" if "Tree" in (item.selected_model or "") else ("Logistic Regression" if "Logistic" in (item.selected_model or "") else ("K-Nearest Neighbors" if "KNN" in (item.selected_model or "") else "SMOTE + RFE + Tuned Random Forest (.pkl)"))
+    model_tag = "Decision Tree Classifier" if "Tree" in (item.selected_model or "") else ("Logistic Regression" if "Logistic" in (item.selected_model or "") else ("K-Nearest Neighbors" if "KNN" in (item.selected_model or "") else "Random Forest Classifier (.pkl)"))
     clf_input = raw_df if (chosen_clf is model_rf and (hasattr(model_rf, "steps") or hasattr(model_rf, "estimators"))) else scaled_df
     stress_code = int(chosen_clf.predict(clf_input)[0])
     raw_priority = float(model_reg.predict(scaled_df)[0])
@@ -490,7 +490,7 @@ def predict_irrigation_priority(item: IrrigationPriorityRequest):
         "priority_category": priority_tag,
         "recommended_irrigation_depth": depth,
         "actionable_farmer_advisory": advisory,
-        "model_used": "Tuned Random Forest Regressor (.pkl)"
+        "model_used": "Random Forest Regressor (.pkl)"
     }
 
 dataset_payload = {
@@ -877,100 +877,9 @@ clusters_response = {
 def get_clusters_regions():
     return clusters_response
 
-evaluation_metrics = {
-    "dataset_source": "data/processed/krishijal_master_dataset.csv",
-    "total_records": 6654,
-    "train_records": 5323,
-    "test_records": 1331,
-    "feature_names": feature_cols,
-    "n_features": 14,
-    "classification": {
-        "Best Overall Model (SMOTE + RFE + Tuned RF)": {
-            "accuracy": 0.9970,
-            "precision": 0.9970,
-            "recall": 0.9970,
-            "f1_score": 0.9970,
-            "macro_f1_score": 0.9932,
-            "roc_auc": 1.0000,
-            "confusion_matrix": [[994, 3, 0, 0], [0, 182, 0, 0], [0, 0, 113, 0], [0, 0, 1, 38]]
-        },
-        "Original Random Forest": {
-            "accuracy": 0.9955,
-            "precision": 0.9956,
-            "recall": 0.9955,
-            "f1_score": 0.9955,
-            "macro_f1_score": 0.9861,
-            "roc_auc": 0.9999,
-            "confusion_matrix": [[995, 2, 0, 0], [0, 180, 2, 0], [0, 0, 113, 0], [0, 0, 2, 37]]
-        },
-        "Decision Tree": {
-            "accuracy": 0.9947,
-            "precision": 0.9948,
-            "recall": 0.9947,
-            "f1_score": 0.9947,
-            "macro_f1_score": 0.9879
-        },
-        "Logistic Regression": {
-            "accuracy": 0.9602,
-            "precision": 0.9606,
-            "recall": 0.9602,
-            "f1_score": 0.9603,
-            "macro_f1_score": 0.9051
-        },
-        "KNN (k=5)": {
-            "accuracy": 0.9166,
-            "precision": 0.9128,
-            "recall": 0.9166,
-            "f1_score": 0.9126,
-            "macro_f1_score": 0.8271
-        },
-        "Gaussian Naive Bayes": {
-            "accuracy": 0.8445,
-            "precision": 0.8620,
-            "recall": 0.8445,
-            "f1_score": 0.8516,
-            "macro_f1_score": 0.6879
-        }
-    },
-    "regression": {
-        "Random Forest Regressor (Tuned)": {
-            "mae": 0.4293,
-            "mse": 0.8831,
-            "rmse": 0.9398,
-            "r2_score": 0.9954
-        },
-        "Decision Tree Regressor": {
-            "mae": 0.8521,
-            "mse": 2.1450,
-            "rmse": 1.4646,
-            "r2_score": 0.9888
-        },
-        "Polynomial Regression (Deg 2)": {
-            "mae": 2.5952,
-            "mse": 11.5902,
-            "rmse": 3.4044,
-            "r2_score": 0.9394
-        },
-        "Linear Regression": {
-            "mae": 4.8669,
-            "mse": 37.1909,
-            "rmse": 6.0984,
-            "r2_score": 0.8055
-        }
-    },
-    "clustering": {
-        "K-Means (k=4)": {
-            "silhouette_score": 0.2174,
-            "davies_bouldin_score": 1.5201,
-            "inertia": 37403.38
-        },
-        "PCA (2D Projection)": {
-            "total_explained_variance": 0.5698,
-            "pc1_explained_variance_ratio": 0.3919,
-            "pc2_explained_variance_ratio": 0.1779
-        }
-    }
-}
+eval_path = "backend/model_evaluation_metrics.json" if os.path.exists("backend/model_evaluation_metrics.json") else "model_evaluation_metrics.json"
+with open(eval_path, "r") as eval_file:
+    evaluation_metrics = json.load(eval_file)
 
 @app.get("/api/models/evaluation")
 def get_models_evaluation():

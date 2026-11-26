@@ -142,19 +142,19 @@
           <div class="card-preview ml-preview">
             <div class="mini-metric-grid">
               <div class="mini-metric-box">
-                <div class="mini-metric-val">99.6%</div>
+                <div class="mini-metric-val" id="home-bm-acc">--</div>
                 <div class="mini-metric-lbl">RF Accuracy</div>
               </div>
               <div class="mini-metric-box">
-                <div class="mini-metric-val">0.995</div>
+                <div class="mini-metric-val" id="home-bm-r2">--</div>
                 <div class="mini-metric-lbl">R² Score</div>
               </div>
               <div class="mini-metric-box">
-                <div class="mini-metric-val">0.429</div>
+                <div class="mini-metric-val" id="home-bm-mae">--</div>
                 <div class="mini-metric-lbl">MAE</div>
               </div>
               <div class="mini-metric-box">
-                <div class="mini-metric-val">14</div>
+                <div class="mini-metric-val" id="home-bm-feat">--</div>
                 <div class="mini-metric-lbl">Features</div>
               </div>
             </div>
@@ -162,7 +162,7 @@
           <div class="card-body">
             <span class="card-badge">MODEL AUDIT</span>
             <h3>ML Benchmarks</h3>
-            <p>Verified accuracy, confusion matrix, precision, recall, and regression comparisons across 5 classification and 4 regression models.</p>
+            <p id="card-bench-desc">Verified accuracy, confusion matrix, precision, recall, and regression comparisons loaded from the executed Kaggle notebook.</p>
             <span class="card-link">Open ML Benchmarks <span class="arrow">&rarr;</span></span>
           </div>
         </a>
@@ -828,9 +828,9 @@
   <!-- ======================================================== -->
   <section id="view-benchmarks" class="subview">
     <div class="view-header">
-      <span class="tag">Empirical Audit</span>
+      <span class="tag">Empirical Audit · Kaggle Notebook</span>
       <h1>ML Benchmarks</h1>
-      <p>Rigorous offline evaluation on 6,654 records (5,323 training / 1,331 test split) comparing 5 classification and 4 regression algorithms across 14 engineered agro-climatic features.</p>
+      <p id="bm-subtitle">Loading evaluation summary from executed Kaggle notebook results…</p>
     </div>
 
     <div class="sec" style="padding-top:0;">
@@ -838,27 +838,27 @@
       <div class="kpi-row">
         <div class="kpi-card" style="border-left:4px solid var(--teal);">
           <div class="kpi-lbl">Best Classifier</div>
-          <div style="font-weight:700;font-size:16px;margin:4px 0;">Random Forest (Tuned)</div>
-          <div class="kpi-num" style="color:var(--teal);" id="bm-rf-acc">99.62%</div>
-          <span style="font-size:11px;color:var(--mute);">F1-Score: 0.9963</span>
+          <div style="font-weight:700;font-size:16px;margin:4px 0;" id="bm-best-clf-name">--</div>
+          <div class="kpi-num" style="color:var(--teal);" id="bm-rf-acc">--</div>
+          <span style="font-size:11px;color:var(--mute);" id="bm-rf-f1">F1-Score: --</span>
         </div>
         <div class="kpi-card" style="border-left:4px solid var(--acc);">
           <div class="kpi-lbl">Best Regressor</div>
-          <div style="font-weight:700;font-size:16px;margin:4px 0;">Random Forest Regressor</div>
-          <div class="kpi-num" style="color:var(--acc);" id="bm-rf-r2">0.9954</div>
-          <span style="font-size:11px;color:var(--mute);">R² Score (MAE: 0.4293)</span>
+          <div style="font-weight:700;font-size:16px;margin:4px 0;" id="bm-best-reg-name">--</div>
+          <div class="kpi-num" style="color:var(--acc);" id="bm-rf-r2">--</div>
+          <span style="font-size:11px;color:var(--mute);" id="bm-rf-mae-rmse">MAE: -- | RMSE: --</span>
         </div>
         <div class="kpi-card">
-          <div class="kpi-lbl">Classification Baseline</div>
-          <div style="font-weight:700;font-size:16px;margin:4px 0;">Decision Tree</div>
-          <div class="kpi-num" style="color:var(--ink);">98.80%</div>
-          <span style="font-size:11px;color:var(--mute);">Precision: 0.9883</span>
+          <div class="kpi-lbl">Secondary Classifier</div>
+          <div style="font-weight:700;font-size:16px;margin:4px 0;" id="bm-base-clf-name">--</div>
+          <div class="kpi-num" style="color:var(--ink);" id="bm-base-acc">--</div>
+          <span style="font-size:11px;color:var(--mute);" id="bm-base-prec">Precision: --</span>
         </div>
         <div class="kpi-card">
-          <div class="kpi-lbl">Total Dataset Records</div>
-          <div style="font-weight:700;font-size:16px;margin:4px 0;">All-India Agro Records</div>
-          <div class="kpi-num" style="color:var(--ink);">6,654</div>
-          <span style="font-size:11px;color:var(--mute);">14 Physical Features</span>
+          <div class="kpi-lbl">Evaluation Split</div>
+          <div style="font-weight:700;font-size:16px;margin:4px 0;">Daily &amp; Monthly Records</div>
+          <div class="kpi-num" style="color:var(--ink);" id="bm-total-records">--</div>
+          <span style="font-size:11px;color:var(--mute);" id="bm-feature-count">-- Physical Features</span>
         </div>
       </div>
 
@@ -871,53 +871,14 @@
               <tr>
                 <th>Model</th>
                 <th>Accuracy</th>
-                <th>Precision</th>
-                <th>Recall</th>
-                <th>F1-Score</th>
+                <th>Precision (Weighted)</th>
+                <th>Recall (Weighted)</th>
+                <th>F1-Score (Weighted)</th>
                 <th>Performance Status</th>
               </tr>
             </thead>
             <tbody id="eval-class-tbody">
-              <tr>
-                <td><b>Random Forest (Tuned)</b></td>
-                <td class="mono">99.62%</td>
-                <td class="mono">99.63%</td>
-                <td class="mono">99.62%</td>
-                <td class="mono">99.63%</td>
-                <td><span class="badge best">Best Overall</span></td>
-              </tr>
-              <tr>
-                <td>Decision Tree</td>
-                <td class="mono">98.80%</td>
-                <td class="mono">98.83%</td>
-                <td class="mono">98.80%</td>
-                <td class="mono">98.81%</td>
-                <td><span class="badge">Highly Accurate</span></td>
-              </tr>
-              <tr>
-                <td>Logistic Regression</td>
-                <td class="mono">95.94%</td>
-                <td class="mono">96.40%</td>
-                <td class="mono">95.94%</td>
-                <td class="mono">96.07%</td>
-                <td><span class="badge">Linear Baseline</span></td>
-              </tr>
-              <tr>
-                <td>KNN (k=5)</td>
-                <td class="mono">92.79%</td>
-                <td class="mono">93.62%</td>
-                <td class="mono">92.79%</td>
-                <td class="mono">93.07%</td>
-                <td><span class="badge">Neighborhood</span></td>
-              </tr>
-              <tr>
-                <td>Gaussian Naive Bayes</td>
-                <td class="mono">81.14%</td>
-                <td class="mono">85.26%</td>
-                <td class="mono">81.14%</td>
-                <td class="mono">82.67%</td>
-                <td><span class="badge">Probabilistic</span></td>
-              </tr>
+              <tr><td colspan="6" style="text-align:center;padding:24px;color:var(--mute);">Loading classification results from Kaggle evaluation API…</td></tr>
             </tbody>
           </table>
         </div>
@@ -925,34 +886,13 @@
 
       <!-- Visual Confusion Matrix for Random Forest -->
       <div class="chart-box" style="margin-bottom:28px;">
-        <h3>Random Forest Confusion Matrix (N = 1,331 Test Samples)</h3>
+        <h3 id="bm-cm-title">Random Forest Classifier Confusion Matrix</h3>
         <p style="color:var(--mute);font-size:13px;margin-top:0;">Evaluated across 4 multi-class stress classes: Low, Moderate, High, Severe.</p>
         <div class="cm-container">
           <div style="font-size:12px;font-weight:700;color:var(--mute);margin-bottom:6px;">PREDICTED STRESS LEVEL &rarr;</div>
           <div style="display:flex;align-items:center;gap:12px;">
             <div style="writing-mode:vertical-rl;transform:rotate(180deg);font-size:12px;font-weight:700;color:var(--mute);">ACTUAL &rarr;</div>
-            <div class="cm-grid">
-              <!-- Row 1: Low Actual -->
-              <div class="cm-cell cm-diag">994<span style="font-size:9px;font-weight:400">Low</span></div>
-              <div class="cm-cell cm-off">3<span style="font-size:9px">Mod</span></div>
-              <div class="cm-cell cm-off">0<span style="font-size:9px">Hi</span></div>
-              <div class="cm-cell cm-off">0<span style="font-size:9px">Sev</span></div>
-              <!-- Row 2: Moderate Actual -->
-              <div class="cm-cell cm-off">0<span style="font-size:9px">Low</span></div>
-              <div class="cm-cell cm-diag">180<span style="font-size:9px;font-weight:400">Mod</span></div>
-              <div class="cm-cell cm-off">2<span style="font-size:9px">Hi</span></div>
-              <div class="cm-cell cm-off">0<span style="font-size:9px">Sev</span></div>
-              <!-- Row 3: High Actual -->
-              <div class="cm-cell cm-off">0<span style="font-size:9px">Low</span></div>
-              <div class="cm-cell cm-off">0<span style="font-size:9px">Mod</span></div>
-              <div class="cm-cell cm-diag">113<span style="font-size:9px;font-weight:400">Hi</span></div>
-              <div class="cm-cell cm-off">0<span style="font-size:9px">Sev</span></div>
-              <!-- Row 4: Severe Actual -->
-              <div class="cm-cell cm-off">0<span style="font-size:9px">Low</span></div>
-              <div class="cm-cell cm-off">0<span style="font-size:9px">Mod</span></div>
-              <div class="cm-cell cm-off">0<span style="font-size:9px">Hi</span></div>
-              <div class="cm-cell cm-diag">39<span style="font-size:9px;font-weight:400">Sev</span></div>
-            </div>
+            <div class="cm-grid" id="eval-cm-grid"></div>
           </div>
         </div>
       </div>
@@ -972,39 +912,8 @@
                 <th>Status</th>
               </tr>
             </thead>
-            <tbody>
-              <tr>
-                <td><b>Random Forest Regressor (Tuned)</b></td>
-                <td class="mono"><b>0.9954</b></td>
-                <td class="mono">0.4293</td>
-                <td class="mono">0.8831</td>
-                <td class="mono">0.9398</td>
-                <td><span class="badge best">Best Regressor</span></td>
-              </tr>
-              <tr>
-                <td>Decision Tree Regressor</td>
-                <td class="mono">0.9888</td>
-                <td class="mono">0.8521</td>
-                <td class="mono">2.1450</td>
-                <td class="mono">1.4646</td>
-                <td><span class="badge">Non-Linear</span></td>
-              </tr>
-              <tr>
-                <td>Polynomial Regression (Degree 2)</td>
-                <td class="mono">0.9394</td>
-                <td class="mono">2.5952</td>
-                <td class="mono">11.5902</td>
-                <td class="mono">3.4044</td>
-                <td><span class="badge">Curvature</span></td>
-              </tr>
-              <tr>
-                <td>Linear Regression</td>
-                <td class="mono">0.8055</td>
-                <td class="mono">4.8669</td>
-                <td class="mono">37.1909</td>
-                <td class="mono">6.0984</td>
-                <td><span class="badge">Baseline</span></td>
-              </tr>
+            <tbody id="eval-reg-tbody">
+              <tr><td colspan="6" style="text-align:center;padding:24px;color:var(--mute);">Loading regression results from Kaggle evaluation API…</td></tr>
             </tbody>
           </table>
         </div>
@@ -1014,8 +923,8 @@
       <div class="takeaway-banner">
         <div class="takeaway-icon"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg></div>
         <div class="takeaway-text">
-          <h4>Model Selection Summary (Evaluation Takeaway)</h4>
-          <p>Hyperparameter-tuned Random Forest delivers 99.62% classification accuracy and 0.9954 regression R² score, providing calibrated decision support for all 14 physical agro-climatic parameters without overfitting.</p>
+          <h4>Model Selection Summary (Verified Kaggle Evaluation)</h4>
+          <p id="bm-takeaway-text">Loading model selection summary from Kaggle evaluation API…</p>
         </div>
       </div>
     </div>

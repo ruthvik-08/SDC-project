@@ -2166,10 +2166,7 @@ function route() {
   } else if (hash.indexOf("#/benchmarks") === 0) {
     benchmarksEl.classList.add("on");
     activateNavLink("nav-benchmarks");
-    var rfAcc = document.getElementById("bm-rf-acc");
-    var rfR2 = document.getElementById("bm-rf-r2");
-    if (rfAcc) animateNumber(rfAcc, 80.0, 99.62, 800, 2, "%");
-    if (rfR2) animateNumber(rfR2, 0.7000, 0.9954, 800, 4, "");
+    loadModelBenchmarks(true);
     window.scrollTo({top:0, behavior:"smooth"});
   } else if (hash.indexOf("#/clusters") === 0) {
     clustersEl.classList.add("on");
@@ -2595,6 +2592,157 @@ function initFarmersView() {
   if (hFilter) hFilter.onchange = loadPredictionHistory;
 }
 
+var cachedEvaluationData = null;
+
+function renderModelBenchmarks(data, animate) {
+  if (!data) return;
+  var clfMap = data.classification || {};
+  var regMap = data.regression || {};
+  var clfKeys = Object.keys(clfMap);
+  var regKeys = Object.keys(regMap);
+
+  var bestClfName = data.best_classifier || clfKeys[0] || "Random Forest Classifier";
+  var bestRegName = data.best_regressor || regKeys[0] || "Random Forest Regressor";
+  var bestClf = clfMap[bestClfName] || {};
+  var bestReg = regMap[bestRegName] || {};
+
+  var secondaryClfName = clfKeys.length > 1 ? clfKeys[1] : bestClfName;
+  var secondaryClf = clfMap[secondaryClfName] || bestClf;
+
+  var totalRec = Number(data.total_records || 0);
+  var trainRec = Number(data.train_records || 0);
+  var testRec = Number(data.test_records || 0);
+  var nFeat = Number(data.n_features || 14);
+
+  var homeAcc = document.getElementById("home-bm-acc");
+  var homeR2 = document.getElementById("home-bm-r2");
+  var homeMae = document.getElementById("home-bm-mae");
+  var homeFeat = document.getElementById("home-bm-feat");
+  var homeDesc = document.getElementById("card-bench-desc");
+  if (homeAcc && bestClf.accuracy !== undefined) homeAcc.textContent = (bestClf.accuracy * 100).toFixed(2) + "%";
+  if (homeR2 && bestReg.r2_score !== undefined) homeR2.textContent = Number(bestReg.r2_score).toFixed(4);
+  if (homeMae && bestReg.mae !== undefined) homeMae.textContent = Number(bestReg.mae).toFixed(4);
+  if (homeFeat) homeFeat.textContent = String(nFeat);
+  if (homeDesc) homeDesc.textContent = "Verified Kaggle evaluation metrics across " + clfKeys.length + " classification and " + regKeys.length + " regression models.";
+
+  var subEl = document.getElementById("bm-subtitle");
+  if (subEl) {
+    subEl.textContent = "Executed Kaggle notebook evaluation on " + totalRec.toLocaleString() + " records (" + trainRec.toLocaleString() + " training / " + testRec.toLocaleString() + " test split) comparing " + clfKeys.length + " classification and " + regKeys.length + " regression algorithms across " + nFeat + " features.";
+  }
+
+  var bestClfEl = document.getElementById("bm-best-clf-name");
+  var rfAccEl = document.getElementById("bm-rf-acc");
+  var rfF1El = document.getElementById("bm-rf-f1");
+  if (bestClfEl) bestClfEl.textContent = bestClfName;
+  if (rfAccEl && bestClf.accuracy !== undefined) {
+    var accPct = Number((bestClf.accuracy * 100).toFixed(2));
+    if (animate) animateNumber(rfAccEl, 80.0, accPct, 800, 2, "%");
+    else rfAccEl.textContent = accPct.toFixed(2) + "%";
+  }
+  if (rfF1El && bestClf.f1_score !== undefined) {
+    rfF1El.textContent = "Weighted F1: " + Number(bestClf.f1_score).toFixed(4) + " | Precision: " + Number(bestClf.precision || 0).toFixed(4);
+  }
+
+  var bestRegEl = document.getElementById("bm-best-reg-name");
+  var rfR2El = document.getElementById("bm-rf-r2");
+  var rfMaeEl = document.getElementById("bm-rf-mae-rmse");
+  if (bestRegEl) bestRegEl.textContent = bestRegName;
+  if (rfR2El && bestReg.r2_score !== undefined) {
+    var r2Val = Number(bestReg.r2_score);
+    if (animate) animateNumber(rfR2El, 0.7000, r2Val, 800, 4, "");
+    else rfR2El.textContent = r2Val.toFixed(4);
+  }
+  if (rfMaeEl && bestReg.mae !== undefined) {
+    rfMaeEl.textContent = "MAE: " + Number(bestReg.mae).toFixed(4) + " | RMSE: " + Number(bestReg.rmse || 0).toFixed(4);
+  }
+
+  var baseClfEl = document.getElementById("bm-base-clf-name");
+  var baseAccEl = document.getElementById("bm-base-acc");
+  var basePrecEl = document.getElementById("bm-base-prec");
+  if (baseClfEl) baseClfEl.textContent = secondaryClfName;
+  if (baseAccEl && secondaryClf.accuracy !== undefined) baseAccEl.textContent = (secondaryClf.accuracy * 100).toFixed(2) + "%";
+  if (basePrecEl && secondaryClf.precision !== undefined) basePrecEl.textContent = "Precision: " + Number(secondaryClf.precision).toFixed(4) + " | F1: " + Number(secondaryClf.f1_score || 0).toFixed(4);
+
+  var totRecEl = document.getElementById("bm-total-records");
+  var featCntEl = document.getElementById("bm-feature-count");
+  if (totRecEl) totRecEl.textContent = totalRec.toLocaleString();
+  if (featCntEl) featCntEl.textContent = nFeat + " Physical Features (" + testRec.toLocaleString() + " Test Samples)";
+
+  var clfTbody = document.getElementById("eval-class-tbody");
+  if (clfTbody) {
+    var cHtml = "";
+    clfKeys.forEach(function(name) {
+      var m = clfMap[name];
+      var isBest = name === bestClfName;
+      cHtml += "<tr>";
+      cHtml += "<td>" + (isBest ? "<b>" + escHtml(name) + "</b>" : escHtml(name)) + "</td>";
+      cHtml += '<td class="mono">' + (m.accuracy * 100).toFixed(2) + "%</td>";
+      cHtml += '<td class="mono">' + (m.precision * 100).toFixed(2) + "%</td>";
+      cHtml += '<td class="mono">' + (m.recall * 100).toFixed(2) + "%</td>";
+      cHtml += '<td class="mono">' + (m.f1_score * 100).toFixed(2) + "%</td>";
+      cHtml += '<td><span class="badge' + (isBest ? " best" : "") + '">' + escHtml(m.status || (isBest ? "Best Overall" : "Evaluated")) + "</span></td>";
+      cHtml += "</tr>";
+    });
+    clfTbody.innerHTML = cHtml;
+  }
+
+  var cmTitle = document.getElementById("bm-cm-title");
+  if (cmTitle) cmTitle.textContent = bestClfName + " Confusion Matrix (N = " + testRec.toLocaleString() + " Test Samples)";
+  var cmGrid = document.getElementById("eval-cm-grid");
+  var cmMatrix = bestClf.confusion_matrix;
+  if (cmGrid && Array.isArray(cmMatrix)) {
+    var shortLabels = ["Low", "Mod", "Hi", "Sev"];
+    var cmHtml = "";
+    for (var r = 0; r < cmMatrix.length; r++) {
+      for (var c = 0; c < cmMatrix[r].length; c++) {
+        var cls = r === c ? "cm-cell cm-diag" : "cm-cell cm-off";
+        var fw = r === c ? ";font-weight:400" : "";
+        cmHtml += '<div class="' + cls + '">' + escHtml(cmMatrix[r][c]) + '<span style="font-size:9px' + fw + '">' + escHtml(shortLabels[c] || "") + "</span></div>";
+      }
+    }
+    cmGrid.innerHTML = cmHtml;
+  }
+
+  var regTbody = document.getElementById("eval-reg-tbody");
+  if (regTbody) {
+    var rHtml = "";
+    regKeys.forEach(function(name) {
+      var m = regMap[name];
+      var isBest = name === bestRegName;
+      rHtml += "<tr>";
+      rHtml += "<td>" + (isBest ? "<b>" + escHtml(name) + "</b>" : escHtml(name)) + "</td>";
+      rHtml += '<td class="mono">' + (isBest ? "<b>" + Number(m.r2_score).toFixed(4) + "</b>" : Number(m.r2_score).toFixed(4)) + "</td>";
+      rHtml += '<td class="mono">' + Number(m.mae).toFixed(4) + "</td>";
+      rHtml += '<td class="mono">' + Number(m.mse).toFixed(4) + "</td>";
+      rHtml += '<td class="mono">' + Number(m.rmse).toFixed(4) + "</td>";
+      rHtml += '<td><span class="badge' + (isBest ? " best" : "") + '">' + escHtml(m.status || (isBest ? "Best Regressor" : "Evaluated")) + "</span></td>";
+      rHtml += "</tr>";
+    });
+    regTbody.innerHTML = rHtml;
+  }
+
+  var takeawayEl = document.getElementById("bm-takeaway-text");
+  if (takeawayEl && bestClf.accuracy !== undefined && bestReg.r2_score !== undefined) {
+    takeawayEl.textContent = "Verified Kaggle evaluation: " + bestClfName + " achieves " + (bestClf.accuracy * 100).toFixed(2) + "% classification accuracy (Weighted F1: " + Number(bestClf.f1_score).toFixed(4) + ") and " + bestRegName + " achieves " + Number(bestReg.r2_score).toFixed(4) + " R² score (MAE: " + Number(bestReg.mae).toFixed(4) + ", RMSE: " + Number(bestReg.rmse).toFixed(4) + ") across all " + nFeat + " physical agro-climatic features.";
+  }
+}
+
+function loadModelBenchmarks(animate) {
+  if (cachedEvaluationData) {
+    renderModelBenchmarks(cachedEvaluationData, animate);
+    return;
+  }
+  fetch("/api/models/evaluation")
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      cachedEvaluationData = data;
+      renderModelBenchmarks(data, animate);
+    })
+    .catch(function(err) {
+      console.warn("Could not load evaluation benchmarks:", err);
+    });
+}
+
 window.editFarmerRecord = editFarmerRecord;
 window.deleteFarmerRecord = deleteFarmerRecord;
 window.deletePredictionRecord = deletePredictionRecord;
@@ -2612,3 +2760,4 @@ setTimeout(updateNavIndicator, 80);
 loadPriorityData();
 loadClustersData();
 loadFarmersData();
+loadModelBenchmarks(false);

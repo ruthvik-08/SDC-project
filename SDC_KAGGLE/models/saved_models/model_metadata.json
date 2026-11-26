@@ -1,6 +1,6 @@
 {
   "project": "KrishiJal Crop Stress & Irrigation Priority Decision Support System",
-  "version": "2.3.0",
+  "source_notebook": "https://www.kaggle.com/code/ruthvikpasupunuri/crop-stress-and-irrigation-priority-decision-suppo",
   "feature_names": [
     "temperature",
     "temp_max",
@@ -19,31 +19,42 @@
   ],
   "n_features": 14,
   "classifier": {
-    "model_name": "ImbPipeline(StandardScaler + SMOTE + RFE + RandomForestClassifier)",
-    "selected_rfe_features": [
-      "temperature",
-      "temp_min",
-      "humidity",
-      "effective_soil_wetness",
-      "ndvi"
-    ],
+    "model_name": "RandomForestClassifier",
     "best_params": {
-      "smote__sampling_strategy": "all",
-      "smote__k_neighbors": 5,
-      "rfe__n_features_to_select": 5,
-      "clf__n_estimators": 150,
-      "clf__min_samples_split": 2,
-      "clf__min_samples_leaf": 1,
-      "clf__max_features": "sqrt",
-      "clf__max_depth": 20,
-      "clf__criterion": "entropy",
-      "clf__class_weight": "balanced_subsample"
+      "max_depth": 12,
+      "n_estimators": 100,
+      "random_state": 42
     },
-    "cv_macro_f1": 0.9894,
-    "test_accuracy": 0.9970,
-    "test_weighted_f1": 0.9970,
-    "test_macro_f1": 0.9932,
-    "test_roc_auc": 1.0000,
+    "test_accuracy": 0.9955,
+    "test_precision": 0.9956,
+    "test_recall": 0.9955,
+    "test_f1_score": 0.9955,
+    "confusion_matrix": [
+      [
+        995,
+        2,
+        0,
+        0
+      ],
+      [
+        0,
+        180,
+        2,
+        0
+      ],
+      [
+        0,
+        0,
+        113,
+        0
+      ],
+      [
+        0,
+        0,
+        2,
+        37
+      ]
+    ],
     "classes": [
       "Low",
       "Moderate",
@@ -55,10 +66,12 @@
     "model_name": "RandomForestRegressor",
     "best_params": {
       "max_depth": 12,
-      "n_estimators": 100
+      "n_estimators": 100,
+      "random_state": 42
     },
-    "test_r2": 0.995235,
-    "test_mae": 0.453024,
-    "test_rmse": 0.954558
+    "test_r2": 0.9952,
+    "test_mae": 0.4538,
+    "test_mse": 0.9127,
+    "test_rmse": 0.9554
   }
 }
