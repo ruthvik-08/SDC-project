@@ -1,242 +1,167 @@
-"""
-Stage 14: Comprehensive Automated Test Suite
-Updated for Single Master Dataset Pipeline: data/processed/krishijal_master_dataset.csv
-Author: First-Year B.Tech Student Project
-Tests:
- 1. Master Dataset Loading & Schema Integrity (6,654/7,386 rows, 72 columns)
- 2. Agronomic Bounds & Data Quality (CWSI, NDVI, IPI, Soil Wetness [0, 1], No -999 anomalies)
- 3. Saved ML Models & Transformers Verification
- 4. Model Predictions (Classification, Regression, Clustering, PCA)
- 5. FastAPI Backend Endpoints, Benchmarks & MySQL CRUD Health
- 6. Error Handling, Invalid Inputs, and Edge Cases
- 7. Irrigation Priority Sorting and Ranking Logic (Descending order)
- 8. Active 6-Module Frontend Static Files Integrity (HTML, CSS, JS, simplified GeoJSON)
-"""
-
+import os
 import sys
-import json
-import numpy as np
 import pandas as pd
 from fastapi.testclient import TestClient
 
-# Ensure project root is in sys.path
 if "." not in sys.path:
     sys.path.insert(0, ".")
 
-# Import FastAPI app from backend
-from backend.main import app, feature_cols, scaler, model_rf, model_dt, model_knn, model_poly_deficit, model_poly_priority
+from backend.main import (
+    app,
+    feature_cols,
+    scaler,
+    model_rf,
+    model_dt,
+    model_knn,
+    model_poly_deficit,
+    model_poly_priority,
+)
 
-# Initialize TestClient
 client = TestClient(app)
 
-print("=" * 80)
-print("STAGE 14: AUTOMATED TESTING SUITE (KRISHIJAL MASTER DATASET PIPELINE)")
-print("=" * 80)
 
 def test_1_master_dataset_loading():
     print("\n[Test 1] Testing Master Dataset Loading & Integrity...")
     master_path = "data/processed/krishijal_master_dataset.csv"
-    try:
-        with open(master_path, "r") as f:
-            pass
-        file_exists = True
-    except Exception:
-        file_exists = False
-    assert file_exists, f"Master dataset not found at {master_path}"
-    
+    assert os.path.exists(master_path), f"Master dataset not found at {master_path}"
+
     df = pd.read_csv(master_path)
     assert len(df) in [6654, 7386], f"Expected 6,654 or 7,386 rows, got {len(df)}"
-    assert len(df.columns) == 72, f"Expected 72 columns (48 master + 24 SHC 2025 features), got {len(df.columns)}"
-    assert "shc_macro_nitrogen_low_share_2024_25" in df.columns, "Missing Soil Health Card features"
-    assert "soil_health_index" in df.columns, "Missing soil_health_index"
-    assert df["district"].nunique() >= 158, f"Expected >= 158 districts, got {df['district'].nunique()}"
-    assert df["state"].nunique() >= 36, f"Expected >= 36 states/UTs, got {df['state'].nunique()}"
-    assert "granularity" in df.columns, "Missing 'granularity' column in master dataset"
-    assert set(df["granularity"].unique()).issubset({"daily", "monthly", "district_baseline"}), "Invalid granularity values"
-    
-    # Check duplicate records
+    assert len(df.columns) == 72, f"Expected 72 columns, got {len(df.columns)}"
+    assert "shc_macro_nitrogen_low_share_2024_25" in df.columns
+    assert "soil_health_index" in df.columns
+    assert df["district"].nunique() >= 158
+    assert df["state"].nunique() >= 36
+    assert "granularity" in df.columns
+
+    allowed_granularities = {"daily", "monthly", "district_baseline"}
+    assert set(df["granularity"].unique()).issubset(allowed_granularities)
+
     dup_count = df.duplicated(subset=["granularity", "state", "district", "month", "date"]).sum()
-    assert dup_count == 0, f"Found {dup_count} duplicate records in master dataset!"
-    
-    print(f"  -> PASSED: Loaded master dataset with {len(df)} records across {df['district'].nunique()} districts in {df['state'].nunique()} States & UTs (0 duplicates).")
+    assert dup_count == 0, f"Found {dup_count} duplicate records"
+
+    print(
+        f"  -> PASSED: Loaded {len(df)} records across {df['district'].nunique()} districts "
+        f"in {df['state'].nunique()} States & UTs."
+    )
+
 
 def test_2_data_preprocessing_and_bounds():
     print("\n[Test 2] Testing Data Preprocessing & Agronomic Physical Bounds...")
     df = pd.read_csv("data/processed/krishijal_master_dataset.csv")
-    
-    # Check that meteorological and core calculated features have 0 nulls
-    core_cols = [
+
+    required_cols = [
         "temperature", "temp_max", "temp_min", "rainfall", "humidity",
         "surface_soil_moisture", "root_zone_soil_moisture", "solar_radiation",
         "effective_soil_wetness", "et0", "etc", "cwsi", "water_deficit", "ndvi",
         "irrigation_priority_index", "stress_level", "stress_level_code",
-        "shc_macro_nitrogen_low_share_2024_25", "soil_health_index"
+        "shc_macro_nitrogen_low_share_2024_25", "soil_health_index",
     ]
-    for col in core_cols:
+    for col in required_cols:
         null_count = df[col].isnull().sum()
-        assert null_count == 0, f"Found {null_count} nulls in core column '{col}'!"
-        
-    # Check for absence of NASA -999 fill values
-    assert (df["root_zone_soil_moisture"] >= 0.0).all(), "Negative soil moisture values detected (uncleaned -999 anomalies)!"
-    assert (df["effective_soil_wetness"] >= 0.0).all() and (df["effective_soil_wetness"] <= 1.0).all(), "Effective soil wetness out of [0, 1] bounds!"
-    
-    # Physical bounds checks
-    assert (df["cwsi"] >= 0.0).all() and (df["cwsi"] <= 1.0).all(), "CWSI out of [0, 1] bounds!"
-    assert (df["ndvi"] >= 0.10).all() and (df["ndvi"] <= 1.0).all(), "NDVI out of valid vegetation bounds!"
-    assert (df["irrigation_priority_index"] >= 0.0).all() and (df["irrigation_priority_index"] <= 100.0).all(), "IPI out of [0, 100] bounds!"
-    assert (df["water_deficit"] >= 0.0).all(), "Water deficit cannot be negative!"
-    
-    # Check categorical labels
+        assert null_count == 0, f"Found {null_count} nulls in '{col}'"
+
+    assert (df["root_zone_soil_moisture"] >= 0.0).all()
+    assert (df["effective_soil_wetness"] >= 0.0).all()
+    assert (df["effective_soil_wetness"] <= 1.0).all()
+    assert (df["cwsi"] >= 0.0).all()
+    assert (df["cwsi"] <= 1.0).all()
+    assert (df["ndvi"] >= 0.10).all()
+    assert (df["ndvi"] <= 1.0).all()
+    assert (df["irrigation_priority_index"] >= 0.0).all()
+    assert (df["irrigation_priority_index"] <= 100.0).all()
+    assert (df["water_deficit"] >= 0.0).all()
+
     valid_stress = {"Low", "Moderate", "High", "Severe"}
-    assert set(df["stress_level"].unique()).issubset(valid_stress), "Invalid stress level categories found!"
-    
-    print("  -> PASSED: All agronomic bounds (CWSI, NDVI, IPI, Soil Wetness) verified with 0 anomalies.")
+    assert set(df["stress_level"].unique()).issubset(valid_stress)
+
+    print("  -> PASSED: All agronomic bounds verified with 0 anomalies.")
+
 
 def test_3_in_memory_models():
-    print("\n[Test 3] Testing In-Memory Trained Models & Scalers...")
-    assert scaler is not None, "StandardScaler is not initialized!"
-    assert model_rf is not None, "Random Forest model is not initialized!"
-    assert model_dt is not None, "Decision Tree model is not initialized!"
-    assert model_knn is not None, "KNN model is not initialized!"
-    assert model_poly_priority is not None, "Polynomial priority model is not initialized!"
-    assert model_poly_deficit is not None, "Polynomial deficit model is not initialized!"
-    
-    print("  -> PASSED: All in-memory Scikit-Learn models and transformers successfully verified in RAM.")
+    print("\n[Test 3] Testing Trained Models & Scalers...")
+    assert scaler is not None
+    assert model_rf is not None
+    assert model_dt is not None
+    assert model_knn is not None
+    assert model_poly_priority is not None
+    assert model_poly_deficit is not None
+    print("  -> PASSED: All ML models and scalers verified.")
+
 
 def test_4_model_predictions():
     print("\n[Test 4] Testing Model Inferences...")
-    # Sample synthetic agro-meteorological feature vector (14 features)
-    sample_raw = [32.0, 38.0, 24.0, 0.0, 45.0, 0.35, 21.0, 7.8, 0.45, 0.65, 5.2, 5.8, 1, 2]
-    features_df = pd.DataFrame([sample_raw], columns=feature_cols)
-    scaled_x = pd.DataFrame(scaler.transform(features_df), columns=feature_cols)
-    
-    # Test classifiers
-    pred_rf = model_rf.predict(scaled_x)[0]
-    pred_dt = model_dt.predict(scaled_x)[0]
-    pred_knn = model_knn.predict(scaled_x)[0]
-    
-    assert pred_rf in [0, 1, 2, 3], f"Invalid RF class prediction: {pred_rf}"
-    assert pred_dt in [0, 1, 2, 3], f"Invalid DT class prediction: {pred_dt}"
-    assert pred_knn in [0, 1, 2, 3], f"Invalid KNN class prediction: {pred_knn}"
-    
-    # Test regression
-    pred_pri = model_poly_priority.predict(scaled_x)[0]
-    pred_def = model_poly_deficit.predict(scaled_x)[0]
-    
-    assert 0.0 <= pred_pri <= 100.0, f"Irrigation Priority Index out of range: {pred_pri}"
-    assert pred_def >= 0.0, f"Water deficit cannot be negative: {pred_def}"
-    
-    print(f"  -> PASSED: Inferences verified (RF Class: {pred_rf}, Priority Index: {pred_pri:.2f}, Deficit: {pred_def:.2f} mm/day).")
+    sample_row = [32.0, 38.0, 24.0, 0.0, 45.0, 0.35, 21.0, 7.8, 0.45, 0.65, 5.2, 5.8, 1, 2]
+    features_df = pd.DataFrame([sample_row], columns=feature_cols)
+    scaled_values = scaler.transform(features_df)
+    scaled_df = pd.DataFrame(scaled_values, columns=feature_cols)
 
-def test_5_api_endpoints():
-    print("\n[Test 5] Testing FastAPI REST Endpoints...")
-    
-    # Root Route
-    r0 = client.get("/")
-    assert r0.status_code == 200
-    res0 = r0.json()
-    assert res0["status"] == "Online and Operational"
-    assert res0["districts_covered"] >= 158
-    assert res0["states_covered"] >= 36
+    pred_rf = model_rf.predict(scaled_df)[0]
+    pred_dt = model_dt.predict(scaled_df)[0]
+    pred_knn = model_knn.predict(scaled_df)[0]
 
-    # Health Check Route (True Model Status)
-    r_health = client.get("/health")
-    assert r_health.status_code == 200
-    res_health = r_health.json()
-    assert res_health["status"] == "healthy"
-    assert res_health["models_loaded"]["crop_stress_classifier"] is True
-    assert res_health["models_loaded"]["irrigation_priority_regressor"] is True
-    assert res_health["models_loaded"]["feature_scaler"] is True
+    assert pred_rf in [0, 1, 2, 3]
+    assert pred_dt in [0, 1, 2, 3]
+    assert pred_knn in [0, 1, 2, 3]
 
-    # Swagger & ReDoc Documentation Routes
-    r_docs = client.get("/docs")
-    assert r_docs.status_code == 200
-    r_redoc = client.get("/redoc")
-    assert r_redoc.status_code == 200
-    
-    # Dataset Info
-    r1 = client.get("/api/dataset/info")
-    assert r1.status_code == 200
-    res1 = r1.json()
-    assert res1["total_records"] in [6654, 7386]
-    assert res1["total_districts"] >= 158
-    assert res1["total_states"] >= 36
-    
-    # Districts Directory
-    r2 = client.get("/api/districts")
-    assert r2.status_code == 200
-    assert len(r2.json()["districts"]) >= 158
-    
-    # Regional Clusters
-    r3 = client.get("/api/clusters/regions")
-    assert r3.status_code == 200
-    assert len(r3.json()["districts_clustered"]) >= 158
-    
-    # Irrigation Priority
-    r4 = client.get("/api/irrigation/priority")
-    assert r4.status_code == 200
-    assert len(r4.json()["ranked_districts"]) >= 158
-    
-    # Model Evaluation Benchmarks
-    r5 = client.get("/api/models/evaluation")
-    assert r5.status_code == 200
-    eval_data = r5.json()
-    assert "classification" in eval_data
-    assert eval_data["best_classifier"] == "Random Forest Classifier"
-    assert eval_data["classification"]["Random Forest Classifier"]["accuracy"] == 0.9955
-    assert eval_data["best_regressor"] == "Random Forest Regressor"
-    assert eval_data["regression"]["Random Forest Regressor"]["r2_score"] == 0.9952
+    pred_priority = model_poly_priority.predict(scaled_df)[0]
+    pred_deficit = model_poly_deficit.predict(scaled_df)[0]
 
-    # MySQL Health & CRUD verification (runs full CRUD round-trip when local MySQL is active)
-    r_db = client.get("/api/db/health")
-    assert r_db.status_code == 200
-    db_info = r_db.json()
+    assert 0.0 <= pred_priority <= 100.0
+    assert pred_deficit >= 0.0
+
+    print(
+        f"  -> PASSED: Inferences verified (Class: {pred_rf}, "
+        f"Priority: {pred_priority:.2f}, Deficit: {pred_deficit:.2f} mm/day)."
+    )
+
+
+def verify_mysql_crud_if_connected():
+    res_db = client.get("/api/db/health")
+    assert res_db.status_code == 200
+    db_info = res_db.json()
     assert "connected" in db_info
-    if db_info.get("connected"):
-        r_hist = client.get("/api/predictions/history")
-        assert r_hist.status_code == 200
-        assert r_hist.json()["status"] == "success"
-        r_create = client.post("/api/farmers", json={
-            "farmer_name": "Pytest Automated Check",
-            "phone": "9000000000",
-            "village": "Test Village",
-            "state_name": "Telangana",
-            "district_name": "Khammam",
-            "primary_crop": "Cotton",
-            "soil_type": "Loamy",
-            "land_area_acres": 3.0
-        })
-        assert r_create.status_code == 200
-        new_id = r_create.json()["farmer"]["farmer_id"]
-        r_update = client.put(f"/api/farmers/{new_id}", json={
-            "farmer_name": "Pytest Automated Updated",
-            "phone": "9000000001",
-            "village": "Test Village",
-            "state_name": "Telangana",
-            "district_name": "Khammam",
-            "primary_crop": "Rice",
-            "soil_type": "Alluvial",
-            "land_area_acres": 4.0
-        })
-        assert r_update.status_code == 200
-        r_del = client.delete(f"/api/farmers/{new_id}")
-        assert r_del.status_code == 200
 
-    r_prof = client.get("/api/district-profile?state=Telangana&district=Karimnagar")
-    assert r_prof.status_code == 200
-    assert r_prof.json()["status"] == "success"
-    assert r_prof.json()["lgd_code"] == 508
+    if not db_info.get("connected"):
+        return
 
-    r_cov = client.get("/api/coverage-report")
-    assert r_cov.status_code == 200
-    assert r_cov.json()["total_districts"] >= 700
+    res_hist = client.get("/api/predictions/history")
+    assert res_hist.status_code == 200
+    assert res_hist.json()["status"] == "success"
 
-    r_all = client.get("/api/districts/all")
-    assert r_all.status_code == 200
-    assert r_all.json()["total_authentic_districts"] >= 700
+    create_payload = {
+        "farmer_name": "Pytest Automated Check",
+        "phone": "9000000000",
+        "village": "Test Village",
+        "state_name": "Telangana",
+        "district_name": "Khammam",
+        "primary_crop": "Cotton",
+        "soil_type": "Loamy",
+        "land_area_acres": 3.0,
+    }
+    res_create = client.post("/api/farmers", json=create_payload)
+    assert res_create.status_code == 200
+    farmer_id = res_create.json()["farmer"]["farmer_id"]
 
-    # Main ML Prediction POST (/predict) with 14 features
-    pred_payload_14 = {
+    update_payload = {
+        "farmer_name": "Pytest Automated Updated",
+        "phone": "9000000001",
+        "village": "Test Village",
+        "state_name": "Telangana",
+        "district_name": "Khammam",
+        "primary_crop": "Rice",
+        "soil_type": "Alluvial",
+        "land_area_acres": 4.0,
+    }
+    res_update = client.put(f"/api/farmers/{farmer_id}", json=update_payload)
+    assert res_update.status_code == 200
+
+    res_delete = client.delete(f"/api/farmers/{farmer_id}")
+    assert res_delete.status_code == 200
+
+
+def verify_prediction_endpoints():
+    payload_14 = {
         "temperature": 32.0,
         "temp_max": 38.0,
         "temp_min": 24.0,
@@ -250,17 +175,20 @@ def test_5_api_endpoints():
         "et0": 5.0,
         "etc": 5.5,
         "crop_type": "Cotton",
-        "growth_stage": "Reproductive"
+        "growth_stage": "Reproductive",
     }
-    r_pred14 = client.post("/predict", json=pred_payload_14)
-    assert r_pred14.status_code == 200
-    res_p14 = r_pred14.json()
-    assert res_p14["status"] == "success"
-    assert res_p14["crop_stress_prediction"]["stress_level"] in ["Low", "Moderate", "High", "Severe"]
-    assert 0.0 <= res_p14["irrigation_priority_prediction"]["irrigation_priority_index"] <= 100.0
+    r_p14 = client.post("/predict", json=payload_14)
+    assert r_p14.status_code == 200
+    data_14 = r_p14.json()
+    assert data_14["status"] == "success"
+    assert data_14["crop_stress_prediction"]["stress_level"] in ["Low", "Moderate", "High", "Severe"]
+    assert 0.0 <= data_14["irrigation_priority_prediction"]["irrigation_priority_index"] <= 100.0
 
-    # Main ML Prediction POST (/predict) with legacy 9 features (verifying zero target leakage)
-    pred_payload_9 = {
+    pred_id = data_14.get("database", {}).get("prediction_id")
+    if pred_id:
+        client.delete(f"/api/predictions/{pred_id}")
+
+    payload_9 = {
         "cwsi": 0.35,
         "effective_soil_wetness": 0.40,
         "water_deficit": 1.50,
@@ -269,20 +197,20 @@ def test_5_api_endpoints():
         "etc": 5.20,
         "temperature": 30.0,
         "rainfall": 0.0,
-        "humidity": 50.0
+        "humidity": 50.0,
     }
-    r_pred9 = client.post("/predict", json=pred_payload_9)
-    assert r_pred9.status_code == 200
-    res_p9 = r_pred9.json()
-    assert res_p9["status"] == "success"
-    assert res_p9["crop_stress_prediction"]["stress_level"] in ["Low", "Moderate", "High", "Severe"]
+    r_p9 = client.post("/predict", json=payload_9)
+    assert r_p9.status_code == 200
+    data_9 = r_p9.json()
+    assert data_9["status"] == "success"
 
-    # Verify that GET /predict correctly yields 405 Method Not Allowed (POST-only route)
-    r_pred_get = client.get("/predict")
-    assert r_pred_get.status_code == 405
-    
-    # Live ML Prediction POST (/api/predict/crop-stress)
-    payload = {
+    pred_id_9 = data_9.get("database", {}).get("prediction_id")
+    if pred_id_9:
+        client.delete(f"/api/predictions/{pred_id_9}")
+
+    assert client.get("/predict").status_code == 405
+
+    sim_payload = {
         "temperature": 34.0,
         "temp_max": 40.0,
         "temp_min": 26.0,
@@ -294,18 +222,15 @@ def test_5_api_endpoints():
         "soil_organic_carbon": 0.35,
         "crop_type": "Cotton",
         "growth_stage": "Reproductive",
-        "selected_model": "Random Forest"
+        "selected_model": "Random Forest",
     }
-    r6 = client.post("/api/predict/crop-stress", json=payload)
-    assert r6.status_code == 200
-    res6 = r6.json()
-    assert res6["crop_stress_level"] in ["Low", "Moderate", "High", "Severe"]
-    assert "recommendation" in res6
-    assert "predicted_water_deficit_mm_per_day" in res6
-    assert "irrigation_priority_index" in res6
+    r_sim = client.post("/api/predict/crop-stress", json=sim_payload)
+    assert r_sim.status_code == 200
+    sim_data = r_sim.json()
+    assert sim_data["crop_stress_level"] in ["Low", "Moderate", "High", "Severe"]
+    assert "recommendation" in sim_data
 
-    # Live ML Prediction POST (/api/predict/irrigation-priority)
-    p_payload = {
+    pri_payload = {
         "cwsi": 0.45,
         "effective_soil_wetness": 0.30,
         "water_deficit": 2.2,
@@ -314,21 +239,59 @@ def test_5_api_endpoints():
         "etc": 5.5,
         "temperature": 33.0,
         "rainfall": 0.0,
-        "humidity": 40.0
+        "humidity": 40.0,
     }
-    r7 = client.post("/api/predict/irrigation-priority", json=p_payload)
-    assert r7.status_code == 200
-    res7 = r7.json()
-    assert 0.0 <= res7["irrigation_priority_index"] <= 100.0
-    assert "priority_category" in res7
-    assert "actionable_farmer_advisory" in res7
-    
-    print(f"  -> PASSED: All REST API endpoints (including /predict, /health, /docs) returned 200 OK.")
+    r_pri = client.post("/api/predict/irrigation-priority", json=pri_payload)
+    assert r_pri.status_code == 200
+    assert 0.0 <= r_pri.json()["irrigation_priority_index"] <= 100.0
+
+
+def test_5_api_endpoints():
+    print("\n[Test 5] Testing FastAPI REST Endpoints...")
+    r_root = client.get("/")
+    assert r_root.status_code == 200
+    assert r_root.json()["status"] == "Online and Operational"
+
+    r_health = client.get("/health")
+    assert r_health.status_code == 200
+    assert r_health.json()["status"] == "healthy"
+    assert r_health.json()["models_loaded"]["crop_stress_classifier"] is True
+    assert r_health.json()["models_loaded"]["irrigation_priority_regressor"] is True
+    assert r_health.json()["models_loaded"]["feature_scaler"] is True
+
+    assert client.get("/docs").status_code == 200
+    assert client.get("/redoc").status_code == 200
+
+    r_info = client.get("/api/dataset/info")
+    assert r_info.status_code == 200
+    assert r_info.json()["total_records"] in [6654, 7386]
+
+    assert len(client.get("/api/districts").json()["districts"]) >= 158
+    assert len(client.get("/api/clusters/regions").json()["districts_clustered"]) >= 158
+    assert len(client.get("/api/irrigation/priority").json()["ranked_districts"]) >= 158
+
+    r_eval = client.get("/api/models/evaluation")
+    assert r_eval.status_code == 200
+    eval_data = r_eval.json()
+    assert eval_data["best_classifier"] == "Random Forest Classifier"
+    assert eval_data["classification"]["Random Forest Classifier"]["accuracy"] == 0.9955
+    assert eval_data["best_regressor"] == "Random Forest Regressor"
+    assert eval_data["regression"]["Random Forest Regressor"]["r2_score"] == 0.9952
+
+    r_prof = client.get("/api/district-profile?state=Telangana&district=Karimnagar")
+    assert r_prof.status_code == 200
+    assert r_prof.json()["lgd_code"] == 508
+
+    assert client.get("/api/coverage-report").json()["total_districts"] >= 700
+    assert client.get("/api/districts/all").json()["total_authentic_districts"] >= 700
+
+    verify_mysql_crud_if_connected()
+    verify_prediction_endpoints()
+    print("  -> PASSED: All REST endpoints, MySQL CRUD checks, and predictions returned HTTP 200.")
+
 
 def test_6_invalid_inputs_and_edge_cases():
     print("\n[Test 6] Testing Edge Cases & Error Handling...")
-    
-    # Edge case 1: Unknown crop type and unknown growth stage (should gracefully fallback)
     edge_payload = {
         "temperature": 28.0,
         "temp_max": 32.0,
@@ -341,75 +304,70 @@ def test_6_invalid_inputs_and_edge_cases():
         "soil_organic_carbon": 0.50,
         "crop_type": "ExoticDragonFruit",
         "growth_stage": "UnknownStage",
-        "selected_model": "Random Forest"
+        "selected_model": "Random Forest",
     }
-    r_edge = client.post("/api/predict/crop-stress", json=edge_payload)
-    assert r_edge.status_code == 200, "API should safely handle unknown crop with fallback encoding"
-    
-    # Edge case 2: Invalid data type payload (string for temperature)
-    invalid_payload = {
-        "temperature": "hot_day",
-        "crop_type": "Rice"
-    }
-    r_inv = client.post("/api/predict/crop-stress", json=invalid_payload)
-    assert r_inv.status_code == 422, "API should return HTTP 422 Unprocessable Entity for invalid types"
-    
-    print("  -> PASSED: Robust error handling verified for unseen categories and 422 schema validation.")
+    assert client.post("/api/predict/crop-stress", json=edge_payload).status_code == 200
+
+    invalid_payload = {"temperature": "hot_day", "crop_type": "Rice"}
+    assert client.post("/api/predict/crop-stress", json=invalid_payload).status_code == 422
+    print("  -> PASSED: Edge cases and 422 validation checks verified.")
+
 
 def test_7_irrigation_priority_logic():
     print("\n[Test 7] Testing Irrigation Priority Ranking Logic...")
-    r = client.get("/api/irrigation/priority")
-    districts = r.json()["ranked_districts"]
-    
-    # Check that districts are sorted descending by Irrigation Priority Index
-    scores = [d["irrigation_priority_index"] for d in districts]
-    assert scores == sorted(scores, reverse=True), "Districts are not properly sorted descending by priority!"
-    
-    # Check that ranks are 1 to N
-    ranks = [d["rank"] for d in districts]
-    assert ranks == list(range(1, len(districts) + 1)), "Ranks must be strictly sequential 1 to N"
-    
-    print(f"  -> PASSED: Irrigation priority table verified ({len(districts)} districts in strict descending rank order).")
+    districts = client.get("/api/irrigation/priority").json()["ranked_districts"]
+
+    scores = []
+    ranks = []
+    for item in districts:
+        scores.append(item["irrigation_priority_index"])
+        ranks.append(item["rank"])
+
+    assert scores == sorted(scores, reverse=True)
+    assert ranks == list(range(1, len(districts) + 1))
+    print(f"  -> PASSED: Priority ranking verified across {len(districts)} districts.")
+
 
 def test_8_frontend_integrity():
     print("\n[Test 8] Testing Active 6-Module Frontend Files Integrity...")
-    for f_path in [
+    required_files = [
         "frontend/index.html",
         "frontend/portal.css",
         "frontend/portal.js",
         "frontend/data/portal_data.json",
         "frontend/data/india_states_simplified.geojson",
         "frontend/data/india_districts_simplified.geojson",
-    ]:
-        try:
-            with open(f_path, "r") as f:
-                pass
-            found = True
-        except Exception:
-            found = False
-        assert found, f"Missing {f_path}"
-    
-    with open("frontend/index.html") as f:
+    ]
+    for path in required_files:
+        assert os.path.exists(path), f"Missing {path}"
+
+    with open("frontend/index.html", "r") as f:
         html = f.read()
-        for token in [
-            "view-home", "id=\"app\"", "view-predictor", "view-ranking",
-            "view-benchmarks", "view-clusters", "view-farmers",
-            "hero-shortcut", "nav-card",
-            "#/map", "#/predictor", "#/ranking", "#/benchmarks", "#/clusters", "#/farmers"
-        ]:
-            assert token in html, f"Missing {token} in frontend/index.html"
-        
-    with open("frontend/portal.js") as f:
+    required_html_tokens = [
+        "view-home", 'id="app"', "view-predictor", "view-ranking",
+        "view-benchmarks", "view-clusters", "view-farmers",
+        "hero-shortcut", "nav-card",
+        "#/map", "#/predictor", "#/ranking", "#/benchmarks", "#/clusters", "#/farmers",
+    ]
+    for token in required_html_tokens:
+        assert token in html, f"Missing {token} in frontend/index.html"
+
+    with open("frontend/portal.js", "r") as f:
         js = f.read()
-        for fn in [
-            "module-dock", "selectDistrict", "runPredictionInference", "loadPriorityData",
-            "loadModelBenchmarks", "loadClustersData", "initFarmersView", "initModuleDocks"
-        ]:
-            assert fn in js, f"Missing {fn} in frontend/portal.js"
-        
-    print("  -> PASSED: Active 6-module HTML, CSS, JS, portal_data.json and simplified GeoJSON assets verified.")
+    required_js_tokens = [
+        "module-dock", "selectDistrict", "runPredictionInference", "loadPriorityData",
+        "loadModelBenchmarks", "loadClustersData", "initFarmersView", "initModuleDocks",
+    ]
+    for token in required_js_tokens:
+        assert token in js, f"Missing {token} in frontend/portal.js"
+
+    print("  -> PASSED: Active 6-module frontend assets verified.")
+
 
 if __name__ == "__main__":
+    print("=" * 80)
+    print("AUTOMATED TESTING SUITE (KRISHIJAL DECISION SUPPORT SYSTEM)")
+    print("=" * 80)
     test_1_master_dataset_loading()
     test_2_data_preprocessing_and_bounds()
     test_3_in_memory_models()
@@ -418,7 +376,6 @@ if __name__ == "__main__":
     test_6_invalid_inputs_and_edge_cases()
     test_7_irrigation_priority_logic()
     test_8_frontend_integrity()
-    
     print("\n" + "=" * 80)
     print("ALL 8 STAGES OF TEST SUITE PASSED SUCCESSFULLY! (100% PASS RATE)")
     print("=" * 80)

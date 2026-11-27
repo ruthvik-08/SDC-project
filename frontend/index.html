@@ -10,7 +10,6 @@
 </head>
 <body>
 
-  <!-- Top Sticky Navigation Bar with Sliding Indicator -->
   <nav class="top" aria-label="Primary">
     <b>Krishi<span>Jal</span></b>
     <span class="sp"></span>
@@ -26,11 +25,8 @@
     </div>
   </nav>
 
-  <!-- ======================================================== -->
-  <!-- VIEW 0: HOME LANDING PAGE WITH 4 VISUAL THUMBNAIL CARDS  -->
-  <!-- ======================================================== -->
   <main id="view-home" class="subview on">
-    <!-- Hero Header -->
+
     <section class="hero">
       <div class="in">
         <span class="tag">AI Decision Support System</span>
@@ -47,14 +43,13 @@
       </div>
     </section>
 
-    <!-- Thematic Portals Section (6 3D Tilt & Genie Thumbnail Cards) -->
     <section class="sec" id="thematic-portals">
       <span class="tag">System Modules</span>
       <h2>Agricultural Intelligence &amp; Decision Portals</h2>
       <p class="sec-desc">Explore verified empirical data, spatial boundaries, real-time ML forecasting, and farmer database records engineered for water conservation and precision irrigation.</p>
 
       <div class="cards-grid">
-        <!-- Thumbnail Card 1: Geospatial Map -->
+
         <a class="nav-card" href="#/map" data-target="#/map" id="card-geo">
           <div class="card-preview geo-preview">
             <svg class="mini-map-svg" viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="1.8">
@@ -73,7 +68,6 @@
           </div>
         </a>
 
-        <!-- Thumbnail Card 2: Predictor -->
         <a class="nav-card" href="#/predictor" data-target="#/predictor" id="card-predictor">
           <div class="card-preview pred-preview">
             <div class="mini-metric-grid">
@@ -103,7 +97,6 @@
           </div>
         </a>
 
-        <!-- Thumbnail Card 3: Irrigation Priority -->
         <a class="nav-card" href="#/ranking" data-target="#/ranking" id="card-rank">
           <div class="card-preview rank-preview">
             <div class="mini-rank-bars">
@@ -137,7 +130,6 @@
           </div>
         </a>
 
-        <!-- Thumbnail Card 4: ML Benchmarks -->
         <a class="nav-card" href="#/benchmarks" data-target="#/benchmarks" id="card-bench">
           <div class="card-preview ml-preview">
             <div class="mini-metric-grid">
@@ -167,7 +159,6 @@
           </div>
         </a>
 
-        <!-- Thumbnail Card 5: Agro-Climatic Clusters -->
         <a class="nav-card" href="#/clusters" data-target="#/clusters" id="card-clusters">
           <div class="card-preview cluster-preview">
             <div class="mini-clusters-grid">
@@ -185,7 +176,6 @@
           </div>
         </a>
 
-        <!-- Thumbnail Card 6: Farmer Records -->
         <a class="nav-card" href="#/farmers" data-target="#/farmers" id="card-farmers">
           <div class="card-preview farmer-preview">
             <div class="mini-rank-bars">
@@ -222,9 +212,6 @@
     </section>
   </main>
 
-  <!-- ======================================================== -->
-  <!-- VIEW 1: INTERACTIVE GEOSPATIAL MAP                       -->
-  <!-- ======================================================== -->
   <div id="app">
     <div class="rail">
       <button id="lyr" title="Layer Selection">&#9776;</button>
@@ -243,10 +230,8 @@
       <a href="#/" class="ibtn" title="Close Map and return to Home">&#10005;</a>
     </div>
 
-    <!-- Map Canvas Container -->
     <div id="map"></div>
 
-    <!-- Map Style Switcher (Top-Right Corner) -->
     <div class="map-switcher" id="map-switcher">
       <button type="button" class="ms-btn" data-style="satellite" id="btn-satellite">Satellite</button>
       <button type="button" class="ms-btn active" data-style="clean" id="btn-clean">Clean</button>
@@ -255,7 +240,6 @@
 
     <button class="lbtn" id="lb">Layers &rsaquo;</button>
 
-    <!-- Layer Selection Panel -->
     <div class="panel" id="panel">
       <h4>LAYER SELECTION</h4>
       <div class="row">
@@ -268,13 +252,9 @@
       </div>
     </div>
 
-    <!-- Dynamic District Info Drawer -->
     <div class="info" id="info"></div>
   </div>
 
-  <!-- ======================================================== -->
-  <!-- VIEW: PREDICTOR                                          -->
-  <!-- ======================================================== -->
   <section id="view-predictor" class="subview">
     <div class="view-header">
       <span class="tag">Decision Engine</span>
@@ -284,7 +264,7 @@
 
     <div class="sec" style="padding-top:0;">
       <div class="predictor-layout">
-        <!-- Left: Control Station Card -->
+
         <div class="pred-card">
           <div class="station-header">
             <h3>Agricultural Control Station</h3>
@@ -293,7 +273,7 @@
           <p class="sub">Select location across 732 districts and tune environmental indicators using rotary control knobs to execute real-time model predictions.</p>
 
           <form id="pred-form" onsubmit="return false;">
-            <!-- Optional Farmer Record for Auto-Saving to MySQL -->
+
             <div class="control-module" style="margin-bottom:16px;">
               <div class="module-header">
                 <span class="module-title">Farmer Record (Auto-Save to MySQL)</span>
@@ -321,7 +301,6 @@
               </div>
             </div>
 
-            <!-- Location & Crop Management -->
             <div class="form-grid-2">
               <div class="form-field">
                 <label for="pred-state">State / UT</label>
@@ -335,7 +314,6 @@
               </div>
             </div>
 
-            <!-- Verified District Baseline Profile Card -->
             <div class="district-profile-card" id="pred-district-profile">
               <div class="profile-header">
                 <span class="profile-title">Verified District Profile</span>
@@ -385,14 +363,13 @@
               </div>
             </div>
 
-            <!-- Rotary Station 1: Weather Parameters -->
             <div class="control-module">
               <div class="module-header">
                 <span class="module-title">Atmospheric &amp; Weather Station</span>
                 <span class="module-badge">3 Rotary Channels</span>
               </div>
               <div class="knobs-grid">
-                <!-- Knob 1: Temperature -->
+
                 <div class="knob-control" data-id="pred-temp" data-min="15" data-max="48" data-step="0.5" data-decimals="1" data-unit="°C">
                   <div class="knob-label">Air Temperature</div>
                   <div class="knob-dial-box" tabindex="0" role="slider" aria-label="Air Temperature" aria-valuemin="15" aria-valuemax="48" aria-valuenow="30.0">
@@ -423,7 +400,6 @@
                   </div>
                 </div>
 
-                <!-- Knob 2: Relative Humidity -->
                 <div class="knob-control" data-id="pred-hum" data-min="10" data-max="95" data-step="1" data-decimals="0" data-unit="%">
                   <div class="knob-label">Relative Humidity</div>
                   <div class="knob-dial-box" tabindex="0" role="slider" aria-label="Relative Humidity" aria-valuemin="10" aria-valuemax="95" aria-valuenow="50">
@@ -454,7 +430,6 @@
                   </div>
                 </div>
 
-                <!-- Knob 3: Daily Rainfall -->
                 <div class="knob-control" data-id="pred-rain" data-min="0" data-max="100" data-step="0.5" data-decimals="1" data-unit="mm">
                   <div class="knob-label">Daily Rainfall</div>
                   <div class="knob-dial-box" tabindex="0" role="slider" aria-label="Daily Rainfall" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0.0">
@@ -487,14 +462,13 @@
               </div>
             </div>
 
-            <!-- Rotary Station 2: Soil Moisture & Chemistry -->
             <div class="control-module">
               <div class="module-header">
                 <span class="module-title">Soil Moisture &amp; Chemistry Station</span>
                 <span class="module-badge">3 Rotary Channels</span>
               </div>
               <div class="knobs-grid">
-                <!-- Knob 4: Soil Moisture (Effective Soil Wetness) -->
+
                 <div class="knob-control" data-id="pred-soil" data-min="0.10" data-max="0.85" data-step="0.01" data-decimals="2" data-unit="Index">
                   <div class="knob-label">Soil Moisture (Wetness)</div>
                   <div class="knob-dial-box" tabindex="0" role="slider" aria-label="Soil Moisture" aria-valuemin="0.10" aria-valuemax="0.85" aria-valuenow="0.38">
@@ -525,7 +499,6 @@
                   </div>
                 </div>
 
-                <!-- Knob 5: Soil pH -->
                 <div class="knob-control" data-id="pred-ph" data-min="4.5" data-max="9.5" data-step="0.1" data-decimals="1" data-unit="pH">
                   <div class="knob-label">Soil pH Level</div>
                   <div class="knob-dial-box" tabindex="0" role="slider" aria-label="Soil pH" aria-valuemin="4.5" aria-valuemax="9.5" aria-valuenow="7.4">
@@ -556,7 +529,6 @@
                   </div>
                 </div>
 
-                <!-- Knob 6: Soil Organic Carbon -->
                 <div class="knob-control" data-id="pred-soc" data-min="0.10" data-max="1.50" data-step="0.05" data-decimals="2" data-unit="%">
                   <div class="knob-label">Soil Organic Carbon</div>
                   <div class="knob-dial-box" tabindex="0" role="slider" aria-label="Soil Organic Carbon" aria-valuemin="0.10" aria-valuemax="1.50" aria-valuenow="0.48">
@@ -589,7 +561,6 @@
               </div>
             </div>
 
-            <!-- Simulation Baseline Scenarios -->
             <div class="presets-section" style="margin-top:14px;">
               <span class="presets-title" style="font-size:11px;font-weight:700;color:var(--mute);text-transform:uppercase;letter-spacing:0.5px;">Simulation Baseline Scenarios:</span>
               <div class="preset-chips" style="margin-top:8px;">
@@ -606,7 +577,6 @@
           </form>
         </div>
 
-        <!-- Right: Results Card -->
         <div class="pred-card" id="pred-results-container">
           <div class="results-empty" id="results-empty">
             <div class="empty-icon-svg" style="margin-bottom:12px;opacity:0.75;">
@@ -630,7 +600,6 @@
               </div>
             </div>
 
-            <!-- Primary 4 KPI Boxes -->
             <div class="res-grid-kpi">
               <div class="res-kpi-box">
                 <div class="res-kpi-lbl">Crop Water Stress</div>
@@ -650,7 +619,6 @@
               </div>
             </div>
 
-            <!-- Class Probabilities Breakdown -->
             <div class="prob-breakdown">
               <h5>Random Forest Class Probabilities</h5>
               <div class="prob-row">
@@ -675,13 +643,11 @@
               </div>
             </div>
 
-            <!-- Actionable Advisory Banner -->
             <div class="advisory-card">
               <h5 id="res-advisory-title">Farmer Actionable Advisory</h5>
               <p id="res-advisory-text">Rapid soil moisture depletion observed. Schedule irrigation within 24–48 hours.</p>
             </div>
 
-            <!-- Calculated Agronomic Indicators -->
             <div style="font-size:12px;color:var(--mute);margin-bottom:18px;display:flex;gap:16px;flex-wrap:wrap;">
               <span>Ref ET₀: <b id="res-et0" class="mono" style="color:var(--ink);">5.67 mm</b></span>
               <span>Crop ETc: <b id="res-etc" class="mono" style="color:var(--ink);">6.24 mm</b></span>
@@ -689,7 +655,6 @@
               <span>Model: <b class="mono" style="color:var(--teal);">RandomForestClassifier (.pkl)</b></span>
             </div>
 
-            <!-- Input Summary Section -->
             <div class="input-summary-card">
               <div class="summary-header">Input Parameters Summary</div>
               <div class="summary-grid">
@@ -704,7 +669,6 @@
               </div>
             </div>
 
-            <!-- View on Map Button -->
             <div class="pred-db-pill" id="res-db-pill" style="display:none;margin-top:14px;">
               <span id="res-db-text">Saved to MySQL crop_stress_db</span>
               <a href="#/farmers" style="color:var(--teal);font-weight:700;text-decoration:underline;">View History &rarr;</a>
@@ -719,9 +683,6 @@
     </div>
   </section>
 
-  <!-- ======================================================== -->
-  <!-- VIEW 2: DEDICATED IRRIGATION PRIORITY RANKING            -->
-  <!-- ======================================================== -->
   <section id="view-ranking" class="subview">
     <div class="view-header">
       <span class="tag">Decision Support Engine</span>
@@ -730,7 +691,7 @@
     </div>
 
     <div class="sec" style="padding-top:0;">
-      <!-- KPI Ribbon with Animated Numbers -->
+
       <div class="kpi-row">
         <div class="kpi-card">
           <div class="kpi-lbl">Total Monitored Districts</div>
@@ -754,7 +715,6 @@
         </div>
       </div>
 
-      <!-- Controls & Filter Toolbar -->
       <div class="toolbar">
         <input type="text" id="ranking-search" placeholder="Search 732 districts or states (e.g. Bikaner, Khammam, Nashik)…">
         <select id="ranking-state-filter">
@@ -768,13 +728,11 @@
         </div>
       </div>
 
-      <!-- Top 10 Horizontal Bar Chart -->
       <div class="chart-box">
         <h3>Top 10 Districts with Highest Irrigation Priority Need</h3>
         <div id="top-10-bars"></div>
       </div>
 
-      <!-- Complete Ranking Table -->
       <div class="table-wrapper">
         <table class="data-table" id="priority-table">
           <thead>
@@ -796,7 +754,6 @@
         </table>
       </div>
 
-      <!-- Pagination Controls for Ranking Table -->
       <div class="table-pagination" id="priority-pagination">
         <div class="pagination-info" id="priority-pagination-info">Showing 1–50 of 732 districts</div>
         <div class="pagination-controls">
@@ -812,7 +769,6 @@
         </div>
       </div>
 
-      <!-- Peak-End Takeaway Banner -->
       <div class="takeaway-banner">
         <div class="takeaway-icon"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg></div>
         <div class="takeaway-text">
@@ -823,9 +779,6 @@
     </div>
   </section>
 
-  <!-- ======================================================== -->
-  <!-- VIEW 3: DEDICATED ML EVALUATION BENCHMARKS              -->
-  <!-- ======================================================== -->
   <section id="view-benchmarks" class="subview">
     <div class="view-header">
       <span class="tag">Empirical Audit · Kaggle Notebook</span>
@@ -834,7 +787,7 @@
     </div>
 
     <div class="sec" style="padding-top:0;">
-      <!-- Best Model KPI Highlights -->
+
       <div class="kpi-row">
         <div class="kpi-card" style="border-left:4px solid var(--teal);">
           <div class="kpi-lbl">Best Classifier</div>
@@ -862,7 +815,6 @@
         </div>
       </div>
 
-      <!-- Classification Comparison Table -->
       <div class="chart-box" style="margin-bottom:28px;">
         <h3>Crop Water Stress Classification Models Comparison</h3>
         <div class="table-wrapper" style="box-shadow:none;border:none;">
@@ -884,7 +836,6 @@
         </div>
       </div>
 
-      <!-- Visual Confusion Matrix for Random Forest -->
       <div class="chart-box" style="margin-bottom:28px;">
         <h3 id="bm-cm-title">Random Forest Classifier Confusion Matrix</h3>
         <p style="color:var(--mute);font-size:13px;margin-top:0;">Evaluated across 4 multi-class stress classes: Low, Moderate, High, Severe.</p>
@@ -897,7 +848,6 @@
         </div>
       </div>
 
-      <!-- Regression Models Comparison Table -->
       <div class="chart-box">
         <h3>Irrigation Priority Regression Models Comparison</h3>
         <div class="table-wrapper" style="box-shadow:none;border:none;">
@@ -919,7 +869,6 @@
         </div>
       </div>
 
-      <!-- Peak-End Takeaway Banner -->
       <div class="takeaway-banner">
         <div class="takeaway-icon"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg></div>
         <div class="takeaway-text">
@@ -930,9 +879,6 @@
     </div>
   </section>
 
-  <!-- ======================================================== -->
-  <!-- VIEW 4: REGIONAL AGRO-CLIMATIC CLUSTERS                 -->
-  <!-- ======================================================== -->
   <section id="view-clusters" class="subview">
     <div class="view-header">
       <span class="tag">Regional Zonation</span>
@@ -941,7 +887,7 @@
     </div>
 
     <div class="sec" style="padding-top:0;">
-      <!-- 2D PCA Feature Space Scatter Plot -->
+
       <div class="pca-card">
         <div class="pca-header">
           <div class="pca-title-wrap">
@@ -955,7 +901,6 @@
           </div>
         </div>
 
-        <!-- Interactive Cluster Filter Pills -->
         <div class="pca-filter-row">
           <button type="button" class="cluster-pill-btn active" data-zone="ALL" id="pill-zone-all">
             All Clusters (732)
@@ -974,13 +919,11 @@
           </button>
         </div>
 
-        <!-- SVG Container & Interactive Tooltip -->
         <div class="pca-svg-container" id="pca-scatter-container">
           <svg class="pca-svg" id="pca-svg" viewBox="0 0 840 440" preserveAspectRatio="xMidYMid meet"></svg>
           <div class="pca-tooltip" id="pca-tooltip"></div>
         </div>
 
-        <!-- Legend Row -->
         <div class="pca-legend">
           <div class="pca-legend-item">
             <span class="pca-legend-swatch" style="background:#d9784f;"></span>
@@ -1001,9 +944,8 @@
         </div>
       </div>
 
-      <!-- 4 Cluster Zone Profile Cards -->
       <div class="cluster-cards">
-        <!-- Zone 0 -->
+
         <div class="cluster-card" style="border-top-color:#d9784f;">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
             <span class="tag" style="color:#d9784f;margin:0;">ZONE 0</span>
@@ -1018,7 +960,6 @@
           <div class="cluster-stat"><span>Strategy</span><span style="color:#d9784f;">Terraced Flow &amp; Tank</span></div>
         </div>
 
-        <!-- Zone 1 -->
         <div class="cluster-card" style="border-top-color:#0f766e;">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
             <span class="tag" style="color:#0f766e;margin:0;">ZONE 1</span>
@@ -1033,7 +974,6 @@
           <div class="cluster-stat"><span>Strategy</span><span style="color:#0f766e;">Drainage Canal / Furrow</span></div>
         </div>
 
-        <!-- Zone 2 -->
         <div class="cluster-card" style="border-top-color:#c0392b;">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
             <span class="tag" style="color:#c0392b;margin:0;">ZONE 2</span>
@@ -1048,7 +988,6 @@
           <div class="cluster-stat"><span>Strategy</span><span style="color:#c0392b;">Precision Micro-Drip</span></div>
         </div>
 
-        <!-- Zone 3 -->
         <div class="cluster-card" style="border-top-color:#2e9e5b;">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
             <span class="tag" style="color:#2e9e5b;margin:0;">ZONE 3</span>
@@ -1064,7 +1003,6 @@
         </div>
       </div>
 
-      <!-- Searchable Clustered District Directory -->
       <div class="chart-box">
         <h3>Clustered District Directory (732 Districts)</h3>
         <div class="toolbar" style="margin-top:16px;">
@@ -1099,7 +1037,6 @@
           </table>
         </div>
 
-        <!-- Pagination Controls for Clusters Table -->
         <div class="table-pagination" id="clusters-pagination">
           <div class="pagination-info" id="clusters-pagination-info">Showing 1–50 of 732 districts</div>
           <div class="pagination-controls">
@@ -1116,7 +1053,6 @@
         </div>
       </div>
 
-      <!-- Peak-End Takeaway Banner -->
       <div class="takeaway-banner">
         <div class="takeaway-icon"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/></svg></div>
         <div class="takeaway-text">
@@ -1127,9 +1063,6 @@
     </div>
   </section>
 
-  <!-- ======================================================== -->
-  <!-- VIEW 5: FARMER RECORDS & MYSQL PREDICTION HISTORY        -->
-  <!-- ======================================================== -->
   <section id="view-farmers" class="subview">
     <div class="view-header">
       <span class="tag">MySQL CRUD Database</span>
@@ -1166,7 +1099,6 @@
         </div>
       </div>
 
-      <!-- Add / Edit Farmer Form Card -->
       <div class="pred-card" style="margin-bottom:28px;">
         <div class="station-header">
           <h3 id="farmer-form-title">Add New Farmer</h3>
@@ -1245,7 +1177,6 @@
         </form>
       </div>
 
-      <!-- Registered Farmers Table -->
       <div class="chart-box">
         <h3>Registered Farmers Directory</h3>
         <div class="toolbar">
@@ -1272,7 +1203,6 @@
         </div>
       </div>
 
-      <!-- Saved ML Prediction History Table -->
       <div class="chart-box">
         <h3>Saved Irrigation Prediction History</h3>
         <div class="toolbar">
@@ -1305,13 +1235,6 @@
       </div>
     </div>
   </section>
-
-  <!-- Compatibility Hidden Stubs for Test Suite 8 -->
-  <div style="display:none;">
-    <div id="geospatial-map"></div>
-    <div id="district-drawer"></div>
-    <form id="sim-form"></form>
-  </div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="portal.js"></script>
