@@ -2250,16 +2250,103 @@ if (crumbStateBtn) {
   crumbStateBtn.onclick = window.backToParentState;
 }
 
-document.getElementById("theme").onclick = function() {
-  var appEl = document.getElementById("app");
-  if (document.documentElement.dataset.theme === "dark") {
-    document.documentElement.dataset.theme = "";
-    if (appEl) appEl.removeAttribute("data-contrast");
+function getSystemDarkPreference() {
+  if (window.matchMedia) {
+    return window.matchMedia("(prefers-color-scheme: dark)").matches;
+  }
+  return false;
+}
+
+function applyColorSchemeState(scheme) {
+  var metaEl = document.getElementById("color-scheme-meta");
+  if (metaEl) {
+    metaEl.content = scheme;
+  }
+
+  var isDark = false;
+  if (scheme === "dark") {
+    isDark = true;
+  } else if (scheme === "light") {
+    isDark = false;
   } else {
+    isDark = getSystemDarkPreference();
+  }
+
+  var appEl = document.getElementById("app");
+  if (isDark) {
     document.documentElement.dataset.theme = "dark";
     if (appEl) appEl.setAttribute("data-contrast", "dark");
+  } else {
+    document.documentElement.dataset.theme = "";
+    if (appEl) appEl.removeAttribute("data-contrast");
   }
-};
+
+  var navToggleBtn = document.getElementById("nav-theme-toggle");
+  if (navToggleBtn) {
+    navToggleBtn.setAttribute("aria-pressed", String(isDark));
+    if (isDark) {
+      navToggleBtn.setAttribute("title", "Switch to light mode");
+    } else {
+      navToggleBtn.setAttribute("title", "Switch to dark mode");
+    }
+  }
+}
+
+function toggleSiteTheme() {
+  var currentIsDark = document.documentElement.dataset.theme === "dark";
+  var targetScheme = "dark";
+  if (currentIsDark) {
+    targetScheme = "light";
+  }
+
+  var sysDark = getSystemDarkPreference();
+  var matchesSystem = (targetScheme === "dark") === sysDark;
+
+  if (matchesSystem) {
+    try { localStorage.removeItem("color-scheme"); } catch (e) {}
+    applyColorSchemeState("light dark");
+  } else {
+    try { localStorage.setItem("color-scheme", targetScheme); } catch (e) {}
+    applyColorSchemeState(targetScheme);
+  }
+  updateNavIndicator();
+}
+
+function initColorSchemeToggle() {
+  var saved = null;
+  try { saved = localStorage.getItem("color-scheme"); } catch (e) {}
+  applyColorSchemeState(saved || "light dark");
+
+  var navToggleBtn = document.getElementById("nav-theme-toggle");
+  if (navToggleBtn) {
+    navToggleBtn.onclick = toggleSiteTheme;
+  }
+
+  var railThemeBtn = document.getElementById("theme");
+  if (railThemeBtn) {
+    railThemeBtn.onclick = toggleSiteTheme;
+  }
+
+  window.addEventListener("storage", function(e) {
+    if (e.key === "color-scheme") {
+      applyColorSchemeState(e.newValue || "light dark");
+    }
+  });
+
+  if (window.matchMedia) {
+    var mq = window.matchMedia("(prefers-color-scheme: dark)");
+    if (mq.addEventListener) {
+      mq.addEventListener("change", function() {
+        var metaEl = document.getElementById("color-scheme-meta");
+        if (!metaEl || metaEl.content === "light dark") {
+          applyColorSchemeState("light dark");
+        }
+      });
+    }
+  }
+}
+
+initColorSchemeToggle();
 
 var layerDockBtns = document.querySelectorAll(".layer-dock .ld-btn");
 for (var ldIdx = 0; ldIdx < layerDockBtns.length; ldIdx++) {

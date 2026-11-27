@@ -3,11 +3,24 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="color-scheme" content="light dark">
+  <meta name="color-scheme" content="light dark" id="color-scheme-meta">
+  <script>
+    (function() {
+      var saved = null;
+      try { saved = localStorage.getItem("color-scheme"); } catch (e) {}
+      var scheme = saved || "light dark";
+      var meta = document.getElementById("color-scheme-meta");
+      if (meta) meta.content = scheme;
+      var prefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+      if (scheme === "dark" || (scheme === "light dark" && prefersDark)) {
+        document.documentElement.dataset.theme = "dark";
+      }
+    })();
+  </script>
   <title>KrishiJal – Crop Stress &amp; Irrigation Intelligence Portal</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-  <link rel="stylesheet" href="portal.css?v=5">
+  <link rel="stylesheet" href="portal.css?v=7">
 </head>
 <body>
 
@@ -24,6 +37,16 @@
       <a href="#/farmers" class="nav-link" id="nav-farmers">Farmer Records</a>
       <div class="nav-indicator" id="nav-indicator"></div>
     </div>
+    <button type="button" class="nav-theme-toggle" id="nav-theme-toggle" aria-label="Toggle color theme" aria-pressed="false">
+      <span class="theme-opt theme-to-dark">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        <span>Dark</span>
+      </span>
+      <span class="theme-opt theme-to-light">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+        <span>Light</span>
+      </span>
+    </button>
   </nav>
 
   <main id="view-home" class="subview on">
@@ -1267,6 +1290,6 @@
   </section>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="portal.js?v=5"></script>
+  <script src="portal.js?v=7"></script>
 </body>
 </html>
