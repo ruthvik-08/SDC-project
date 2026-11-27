@@ -3,10 +3,11 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="light dark">
   <title>KrishiJal – Crop Stress &amp; Irrigation Intelligence Portal</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-  <link rel="stylesheet" href="portal.css">
+  <link rel="stylesheet" href="portal.css?v=4">
 </head>
 <body>
 
@@ -212,33 +213,61 @@
     </section>
   </main>
 
-  <div id="app">
-    <div class="rail">
-      <button id="lyr" title="Layer Selection">&#9776;</button>
-      <button id="theme" class="bot" title="Toggle Light/Dark Theme">&#9788;</button>
+  <div id="app" data-basemap="dark">
+    <div class="rail" aria-label="Map Tools">
+      <button type="button" id="map-zoom-in" title="Zoom In">+</button>
+      <button type="button" id="map-zoom-out" title="Zoom Out">&minus;</button>
+      <button type="button" id="map-reset" title="Reset Camera to India">&#8962;</button>
+      <button type="button" id="lyr" title="Layer Selection">&#9776;</button>
+      <button type="button" id="theme" class="bot" title="Toggle Interface Contrast">&#9788;</button>
     </div>
 
     <div class="bar">
-      <b>Krishi<span style="color:var(--acc)">Jal</span></b>
-      <span class="pill" id="pill" title="Click to zoom back to India">INDIA</span>
-      <span class="coverage-badge" id="coverage-badge">732 Districts | All India Coverage</span>
-      <select id="state-select" class="bar-select" title="Filter by State or Union Territory">
-        <option value="ALL">All States / UTs (732 Districts)</option>
+      <b>Krishi<span style="color:var(--geo-accent)">Jal</span></b>
+      <div class="geo-breadcrumbs" aria-label="Geographical Hierarchy">
+        <span class="pill" id="pill" title="Click to return to Entire India">INDIA</span>
+        <button type="button" class="crumb-btn" id="crumb-state" style="display:none;"></button>
+        <span class="crumb-sep" id="crumb-sep-district" style="display:none;">&rsaquo;</span>
+        <span class="crumb-district" id="crumb-district" style="display:none;"></span>
+      </div>
+      <div class="geo-nav-actions">
+        <button type="button" class="geo-action-btn" id="btn-back-india" style="display:none;">&larr; Back to India</button>
+        <button type="button" class="geo-action-btn" id="btn-back-state" style="display:none;">&larr; Back to State</button>
+      </div>
+      <span class="coverage-badge" id="coverage-badge">732 Districts · All India</span>
+      <select id="state-select" class="bar-select" aria-label="Select State or Union Territory">
+        <option value="ALL">All States / UTs (37)</option>
       </select>
-      <input id="search" list="dl" placeholder="Search 732+ districts (e.g. Khammam, Bikaner) or State…">
+      <input id="search" list="dl" placeholder="Search State or any of 732 districts (e.g. Telangana, Hyderabad)..." autocomplete="off">
       <datalist id="dl"></datalist>
       <a href="#/" class="ibtn" title="Close Map and return to Home">&#10005;</a>
     </div>
 
     <div id="map"></div>
+    <div class="geo-grid-overlay" aria-hidden="true"></div>
+    <div class="geo-scan-overlay" aria-hidden="true"></div>
 
-    <div class="map-switcher" id="map-switcher">
-      <button type="button" class="ms-btn" data-style="satellite" id="btn-satellite">Satellite</button>
-      <button type="button" class="ms-btn active" data-style="clean" id="btn-clean">Clean</button>
-      <button type="button" class="ms-btn active" id="btn-state-borders" title="Toggle Highlighted State Boundaries">State Borders</button>
+    <div class="geo-loading-wrap" id="geo-loading-wrap" role="status">
+      <progress aria-label="Retrieving geospatial data" class="geo-loading-progress"></progress>
+      <span id="geo-loading-text">Loading geospatial boundaries...</span>
     </div>
 
-    <button class="lbtn" id="lb">Layers &rsaquo;</button>
+    <div class="geo-top-controls">
+      <div class="layer-dock" id="layer-dock" role="group" aria-label="Agricultural Risk Layers">
+        <button type="button" class="ld-btn active" data-layer="stress" id="btn-layer-stress">Crop Stress</button>
+        <button type="button" class="ld-btn" data-layer="ipi" id="btn-layer-ipi">Irrigation Priority</button>
+        <button type="button" class="ld-btn" data-layer="wet" id="btn-layer-wet">Soil Wetness</button>
+      </div>
+
+      <div class="map-switcher" id="map-switcher" role="group" aria-label="Basemap Styles">
+        <button type="button" class="ms-btn" data-style="satellite" id="btn-satellite">Satellite</button>
+        <button type="button" class="ms-btn active" data-style="dark" id="btn-dark">Dark</button>
+        <button type="button" class="ms-btn" data-style="light" id="btn-light">Light</button>
+        <button type="button" class="ms-btn active" id="btn-state-borders" title="Toggle State Borders">State Borders</button>
+      </div>
+    </div>
+
+    <button type="button" class="lbtn" id="lb">Layers &rsaquo;</button>
 
     <div class="panel" id="panel">
       <h4>LAYER SELECTION</h4>
@@ -247,12 +276,14 @@
         <span id="layers"></span>
       </div>
       <div class="row">
-        <i>DATA</i>
-        <span>Real KrishiJal master dataset, Jun–Nov 2023 district averages</span>
+        <i>COVERAGE</i>
+        <span>37 States/UTs &amp; 732 Districts (ML Verified)</span>
       </div>
     </div>
 
-    <div class="info" id="info"></div>
+    <div class="geo-legend-card" id="map-legend" aria-label="Map Legend"></div>
+    <div class="geo-tooltip" id="map-tooltip" role="tooltip" aria-hidden="true"></div>
+    <aside class="info geo-intel-panel" id="info" aria-label="Geospatial Intelligence Panel"></aside>
   </div>
 
   <section id="view-predictor" class="subview">
@@ -1237,6 +1268,6 @@
   </section>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="portal.js"></script>
+  <script src="portal.js?v=4"></script>
 </body>
 </html>

@@ -1,32 +1,22 @@
 var LAYERS = {
   stress: {
     name: "Crop Stress",
-    cat: ["#2e9e5b", "#e6c229", "#e8873a", "#c0392b"],
+    cat: ["#facc15", "#fb923c", "#ef4444", "#991b1b"],
     labels: ["Low", "Moderate", "High", "Severe"]
   },
   ipi: {
-    name: "Irrigation priority",
+    name: "Irrigation Priority",
     key: "ipi",
     unit: "/100",
-    ramp: ["#fbeee6", "#f1b896", "#d9784f", "#b5573a", "#7a2e17"]
+    labels: ["Low", "Medium", "High"],
+    colors: ["#22c55e", "#f97316", "#dc2626"]
   },
   wet: {
-    name: "Soil wetness",
+    name: "Soil Wetness",
     key: "soil_wetness",
     unit: "",
-    ramp: ["#f3ead7", "#d9c79a", "#9fb98c", "#4f9d9a", "#1f6a7a"]
-  },
-  ndvi: {
-    name: "NDVI",
-    key: "ndvi",
-    unit: "",
-    ramp: ["#ffff66", "#a6e07a", "#4fbf8a", "#14917f", "#1d4e5f"]
-  },
-  rainfall: {
-    name: "Rainfall",
-    key: "rainfall",
-    unit: " mm/day",
-    ramp: ["#eef6fb", "#bcdcee", "#7fb8de", "#3f86c4", "#1f4e8c"]
+    labels: ["Low", "Moderate", "High"],
+    colors: ["#bae6fd", "#38bdf8", "#1d4ed8"]
   }
 };
 
@@ -39,8 +29,16 @@ var BASEMAP_CONFIG = {
       maxZoom: 19
     }
   },
-  clean: {
-    name: "Clean",
+  dark: {
+    name: "Dark",
+    url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+    options: {
+      attribution: "&copy; <a href=\"https://www.openstreetmap.org/copyright\">OpenStreetMap</a> contributors",
+      maxZoom: 19
+    }
+  },
+  light: {
+    name: "Light",
     url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
     options: {
       attribution: "&copy; <a href=\"https://www.openstreetmap.org/copyright\">OpenStreetMap</a> contributors",
@@ -49,7 +47,7 @@ var BASEMAP_CONFIG = {
   }
 };
 
-var currentBasemap = "clean";
+var currentBasemap = "dark";
 var baseTileLayer = null;
 var layer = "stress";
 var DATA = {};
@@ -57,6 +55,7 @@ var statesGeo = null;
 var distsGeo = null;
 var stateLayer = null;
 var distLayer = null;
+var riskPulseLayerGroup = L.layerGroup();
 var current = null;
 var selected = null;
 var selectedDistrictLayer = null;
@@ -65,6 +64,8 @@ var districtMap = {};
 var stateBounds = {};
 var stateList = [];
 var stateCounts = {};
+var stateSummaries = {};
+var districtMlCache = {};
 var lastGenieOrigin = null;
 var highlightStateBorders = true;
 var hoveredState = null;
@@ -110,8 +111,8 @@ var PORTAL_MODULES = [
   { hash: "#/farmers", label: "Farmer Records", kicker: "MySQL Database" }
 ];
 
-var map = L.map("map", { zoomControl: false, zoomSnap: 0.25 }).setView([22.5, 80], 4.5);
-L.control.zoom({ position: "bottomright" }).addTo(map);
+var map = L.map("map", { zoomControl: false, zoomSnap: 0.25, preferCanvas: false }).setView([22.8, 84.5], 4.5);
+riskPulseLayerGroup.addTo(map);
 
 if (!map.getPane("stateBoundariesPane")) {
   var statePane = map.createPane("stateBoundariesPane");
@@ -121,7 +122,11 @@ if (!map.getPane("stateBoundariesPane")) {
 
 function normState(s) {
   var text = s || "";
-  return text.toLowerCase().replace(/&/g, "and").replace(/[^a-z0-9]/g, "");
+  var cleaned = text.toLowerCase().replace(/&/g, "and").replace(/[^a-z0-9]/g, "");
+  if (cleaned === "andamanandnicobarislands") {
+    return "andamanandnicobar";
+  }
+  return cleaned;
 }
 
 function formatStateName(s) {
@@ -129,7 +134,22 @@ function formatStateName(s) {
   if (s.toUpperCase() === "JAMMU & KASHMIR" || s.toLowerCase() === "jammu and kashmir") {
     return "Jammu and Kashmir";
   }
+  if (s.toLowerCase() === "andaman and nicobar islands") {
+    return "Andaman and Nicobar";
+  }
   return s;
+}
+
+function setGeoLoading(active, message) {
+  var wrap = document.getElementById("geo-loading-wrap");
+  var txt = document.getElementById("geo-loading-text");
+  if (!wrap) return;
+  if (active) {
+    if (txt && message) txt.textContent = message;
+    wrap.classList.add("on");
+  } else {
+    wrap.classList.remove("on");
+  }
 }
 
 function getStressBadgeClass(stressLevel) {
@@ -140,6 +160,20 @@ function getStressBadgeClass(stressLevel) {
     return "med";
   }
   return "low";
+}
+
+function getRiskStatusLabel(d) {
+  if (!d) return "Data Unavailable";
+  if (d.stress === "Severe" || d.ipi >= 60.0) return "Critical Risk";
+  if (d.stress === "High" || d.ipi >= 45.0) return "High Risk";
+  if (d.stress === "Moderate" || d.ipi >= 30.0) return "Elevated Risk";
+  return "Optimal / Low Risk";
+}
+
+function getPriorityCategoryLabel(ipi) {
+  if (ipi >= 50.0) return "High Priority";
+  if (ipi >= 35.0) return "Medium Priority";
+  return "Low Priority";
 }
 
 function getPriorityScoreColor(score) {
@@ -164,27 +198,53 @@ function getPriorityBadgeClass(score) {
 
 function getSelectedDistrictColor() {
   if (currentBasemap === "satellite") {
-    return "#ffd700";
+    return "#fbbf24";
   }
-  return "#b5573a";
+  if (currentBasemap === "light") {
+    return "#0f766e";
+  }
+  return "#22d3ee";
 }
 
 function setBasemap(styleKey) {
   if (!BASEMAP_CONFIG[styleKey]) return;
   currentBasemap = styleKey;
 
+  var appEl = document.getElementById("app");
+  if (appEl) {
+    appEl.setAttribute("data-basemap", styleKey);
+  }
+
   var mapEl = document.getElementById("map");
   if (styleKey === "satellite") {
-    mapEl.style.backgroundColor = "#0b101b";
+    mapEl.style.backgroundColor = "#060d14";
+  } else if (styleKey === "dark") {
+    mapEl.style.backgroundColor = "#07111a";
   } else {
-    mapEl.style.backgroundColor = "#fafaf8";
+    mapEl.style.backgroundColor = "#f4f6f8";
+  }
+
+  var tilePane = map.getPane("tilePane");
+  if (tilePane) {
+    tilePane.style.opacity = "0.28";
   }
 
   if (baseTileLayer) {
     map.removeLayer(baseTileLayer);
   }
   var cfg = BASEMAP_CONFIG[styleKey];
-  baseTileLayer = L.tileLayer(cfg.url, cfg.options).addTo(map);
+  baseTileLayer = L.tileLayer(cfg.url, cfg.options);
+  baseTileLayer.on("load", function() {
+    if (tilePane) {
+      tilePane.style.opacity = "1";
+    }
+  });
+  baseTileLayer.addTo(map);
+  setTimeout(function() {
+    if (tilePane) {
+      tilePane.style.opacity = "1";
+    }
+  }, 450);
 
   if (distLayer) distLayer.bringToFront();
   if (stateLayer) stateLayer.bringToFront();
@@ -197,27 +257,36 @@ function setBasemap(styleKey) {
   recolor();
 }
 
-setBasemap("clean");
+setBasemap("dark");
 
 function colorFor(d) {
   if (!d) {
-    if (currentBasemap === "satellite") return "#000000";
-    return "#e6e2dc";
+    if (currentBasemap === "light") return "#cbd5e1";
+    return "#1e293b";
   }
-  var layerInfo = LAYERS[layer];
+
   if (layer === "stress") {
+    var layerInfo = LAYERS.stress;
     var catIndex = layerInfo.labels.indexOf(d.stress);
     if (catIndex >= 0) {
       return layerInfo.cat[catIndex];
     }
-    return "#e6c229";
+    return "#fb923c";
   }
-  var range = ranges[layer];
-  var span = (range[1] - range[0]) || 1;
-  var ratio = (d[layerInfo.key] - range[0]) / span;
-  var colorIdx = Math.floor(ratio * layerInfo.ramp.length);
-  colorIdx = Math.max(0, Math.min(layerInfo.ramp.length - 1, colorIdx));
-  return layerInfo.ramp[colorIdx];
+
+  if (layer === "ipi") {
+    if (d.ipi >= 50.0) return "#dc2626";
+    if (d.ipi >= 35.0) return "#f97316";
+    return "#22c55e";
+  }
+
+  if (layer === "wet") {
+    if (d.soil_wetness >= 0.55) return "#1d4ed8";
+    if (d.soil_wetness >= 0.35) return "#38bdf8";
+    return "#bae6fd";
+  }
+
+  return "#fb923c";
 }
 
 function dataFor(p) {
@@ -249,46 +318,49 @@ function styleState(f) {
       opacity: 0
     };
   }
+
   var nSt = normState(f.properties.state);
   var isCurrent = current && nSt === normState(current);
   var isHovered = hoveredState && nSt === hoveredState;
-  var activeWeight = 2.8;
+
+  var activeWeight = 1.6;
+  var strokeOpacity = 0.72;
   if (isCurrent) {
-    activeWeight = 4.2;
-  } else if (isHovered) {
     activeWeight = 3.6;
+    strokeOpacity = 1.0;
+  } else if (isHovered) {
+    activeWeight = 3.0;
+    strokeOpacity = 1.0;
+  } else if (current) {
+    activeWeight = 1.0;
+    strokeOpacity = 0.25;
   }
 
+  var strokeColor = "#22d3ee";
   if (currentBasemap === "satellite") {
-    var satColor = "#38bdf8";
-    var satOpacity = 0.95;
-    if (isCurrent || isHovered) {
-      satColor = "#fbbf24";
-      satOpacity = 1.0;
-    }
-    return {
-      fillColor: "transparent",
-      fillOpacity: 0,
-      color: satColor,
-      weight: activeWeight,
-      opacity: satOpacity,
-      lineCap: "round",
-      lineJoin: "round"
-    };
+    strokeColor = "#38bdf8";
+    if (isCurrent || isHovered) strokeColor = "#fbbf24";
+  } else if (currentBasemap === "light") {
+    strokeColor = "#0f172a";
+    if (isCurrent || isHovered) strokeColor = "#0f766e";
+  } else {
+    strokeColor = "#38bdf8";
+    if (isCurrent || isHovered) strokeColor = "#4ade80";
   }
 
-  var lightColor = "#0f172a";
-  var lightOpacity = 0.95;
-  if (isCurrent || isHovered) {
-    lightColor = "#b45309";
-    lightOpacity = 1.0;
+  var glowFill = "transparent";
+  var glowFillOp = 0;
+  if (!current && isHovered) {
+    glowFill = strokeColor;
+    glowFillOp = 0.14;
   }
+
   return {
-    fillColor: "transparent",
-    fillOpacity: 0,
-    color: lightColor,
+    fillColor: glowFill,
+    fillOpacity: glowFillOp,
+    color: strokeColor,
     weight: activeWeight,
-    opacity: lightOpacity,
+    opacity: strokeOpacity,
     lineCap: "round",
     lineJoin: "round"
   };
@@ -298,164 +370,540 @@ function styleDist(f) {
   var d = dataFor(f.properties);
   var fill = colorFor(d);
   var hasData = Boolean(d);
-  var isStateDimmed = current && normState(f.properties.state) !== normState(current);
+  var nDistState = normState(f.properties.state);
+  var inActiveState = current && nDistState === normState(current);
+  var isStateDimmed = current && !inActiveState;
+  var isStateHovered = !current && hoveredState && nDistState === hoveredState;
 
-  var borderWeight = 0.6;
-  if (hasData) {
-    borderWeight = 0.8;
-  }
+  var fillOpacity = 0.74;
+  var borderColor = "rgba(15, 23, 42, 0.55)";
+  var borderWeight = 0.75;
+  var borderOpacity = 0.7;
 
   if (currentBasemap === "satellite") {
-    var satFillOpacity = 0.20;
-    var satBorderColor = "rgba(255,255,255,0.5)";
-    var satOpacity = 0.8;
-    if (isStateDimmed) {
-      satFillOpacity = 0.05;
-      satBorderColor = "rgba(255,255,255,0.15)";
-      satOpacity = 0.2;
-    } else if (hasData) {
-      satFillOpacity = 0.82;
-      satBorderColor = "#ffffff";
-      borderWeight = 0.9;
-    }
-    return {
-      fillColor: fill,
-      fillOpacity: satFillOpacity,
-      color: satBorderColor,
-      weight: borderWeight,
-      opacity: satOpacity
-    };
+    fillOpacity = 0.72;
+    borderColor = "rgba(255, 255, 255, 0.48)";
+  } else if (currentBasemap === "light") {
+    fillOpacity = 0.84;
+    borderColor = "#ffffff";
   }
 
-  var cleanFillOpacity = 0.45;
-  var cleanBorderColor = "#c2bcb2";
-  var cleanOpacity = 1.0;
-  if (isStateDimmed) {
-    cleanFillOpacity = 0.10;
-    cleanBorderColor = "#d5d1cb";
-    cleanOpacity = 0.3;
-  } else if (hasData) {
-    cleanFillOpacity = 0.88;
-    cleanBorderColor = "#ffffff";
+  if (!hasData) {
+    fillOpacity = 0.25;
+  }
+
+  if (isStateHovered) {
+    fillOpacity = 0.90;
+    borderColor = "#22d3ee";
+    borderWeight = 1.0;
+  } else if (inActiveState) {
+    fillOpacity = 0.88;
+    borderColor = "rgba(255, 255, 255, 0.72)";
+    borderWeight = 1.1;
+    borderOpacity = 0.92;
+    if (currentBasemap === "light") {
+      borderColor = "#0f172a";
+      borderOpacity = 0.55;
+    }
+  } else if (isStateDimmed) {
+    fillOpacity = 0.08;
+    borderOpacity = 0.15;
+    borderWeight = 0.4;
   }
 
   return {
     fillColor: fill,
-    fillOpacity: cleanFillOpacity,
-    color: cleanBorderColor,
+    fillOpacity: fillOpacity,
+    color: borderColor,
     weight: borderWeight,
-    opacity: cleanOpacity
+    opacity: borderOpacity
   };
 }
 
-function drawLegend() {
-  var layerInfo = LAYERS[layer];
-  var palette = layerInfo.ramp;
+function renderDynamicLegend() {
+  var el = document.getElementById("map-legend");
+  if (!el) return;
+
+  var title = "Crop Stress Layer";
+  var rows = [];
+
   if (layer === "stress") {
-    palette = layerInfo.cat;
+    title = "Crop Stress Gradient";
+    rows = [
+      { label: "Low", color: "#facc15" },
+      { label: "Moderate", color: "#fb923c" },
+      { label: "High", color: "#ef4444" },
+      { label: "Severe", color: "#991b1b" }
+    ];
+  } else if (layer === "ipi") {
+    title = "Irrigation Priority";
+    rows = [
+      { label: "Low (< 35)", color: "#22c55e" },
+      { label: "Medium (35–49)", color: "#f97316" },
+      { label: "High (50+)", color: "#dc2626" }
+    ];
+  } else {
+    title = "Soil Wetness Index";
+    rows = [
+      { label: "Low (< 0.35)", color: "#bae6fd" },
+      { label: "Moderate (0.35–0.54)", color: "#38bdf8" },
+      { label: "High (0.55+)", color: "#1d4ed8" }
+    ];
   }
 
-  var swatchHtml = "";
-  for (var i = 0; i < palette.length; i++) {
-    swatchHtml += "<div style='background:" + palette[i] + "'></div>";
+  var itemsHtml = "";
+  for (var i = 0; i < rows.length; i++) {
+    itemsHtml += "<div class='geo-legend-item'>"
+      + "<span class='geo-legend-swatch' style='background:" + rows[i].color + ";'></span>"
+      + "<span>" + rows[i].label + "</span>"
+      + "</div>";
   }
 
-  var hiLabel = "HIGH";
-  if (layer === "stress") {
-    hiLabel = "SEVERE";
-  }
+  var borderColor = "#38bdf8";
+  if (currentBasemap === "light") borderColor = "#0f766e";
+  if (currentBasemap === "satellite") borderColor = "#fbbf24";
 
-  var noDataColor = "#e6e2dc";
-  var stateBdrColor = "#0f172a";
-  if (currentBasemap === "satellite") {
-    noDataColor = "#000000";
-    stateBdrColor = "#38bdf8";
-  }
-
-  return "<div class='leg'><div style='background:" + noDataColor + ";flex:.5'></div>" + swatchHtml + "</div>"
-    + "<div class='legl'><span>NO DATA</span><span>LOW</span><span>" + hiLabel + "</span></div>"
-    + "<div style='display:flex;align-items:center;gap:7px;margin-top:8px;padding-top:6px;border-top:1px dashed var(--line);font-size:11.5px;color:var(--ink);font-weight:600;'>"
-    + "<span style='display:inline-block;width:20px;height:4px;background:" + stateBdrColor + ";border-radius:2px;box-shadow:0 0 2px rgba(0,0,0,0.3);'></span>"
-    + "<span>State Boundaries (Highlighted)</span>"
+  itemsHtml += "<div class='geo-legend-item'>"
+    + "<span class='geo-legend-swatch' style='background:" + borderColor + ";'></span>"
+    + "<span>State Border</span>"
     + "</div>";
+
+  el.innerHTML = "<div class='geo-legend-title'><span>" + title + "</span><span>732 Districts</span></div>"
+    + "<div class='geo-legend-items'>" + itemsHtml + "</div>";
 }
 
 function escapeSingleQuote(str) {
   return String(str || "").replace(/'/g, "\\'");
 }
 
-function buildStateSummaryHtml() {
-  var stateDists = distsGeo.features.filter(function(f) {
-    return normState(f.properties.state) === normState(current);
-  });
-  var dataCount = 0;
-  for (var i = 0; i < stateDists.length; i++) {
-    if (dataFor(stateDists[i].properties) !== null) {
-      dataCount += 1;
-    }
+function syncBreadcrumbControls() {
+  var pillEl = document.getElementById("pill");
+  var crumbState = document.getElementById("crumb-state");
+  var crumbSepDist = document.getElementById("crumb-sep-district");
+  var crumbDist = document.getElementById("crumb-district");
+  var btnBackIndia = document.getElementById("btn-back-india");
+  var btnBackState = document.getElementById("btn-back-state");
+
+  if (pillEl) {
+    pillEl.textContent = "INDIA";
   }
-  return "<h4>" + current + "</h4>"
-    + "<div class='v mono' style='font-size:18px;color:var(--teal);margin:6px 0;'>" + stateDists.length + " Districts</div>"
-    + "<p style='margin-bottom:8px;'><b>" + dataCount + "</b> district(s) with active ML predictions in verified dataset.</p>"
-    + "<p style='font-size:12px;color:var(--mute);'>Click any individual district on the map or search above to inspect agricultural metrics.</p>";
+
+  if (!current) {
+    if (crumbState) crumbState.style.display = "none";
+    if (crumbSepDist) crumbSepDist.style.display = "none";
+    if (crumbDist) crumbDist.style.display = "none";
+    if (btnBackIndia) btnBackIndia.style.display = "none";
+    if (btnBackState) btnBackState.style.display = "none";
+    return;
+  }
+
+  if (crumbState) {
+    crumbState.style.display = "inline-flex";
+    crumbState.textContent = current;
+  }
+  if (btnBackIndia) {
+    btnBackIndia.style.display = "inline-flex";
+  }
+
+  if (selected) {
+    if (crumbSepDist) crumbSepDist.style.display = "inline";
+    if (crumbDist) {
+      crumbDist.style.display = "inline";
+      crumbDist.textContent = selected.district;
+    }
+    if (btnBackState) {
+      btnBackState.style.display = "inline-flex";
+      btnBackState.textContent = "\u2190 Back to " + current;
+    }
+  } else {
+    if (crumbSepDist) crumbSepDist.style.display = "none";
+    if (crumbDist) crumbDist.style.display = "none";
+    if (btnBackState) btnBackState.style.display = "none";
+  }
 }
 
-function buildDistrictInfoHtml(d) {
-  var layerInfo = LAYERS[layer];
-  var valueLabel = d[layerInfo.key] + layerInfo.unit;
-  if (layer === "stress") {
-    valueLabel = d.stress;
+function showMapTooltip(htmlContent, mouseEvent) {
+  var tooltipEl = document.getElementById("map-tooltip");
+  var appEl = document.getElementById("app");
+  if (!tooltipEl || !appEl) return;
+
+  tooltipEl.innerHTML = htmlContent;
+  tooltipEl.classList.add("visible");
+  tooltipEl.setAttribute("aria-hidden", "false");
+
+  if (!mouseEvent || !mouseEvent.originalEvent) return;
+  var rect = appEl.getBoundingClientRect();
+  var clientX = mouseEvent.originalEvent.clientX - rect.left;
+  var clientY = mouseEvent.originalEvent.clientY - rect.top;
+
+  var boxW = tooltipEl.offsetWidth || 240;
+  var boxH = tooltipEl.offsetHeight || 130;
+  var left = clientX + 16;
+  var top = clientY - 18;
+
+  if (left + boxW > rect.width - 14) {
+    left = clientX - boxW - 16;
+  }
+  if (left < 64) left = 64;
+  if (top + boxH > rect.height - 14) {
+    top = rect.height - boxH - 14;
+  }
+  if (top < 70) top = 70;
+
+  tooltipEl.style.left = left + "px";
+  tooltipEl.style.top = top + "px";
+}
+
+function hideMapTooltip() {
+  var tooltipEl = document.getElementById("map-tooltip");
+  if (!tooltipEl) return;
+  tooltipEl.classList.remove("visible");
+  tooltipEl.setAttribute("aria-hidden", "true");
+}
+
+function buildStateHoverTooltipHtml(stateName) {
+  var summary = stateSummaries[normState(stateName)];
+  if (!summary) {
+    return "<div class='geo-tooltip-title'>" + stateName + "</div>"
+      + "<div class='geo-tooltip-sub'>Indian State / Union Territory Boundary</div>"
+      + "<div class='geo-tooltip-grid'><div><span>Coverage</span><b>Click to Explore</b></div><div><span>Districts</span><b>Boundary Only</b></div></div>";
+  }
+  return "<div class='geo-tooltip-title'>" + summary.name + "</div>"
+    + "<div class='geo-tooltip-sub'>Click State to View " + summary.districtCount + " Districts</div>"
+    + "<div class='geo-tooltip-grid'>"
+    + "<div><span>Districts</span><b>" + summary.districtCount + "</b></div>"
+    + "<div><span>Avg Priority</span><b>" + summary.avgIpi.toFixed(1) + " / 100</b></div>"
+    + "<div><span>Dominant Stress</span><b>" + summary.dominantStress + "</b></div>"
+    + "<div><span>Soil Wetness</span><b>" + summary.avgWet.toFixed(2) + "</b></div>"
+    + "</div>";
+}
+
+function buildDistrictHoverTooltipHtml(props, d) {
+  var stateTitle = formatStateName(props.state);
+  if (!d) {
+    return "<div class='geo-tooltip-title'>" + props.district + "</div>"
+      + "<div class='geo-tooltip-sub'>" + stateTitle + "</div>"
+      + "<div class='geo-tooltip-grid'><div><span>Status</span><b>Data Unavailable</b></div><div><span>Boundary</span><b>Verified</b></div></div>";
+  }
+  return "<div class='geo-tooltip-title'>" + d.district + "</div>"
+    + "<div class='geo-tooltip-sub'>" + formatStateName(d.state) + " · " + (d.crop || "Mixed") + "</div>"
+    + "<div class='geo-tooltip-grid'>"
+    + "<div><span>Crop Stress</span><b>" + d.stress + "</b></div>"
+    + "<div><span>Priority</span><b>" + d.ipi + " / 100</b></div>"
+    + "<div><span>Soil Wetness</span><b>" + d.soil_wetness + "</b></div>"
+    + "<div><span>Risk Status</span><b>" + getRiskStatusLabel(d) + "</b></div>"
+    + "</div>";
+}
+
+function animateIntelNumbers() {
+  var els = document.querySelectorAll("#info .intel-anim-num");
+  for (var i = 0; i < els.length; i++) {
+    var el = els[i];
+    var target = parseFloat(el.getAttribute("data-target"));
+    var decimals = parseInt(el.getAttribute("data-decimals"), 10) || 0;
+    var suffix = el.getAttribute("data-suffix") || "";
+    if (!isNaN(target)) {
+      animateNumber(el, 0, target, 420, decimals, suffix);
+    }
+  }
+}
+
+function buildIndiaOverviewHtml() {
+  var highCount = 0;
+  var modCount = 0;
+  var totalWet = 0;
+  var count = 0;
+  for (var k in DATA) {
+    var row = DATA[k];
+    count += 1;
+    totalWet += Number(row.soil_wetness || 0);
+    if (row.stress === "High" || row.stress === "Severe") highCount += 1;
+    else if (row.stress === "Moderate") modCount += 1;
+  }
+  var meanWet = 0;
+  if (count > 0) meanWet = totalWet / count;
+
+  return "<span class='tag' style='color:var(--geo-accent);margin-bottom:4px;'>INDIA GEOSPATIAL INTELLIGENCE</span>"
+    + "<h4>All-India Overview</h4>"
+    + "<p>Interactive view across all 37 States/UTs and " + count + " districts. Hover a state boundary or click any state to enter State Map mode.</p>"
+    + "<div class='intel-section'>"
+    + "<div class='intel-section-title'>National Agricultural Snapshot</div>"
+    + "<div class='intel-kpi-grid'>"
+    + "<div class='intel-kpi'><span>Districts Covered</span><b class='intel-anim-num' data-target='" + count + "' data-decimals='0'>0</b></div>"
+    + "<div class='intel-kpi'><span>High / Severe Stress</span><b style='color:var(--geo-danger);' class='intel-anim-num' data-target='" + highCount + "' data-decimals='0'>0</b></div>"
+    + "<div class='intel-kpi'><span>Moderate Stress</span><b style='color:var(--geo-warn);' class='intel-anim-num' data-target='" + modCount + "' data-decimals='0'>0</b></div>"
+    + "<div class='intel-kpi'><span>Mean Soil Wetness</span><b style='color:var(--geo-accent);' class='intel-anim-num' data-target='" + meanWet.toFixed(2) + "' data-decimals='2'>0.00</b></div>"
+    + "</div></div>"
+    + "<div class='intel-section'>"
+    + "<div class='intel-section-title'>Navigation Guide</div>"
+    + "<p>1. Click any State (e.g. Telangana) or pick from dropdown.</p>"
+    + "<p>2. Select any District to run live Random Forest intelligence.</p>"
+    + "</div>";
+}
+
+function buildStateSummaryHtml() {
+  var summary = stateSummaries[normState(current)];
+  if (!summary) {
+    return "<span class='tag' style='color:var(--geo-accent);margin-bottom:4px;'>STATE GEOGRAPHY</span>"
+      + "<h4>" + current + "</h4>"
+      + "<div style='margin:8px 0;'><span class='badge'>Data Unavailable</span></div>"
+      + "<p>Boundary loaded cleanly for " + current + ". Detailed district benchmark observations are unavailable for this union territory in the dataset.</p>"
+      + "<div class='intel-actions'>"
+      + "<button type='button' class='btn fill' onclick=\"filterByState('ALL')\">Back to India</button>"
+      + "</div>";
   }
 
-  var badgeCls = getStressBadgeClass(d.stress);
-  var html = "<h4>" + d.district + ", " + formatStateName(d.state) + "</h4>"
-    + "<div style='margin:6px 0;'><span class='badge " + badgeCls + "'>" + (d.stress || "Verified") + " Stress</span></div>"
-    + "<div class='v mono'>" + valueLabel + "</div><p>" + layerInfo.name + " · 2024–25 Authentic Data</p>"
-    + "<p>Irrigation priority " + d.ipi + " · NDVI " + d.ndvi + " · rain " + d.rainfall + " mm/mo</p>";
+  return "<span class='tag' style='color:var(--geo-neon);margin-bottom:4px;'>STATE INTELLIGENCE VIEW</span>"
+    + "<h4>" + summary.name + "</h4>"
+    + "<p>Click any highlighted district boundary inside " + summary.name + " to open its ML District Intelligence Panel.</p>"
+    + "<div class='intel-section'>"
+    + "<div class='intel-section-title'>State Agricultural Statistics</div>"
+    + "<div class='intel-kpi-grid'>"
+    + "<div class='intel-kpi'><span>Total Districts</span><b class='intel-anim-num' data-target='" + summary.districtCount + "' data-decimals='0'>0</b></div>"
+    + "<div class='intel-kpi'><span>Avg Priority Index</span><b class='intel-anim-num' data-target='" + summary.avgIpi.toFixed(1) + "' data-decimals='1'>0.0</b></div>"
+    + "<div class='intel-kpi'><span>Dominant Stress</span><b>" + summary.dominantStress + "</b></div>"
+    + "<div class='intel-kpi'><span>Mean Soil Wetness</span><b class='intel-anim-num' data-target='" + summary.avgWet.toFixed(2) + "' data-decimals='2'>0.00</b></div>"
+    + "<div class='intel-kpi'><span>Primary Crop</span><b>" + summary.dominantCrop + "</b></div>"
+    + "<div class='intel-kpi'><span>Verified Rows</span><b>" + summary.dataCount + " / " + summary.districtCount + "</b></div>"
+    + "</div></div>"
+    + "<div class='intel-actions'>"
+    + "<button type='button' class='btn fill' onclick=\"filterByState('ALL')\">&larr; Back to India</button>"
+    + "</div>";
+}
 
-  if (d.crop) {
-    html += "<p style='font-size:12px;margin:4px 0;'><b>Crop:</b> " + d.crop
-      + " · <b>Soil:</b> " + (d.soil_type || "Alluvial")
-      + " · <b>Irrig:</b> " + (d.irrigation_coverage || 45) + "%</p>";
+function lookupPriorityRecord(stateName, distName) {
+  var nDt = normState(distName);
+  var nSt = normState(stateName);
+  for (var i = 0; i < allPriorityList.length; i++) {
+    var row = allPriorityList[i];
+    if (normState(row.district) === nDt && normState(row.state) === nSt) {
+      return row;
+    }
+  }
+  return null;
+}
+
+function lookupClusterRecord(stateName, distName) {
+  var nDt = normState(distName);
+  var nSt = normState(stateName);
+  for (var i = 0; i < allClustersList.length; i++) {
+    var row = allClustersList[i];
+    if (normState(row.district) === nDt && normState(row.state) === nSt) {
+      return row;
+    }
+  }
+  return null;
+}
+
+function getPeakModelProbability(probs) {
+  if (!probs) return null;
+  var bestLabel = "";
+  var bestVal = -1;
+  for (var key in probs) {
+    if (Number(probs[key]) > bestVal) {
+      bestVal = Number(probs[key]);
+      bestLabel = key;
+    }
+  }
+  if (bestVal < 0) return null;
+  return { label: bestLabel, pct: (bestVal * 100).toFixed(1) };
+}
+
+function buildDistrictInfoHtml(d, mlRes) {
+  var stateTitle = formatStateName(d.state);
+  var priorityRec = lookupPriorityRecord(d.state, d.district);
+  var clusterRec = lookupClusterRecord(d.state, d.district);
+
+  var stressLevel = d.stress;
+  var ipiScore = Number(d.ipi || 0);
+  var priorityCat = getPriorityCategoryLabel(ipiScore);
+  var depthText = "Based on model priority score";
+  var reasonText = "Derived from verified crop water stress index and district baseline observations.";
+  var actionText = "Monitor field moisture and align irrigation with crop stage.";
+  var deficitText = "";
+  var probs = null;
+
+  if (priorityRec) {
+    priorityCat = priorityRec.priority_category || priorityCat;
+    depthText = priorityRec.recommended_irrigation_depth || depthText;
+    deficitText = " · Daily Deficit: " + priorityRec.daily_water_deficit_mm + " mm";
   }
 
-  html += "<p>Monthly irrigation priority</p><div class='chart'>";
+  if (mlRes && mlRes.crop_stress_prediction && mlRes.irrigation_priority_prediction) {
+    var cs = mlRes.crop_stress_prediction;
+    var ip = mlRes.irrigation_priority_prediction;
+    var ag = mlRes.calculated_agronomic_indicators || {};
+    stressLevel = cs.stress_level || stressLevel;
+    ipiScore = Number(ip.irrigation_priority_index || ipiScore);
+    priorityCat = ip.priority_category || priorityCat;
+    depthText = ip.recommended_irrigation_depth || depthText;
+    reasonText = cs.condition_summary || reasonText;
+    actionText = ip.actionable_farmer_advisory || actionText;
+    probs = cs.stress_probabilities || null;
+    if (ag.daily_water_deficit_mm !== undefined) {
+      deficitText = " · Daily Deficit: " + Number(ag.daily_water_deficit_mm).toFixed(1) + " mm";
+    }
+  }
+
+  var badgeCls = getStressBadgeClass(stressLevel);
+  var riskStatus = getRiskStatusLabel({ stress: stressLevel, ipi: ipiScore });
+  var regionText = "India Agro-Climatic Grid";
+  if (clusterRec) {
+    regionText = "Zone " + clusterRec.cluster_id + ": " + clusterRec.cluster_name;
+  }
+
+  var rankHtml = "";
+  if (priorityRec && priorityRec.rank) {
+    rankHtml = " · Rank #" + priorityRec.rank + " / 732";
+  }
+
+  var confHtml = "";
+  if (probs) {
+    var peak = getPeakModelProbability(probs);
+    var confBars = "";
+    var order = ["Low", "Moderate", "High", "Severe"];
+    for (var i = 0; i < order.length; i++) {
+      var lbl = order[i];
+      var pct = ((Number(probs[lbl] || 0)) * 100).toFixed(1);
+      confBars += "<div class='intel-conf-row'>"
+        + "<span class='intel-conf-lbl'>" + lbl + "</span>"
+        + "<div class='intel-conf-track'><div class='intel-conf-fill' style='width:" + pct + "%;'></div></div>"
+        + "<span class='intel-conf-pct'>" + pct + "%</span>"
+        + "</div>";
+    }
+    var peakText = "";
+    if (peak) {
+      peakText = " (" + peak.label + " confidence: " + peak.pct + "%)";
+    }
+    confHtml = "<div class='intel-section-title' style='margin-top:10px;'>Model Class Probabilities" + peakText + "</div>"
+      + "<div class='intel-conf-list'>" + confBars + "</div>";
+  } else {
+    confHtml = "<div style='font-size:11px;color:var(--geo-muted);margin-top:6px;'>Loading live Random Forest class probabilities...</div>";
+  }
+
   var monthNames = ["", "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  var barsHtml = "";
   for (var m = 6; m <= 11; m++) {
-    var heightPx = Math.max(4, (d.months[m] || 0) * 0.6);
-    html += "<div data-m='" + monthNames[m] + "' style='height:" + heightPx + "px'></div>";
+    var heightPx = Math.max(4, (d.months[m] || 0) * 0.55);
+    barsHtml += "<div data-m='" + monthNames[m] + "' style='height:" + heightPx + "px'></div>";
   }
 
   var safeState = escapeSingleQuote(d.state);
   var safeDistrict = escapeSingleQuote(d.district);
-  html += "</div>"
-    + "<button type='button' onclick=\"openDistrictInPredictor('" + safeState + "', '" + safeDistrict + "')\" class='btn fill' style='width:100%;font-size:12px;padding:8px 10px;margin-top:14px;cursor:pointer;'>Open in Predictor</button>";
-  return html;
+
+  return "<span class='tag' style='color:var(--geo-accent);margin-bottom:4px;'>DISTRICT INTELLIGENCE PANEL</span>"
+    + "<h4>" + d.district + ", " + stateTitle + "</h4>"
+    + "<div style='display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 8px;'>"
+    + "<span class='badge " + badgeCls + "'>" + stressLevel + " Stress</span>"
+    + "<span class='badge'>" + riskStatus + "</span>"
+    + "</div>"
+    + "<div class='intel-section'>"
+    + "<div class='intel-section-title'>1. Geographical Information</div>"
+    + "<p><b>Region Cluster:</b> " + regionText + "</p>"
+    + "<p><b>Crop &amp; Soil:</b> " + (d.crop || "Mixed") + " · " + (d.soil_type || "Alluvial") + " · Irrig Coverage: " + (d.irrigation_coverage || 45) + "%</p>"
+    + "</div>"
+    + "<div class='intel-section'>"
+    + "<div class='intel-section-title'>2. ML Intelligence" + rankHtml + "</div>"
+    + "<div class='intel-kpi-grid'>"
+    + "<div class='intel-kpi'><span>Crop Stress</span><b style='color:" + getPriorityScoreColor(ipiScore) + ";'>" + stressLevel + "</b></div>"
+    + "<div class='intel-kpi'><span>Irrigation Priority</span><b class='intel-anim-num' data-target='" + ipiScore.toFixed(1) + "' data-decimals='1' data-suffix='/100'>0.0</b></div>"
+    + "<div class='intel-kpi'><span>Risk Class</span><b>" + priorityCat + "</b></div>"
+    + "<div class='intel-kpi'><span>Soil Wetness</span><b class='intel-anim-num' data-target='" + Number(d.soil_wetness).toFixed(2) + "' data-decimals='2'>0.00</b></div>"
+    + "</div>"
+    + confHtml
+    + "</div>"
+    + "<div class='intel-section'>"
+    + "<div class='intel-section-title'>3. Irrigation Recommendation</div>"
+    + "<div class='intel-advisory-box'>"
+    + "<p style='margin:0 0 4px;color:var(--geo-text);'><b>Priority &amp; Depth:</b> " + priorityCat + " (" + depthText + ")</p>"
+    + "<p style='margin:0 0 4px;color:var(--geo-muted);'><b>Reason:</b> " + reasonText + "</p>"
+    + "<p style='margin:0 0 4px;color:var(--geo-muted);'><b>Environment:</b> Temp " + (d.temperature || 28) + "°C · Humidity " + (d.humidity || 60) + "% · Rain " + d.rainfall + " mm · NDVI " + d.ndvi + deficitText + "</p>"
+    + "<p style='margin:0;color:var(--geo-neon);'><b>Action:</b> " + actionText + "</p>"
+    + "</div>"
+    + "</div>"
+    + "<div class='intel-section'>"
+    + "<div class='intel-section-title'>Jun–Nov Seasonal Priority Trend</div>"
+    + "<div class='chart'>" + barsHtml + "</div>"
+    + "</div>"
+    + "<div class='intel-actions'>"
+    + "<button type='button' onclick=\"openDistrictInPredictor('" + safeState + "', '" + safeDistrict + "')\" class='btn fill'>Open in Predictor</button>"
+    + "<button type='button' onclick=\"backToParentState()\" class='geo-action-btn'>&larr; Back to " + stateTitle + "</button>"
+    + "</div>";
 }
 
-function showInfo(d, p) {
+function showInfo(d, p, mlRes) {
   var el = document.getElementById("info");
+  if (!el) return;
   var html = "";
 
   if (!p) {
     if (current) {
       html = buildStateSummaryHtml();
     } else {
-      html = "<h4>All-India Coverage</h4>"
-        + "<div class='v mono' style='font-size:18px;color:var(--teal);margin:6px 0;'>732 Districts Across 36 States/UTs</div>"
-        + "<p style='margin-bottom:8px;'>Comprehensive nationwide district-level boundaries with verified agricultural intelligence.</p>"
-        + "<p style='font-size:12px;color:var(--mute);'>Select a state from the dropdown or click any district to explore data.</p>";
+      html = buildIndiaOverviewHtml();
     }
   } else if (!d) {
-    html = "<h4>" + p.district + ", " + formatStateName(p.state) + "</h4>"
-      + "<div style='margin:8px 0;'><span class='badge' style='background:#f3f4f6;color:#4b5563;border:1px solid #d1d5db;'>Agricultural prediction data unavailable.</span></div>"
-      + "<p style='margin:8px 0;font-size:13px;line-height:1.5;'><b>Geographical Boundary Verified.</b> Authentic Survey of India district boundaries loaded for " + p.district + ".</p>"
-      + "<p style='font-size:12px;color:var(--mute);line-height:1.5;'>Agricultural sensor and ML prediction data is unavailable for this district in the Jun–Nov 2023 verified benchmark dataset.</p>";
+    html = "<span class='tag' style='color:var(--geo-muted);margin-bottom:4px;'>GEOGRAPHICAL BOUNDARY</span>"
+      + "<h4>" + p.district + ", " + formatStateName(p.state) + "</h4>"
+      + "<div style='margin:8px 0;'><span class='badge'>Data Unavailable</span></div>"
+      + "<p style='line-height:1.5;'>Boundary geometry verified for " + p.district + ". Agricultural telemetry and ML prediction data are unavailable for this district in the current dataset.</p>"
+      + "<div class='intel-actions'>"
+      + "<button type='button' onclick=\"backToParentState()\" class='geo-action-btn'>&larr; Back to State</button>"
+      + "</div>";
   } else {
-    html = buildDistrictInfoHtml(d);
+    html = buildDistrictInfoHtml(d, mlRes);
   }
 
-  el.innerHTML = html + drawLegend();
+  el.innerHTML = html;
+  el.scrollTop = 0;
+  animateIntelNumbers();
+  renderDynamicLegend();
+}
+
+function fetchDistrictMlIntelligence(props, d) {
+  if (!d || !props) return;
+  var cacheKey = normState(props.state) + "|" + normState(props.district);
+  if (districtMlCache[cacheKey]) {
+    if (selected && normState(selected.district) === normState(props.district)) {
+      showInfo(d, props, districtMlCache[cacheKey]);
+    }
+    return;
+  }
+
+  setGeoLoading(true, "Running ML intelligence for " + props.district + "...");
+
+  var payload = {
+    state: formatStateName(props.state),
+    district: props.district,
+    temperature: Number(d.temperature || 28.0),
+    rainfall: Number(d.rainfall || 2.0),
+    humidity: Number(d.humidity || 60.0),
+    effective_soil_wetness: Number(d.soil_wetness || 0.45),
+    ndvi: Number(d.ndvi || 0.55),
+    crop_type: d.crop || "Cotton",
+    growth_stage: "Reproductive",
+    save_history: false
+  };
+
+  fetch("/predict", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  })
+    .then(function(r) {
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      return r.json();
+    })
+    .then(function(res) {
+      setGeoLoading(false);
+      districtMlCache[cacheKey] = res;
+      if (selected && normState(selected.district) === normState(props.district)) {
+        showInfo(d, props, res);
+      }
+    })
+    .catch(function() {
+      setGeoLoading(false);
+    });
 }
 
 window.openDistrictInPredictor = function(st, dt) {
@@ -485,72 +933,219 @@ window.openDistrictInPredictor = function(st, dt) {
   }, 120);
 };
 
-function selectDistrict(props, ly) {
+function getFitBoundsOptions(maxZoomLimit) {
+  if (window.innerWidth > 900) {
+    return {
+      duration: 1.0,
+      maxZoom: maxZoomLimit,
+      paddingTopLeft: [45, 55],
+      paddingBottomRight: [370, 35]
+    };
+  }
+  return {
+    duration: 1.0,
+    maxZoom: maxZoomLimit,
+    paddingTopLeft: [20, 40],
+    paddingBottomRight: [20, 220]
+  };
+}
+
+function selectDistrict(props, ly, skipFly) {
+  if (!props || !ly) return;
+  var parentState = formatStateName(props.state);
+  if (!current || normState(current) !== normState(parentState)) {
+    current = parentState;
+    document.getElementById("state-select").value = parentState;
+  }
+
   if (selectedDistrictLayer && distLayer) {
     distLayer.resetStyle(selectedDistrictLayer);
   }
   selectedDistrictLayer = ly;
   selected = props;
-  var baseFillOpacity = ly.options.fillOpacity || 0.8;
+
+  if (distLayer) distLayer.setStyle(styleDist);
+  if (stateLayer) stateLayer.setStyle(styleState);
+
   ly.setStyle({
-    weight: 3.5,
+    weight: 3.8,
     color: getSelectedDistrictColor(),
-    fillOpacity: Math.min(1.0, baseFillOpacity + 0.12),
+    fillOpacity: 0.94,
     opacity: 1
   });
   if (!L.Browser.ie && !L.Browser.opera && !L.Browser.edge) {
     ly.bringToFront();
   }
-  showInfo(dataFor(props), props);
+  if (stateLayer) {
+    stateLayer.bringToFront();
+  }
+
+  if (!skipFly) {
+    map.flyToBounds(ly.getBounds(), getFitBoundsOptions(8.5));
+  }
+
+  syncBreadcrumbControls();
+  updateRiskPulseMarkers();
+  var distData = dataFor(props);
+  var cacheKey = normState(props.state) + "|" + normState(props.district);
+  showInfo(distData, props, districtMlCache[cacheKey] || null);
+  fetchDistrictMlIntelligence(props, distData);
 }
 
 function clearSelectedDistrict() {
   if (selectedDistrictLayer && distLayer) {
     distLayer.resetStyle(selectedDistrictLayer);
-    selectedDistrictLayer = null;
-    selected = null;
   }
+  selectedDistrictLayer = null;
+  selected = null;
 }
+
+window.backToParentState = function() {
+  if (!current) {
+    filterByState("ALL");
+    return;
+  }
+  filterByState(current);
+};
 
 function filterByState(stName) {
   clearSelectedDistrict();
+  hideMapTooltip();
 
   if (!stName || stName === "ALL") {
     current = null;
-    document.getElementById("pill").textContent = "INDIA";
     document.getElementById("state-select").value = "ALL";
     if (distLayer) distLayer.setStyle(styleDist);
     if (stateLayer) stateLayer.setStyle(styleState);
-    map.flyTo([22.5, 80], 4.5, { duration: 1.2 });
-    showInfo(null);
+    map.flyTo([22.8, 84.5], 4.5, { duration: 1.1 });
+    syncBreadcrumbControls();
+    updateRiskPulseMarkers();
+    showInfo(null, null);
     return;
   }
 
-  current = stName;
-  document.getElementById("pill").textContent = stName.toUpperCase();
-  document.getElementById("state-select").value = stName;
-  if (distLayer) distLayer.setStyle(styleDist);
-  if (stateLayer) stateLayer.setStyle(styleState);
+  var formatted = formatStateName(stName);
+  current = formatted;
+  var stateSelectEl = document.getElementById("state-select");
+  if (stateSelectEl) {
+    selectOptionCaseInsensitive(stateSelectEl, formatted);
+  }
 
-  var nSt = normState(stName);
+  if (distLayer) distLayer.setStyle(styleDist);
+  if (stateLayer) {
+    stateLayer.setStyle(styleState);
+    stateLayer.bringToFront();
+  }
+
+  var nSt = normState(formatted);
   var bounds = stateBounds[nSt];
   if (bounds && bounds.isValid()) {
-    map.flyToBounds(bounds, { duration: 1.2, padding: [35, 35] });
+    map.flyToBounds(bounds, getFitBoundsOptions(7.5));
   }
-  showInfo(null);
+  syncBreadcrumbControls();
+  updateRiskPulseMarkers();
+  showInfo(null, null);
+}
+
+function updateRiskPulseMarkers() {
+  if (!riskPulseLayerGroup || !distsGeo) return;
+  riskPulseLayerGroup.clearLayers();
+
+  var candidates = [];
+  for (var k in districtMap) {
+    var ly = districtMap[k];
+    var props = ly.feature.properties;
+    if (current && normState(props.state) !== normState(current)) {
+      continue;
+    }
+    var d = dataFor(props);
+    if (!d) continue;
+
+    var isRisk = false;
+    var pulseColor = "#ef4444";
+    var score = Number(d.ipi || 0);
+
+    if (layer === "stress") {
+      if (d.stress === "Severe" || d.stress === "High") {
+        isRisk = true;
+        if (d.stress === "Severe") pulseColor = "#ff2e4c";
+      }
+    } else if (layer === "ipi") {
+      if (d.ipi >= 50.0) {
+        isRisk = true;
+        pulseColor = "#dc2626";
+      }
+    } else if (layer === "wet") {
+      if (d.soil_wetness < 0.30) {
+        isRisk = true;
+        pulseColor = "#f97316";
+      }
+    }
+
+    if (isRisk) {
+      candidates.push({
+        layerObj: ly,
+        score: score,
+        color: pulseColor
+      });
+    }
+  }
+
+  candidates.sort(function(a, b) { return b.score - a.score; });
+
+  var maxMarkers = 15;
+  if (current) {
+    maxMarkers = 40;
+  }
+  var limit = Math.min(candidates.length, maxMarkers);
+
+  for (var i = 0; i < limit; i++) {
+    var item = candidates[i];
+    var center = item.layerObj.getBounds().getCenter();
+    var icon = L.divIcon({
+      className: "geo-pulse-marker",
+      html: "<div class='geo-pulse-wrap' style='--geo-pulse-color:" + item.color + ";'>"
+        + "<div class='geo-risk-pulse-ring'></div>"
+        + "<div class='geo-risk-pulse-core'></div>"
+        + "</div>",
+      iconSize: [24, 24],
+      iconAnchor: [12, 12]
+    });
+    L.marker(center, { icon: icon, interactive: false, keyboard: false }).addTo(riskPulseLayerGroup);
+  }
 }
 
 function recolor() {
   if (distLayer) distLayer.setStyle(styleDist);
   if (stateLayer) stateLayer.setStyle(styleState);
   if (selectedDistrictLayer) {
-    selectedDistrictLayer.setStyle({ weight: 3.5, color: getSelectedDistrictColor() });
+    selectedDistrictLayer.setStyle({ weight: 3.8, color: getSelectedDistrictColor(), fillOpacity: 0.94 });
   }
+  updateRiskPulseMarkers();
   var selectedData = null;
+  var cacheKey = "";
+  var cachedMl = null;
   if (selected) {
     selectedData = dataFor(selected);
+    cacheKey = normState(selected.state) + "|" + normState(selected.district);
+    cachedMl = districtMlCache[cacheKey] || null;
   }
-  showInfo(selectedData, selected);
+  showInfo(selectedData, selected, cachedMl);
+}
+
+function syncLayerButtonsState() {
+  var btns = document.querySelectorAll(".layer-dock .ld-btn");
+  for (var i = 0; i < btns.length; i++) {
+    btns[i].classList.toggle("active", btns[i].getAttribute("data-layer") === layer);
+  }
+}
+
+function setActiveLayer(layerKey) {
+  if (!LAYERS[layerKey]) return;
+  layer = layerKey;
+  syncLayerButtonsState();
+  buildLayerLinks();
+  recolor();
 }
 
 function buildLayerLinks() {
@@ -560,19 +1155,14 @@ function buildLayerLinks() {
     if (k === layer) {
       activeClass = "sel";
     }
-    var linkColor = "var(--acc)";
-    if (k === "stress") {
-      linkColor = "#c0392b";
-    }
-    html += "<a data-k='" + k + "' class='" + activeClass + "' style='color:" + linkColor + "'>" + LAYERS[k].name + "</a>";
+    html += "<a data-k='" + k + "' class='" + activeClass + "'>" + LAYERS[k].name + "</a>";
   }
   var box = document.getElementById("layers");
+  if (!box) return;
   box.innerHTML = html;
   box.onclick = function(e) {
     if (e.target.dataset.k) {
-      layer = e.target.dataset.k;
-      buildLayerLinks();
-      recolor();
+      setActiveLayer(e.target.dataset.k);
     }
   };
 }
@@ -590,6 +1180,67 @@ function computeRanges() {
     }
     ranges[k] = [lo, hi];
   }
+}
+
+function computeStateSummaries() {
+  stateSummaries = {};
+  if (!distsGeo) return;
+
+  for (var i = 0; i < distsGeo.features.length; i++) {
+    var props = distsGeo.features[i].properties;
+    var stName = formatStateName(props.state);
+    var nSt = normState(stName);
+    if (!stateSummaries[nSt]) {
+      stateSummaries[nSt] = {
+        name: stName,
+        districtCount: 0,
+        dataCount: 0,
+        ipiSum: 0,
+        wetSum: 0,
+        stressCounts: {},
+        cropCounts: {}
+      };
+    }
+    var entry = stateSummaries[nSt];
+    entry.districtCount += 1;
+
+    var d = dataFor(props);
+    if (d) {
+      entry.dataCount += 1;
+      entry.ipiSum += Number(d.ipi || 0);
+      entry.wetSum += Number(d.soil_wetness || 0);
+      if (d.stress) {
+        entry.stressCounts[d.stress] = (entry.stressCounts[d.stress] || 0) + 1;
+      }
+      if (d.crop) {
+        entry.cropCounts[d.crop] = (entry.cropCounts[d.crop] || 0) + 1;
+      }
+    }
+  }
+
+  for (var k in stateSummaries) {
+    var s = stateSummaries[k];
+    s.avgIpi = 0;
+    s.avgWet = 0;
+    if (s.dataCount > 0) {
+      s.avgIpi = s.ipiSum / s.dataCount;
+      s.avgWet = s.wetSum / s.dataCount;
+    }
+    s.dominantStress = pickTopKey(s.stressCounts, "Low");
+    s.dominantCrop = pickTopKey(s.cropCounts, "Mixed");
+  }
+}
+
+function pickTopKey(freqMap, fallback) {
+  var bestKey = fallback;
+  var bestCount = -1;
+  for (var key in freqMap) {
+    if (freqMap[key] > bestCount) {
+      bestCount = freqMap[key];
+      bestKey = key;
+    }
+  }
+  return bestKey;
 }
 
 function findDistrictLayerMatch(targetDt, targetSt) {
@@ -638,16 +1289,7 @@ function handleSearch(val) {
   var ly = findDistrictLayerMatch(targetDt, targetSt);
   if (!ly) return;
 
-  var feature = ly.feature;
-  if (current && normState(feature.properties.state) !== normState(current)) {
-    current = formatStateName(feature.properties.state);
-    document.getElementById("pill").textContent = current.toUpperCase();
-    document.getElementById("state-select").value = current;
-    distLayer.setStyle(styleDist);
-    stateLayer.setStyle(styleState);
-  }
-  selectDistrict(feature.properties, ly);
-  map.flyToBounds(ly.getBounds(), { duration: 1.0, maxZoom: 8, padding: [50, 50] });
+  selectDistrict(ly.feature.properties, ly, false);
 }
 
 function loadDistrictProfile(state, district) {
@@ -1364,35 +2006,9 @@ function navigatePredictionToMap() {
 
     if (!ly) return;
 
-    if (current && normState(ly.feature.properties.state) !== normState(current)) {
-      current = formatStateName(ly.feature.properties.state);
-      document.getElementById("pill").textContent = current.toUpperCase();
-      document.getElementById("state-select").value = current;
-      distLayer.setStyle(styleDist);
-      stateLayer.setStyle(styleState);
-    }
-    selectDistrict(ly.feature.properties, ly);
-    map.flyToBounds(ly.getBounds(), { duration: 1.0, maxZoom: 8, padding: [50, 50] });
-
-    var cStress = res.crop_stress_prediction || {};
-    var iPriority = res.irrigation_priority_prediction || {};
-    var agro = res.calculated_agronomic_indicators || {};
-    var stressLevel = cStress.stress_level || "Moderate";
-    var badgeCls = getStressBadgeClass(stressLevel);
-
-    var html = "<h4>" + payload.district + ", " + formatStateName(payload.state) + "</h4>"
-      + "<div style='margin:6px 0;'><span class='badge " + badgeCls + "'>Predicted: " + stressLevel + " Stress</span> "
-      + "<span class='badge' style='background:rgba(15,118,110,0.15);color:var(--teal);'>ML INFERENCE</span></div>"
-      + "<div class='v mono' style='color:var(--acc);font-size:22px;margin:4px 0;'>IPI " + (iPriority.irrigation_priority_index || 0.0).toFixed(1) + " / 100</div>"
-      + "<p><b>Recommended Irrigation:</b> " + (iPriority.recommended_irrigation_depth || "35–45 mm") + "</p>"
-      + "<p><b>Crop:</b> " + payload.crop_type + " (" + payload.growth_stage + " stage)</p>"
-      + "<p style='font-size:12px;margin:8px 0;line-height:1.4;'><b>Advisory:</b> " + (iPriority.actionable_farmer_advisory || "") + "</p>"
-      + "<p style='font-size:11.5px;color:var(--mute);margin-top:10px;'>Deficit: "
-      + (agro.daily_water_deficit_mm || 0.0).toFixed(1) + " mm/d · ETc: "
-      + (agro.crop_etc_mm || 0.0).toFixed(2) + " mm · NDVI: "
-      + (agro.vegetation_ndvi || 0.0).toFixed(3) + "</p>";
-
-    document.getElementById("info").innerHTML = html + drawLegend();
+    var cacheKey = normState(ly.feature.properties.state) + "|" + normState(ly.feature.properties.district);
+    districtMlCache[cacheKey] = res;
+    selectDistrict(ly.feature.properties, ly, false);
   }, 180);
 }
 
@@ -1408,50 +2024,74 @@ function attachDistrictLayerEvents(feature, layerObj) {
   }
 
   layerObj.on("click", function() {
-    selectDistrict(feature.properties, layerObj);
+    var parentStateName = formatStateName(feature.properties.state);
+    if (!current) {
+      filterByState(parentStateName);
+      return;
+    }
+    if (normState(parentStateName) !== normState(current)) {
+      filterByState(parentStateName);
+      return;
+    }
+    selectDistrict(feature.properties, layerObj, false);
   });
-  layerObj.on("mouseover", function() {
+
+  layerObj.on("mouseover", function(e) {
+    hoveredState = nSt;
+    if (!current) {
+      if (stateLayer) stateLayer.setStyle(styleState);
+      if (distLayer) distLayer.setStyle(styleDist);
+      showMapTooltip(buildStateHoverTooltipHtml(formatStateName(feature.properties.state)), e);
+      return;
+    }
+
+    var hoverColor = getSelectedDistrictColor();
     if (layerObj !== selectedDistrictLayer) {
-      var hoverColor = "#b5573a";
-      if (currentBasemap === "satellite") {
-        hoverColor = "#ffffff";
-      }
-      layerObj.setStyle({ weight: 2.5, color: hoverColor });
+      layerObj.setStyle({ weight: 2.6, color: hoverColor, fillOpacity: 0.96, opacity: 1.0 });
       if (!L.Browser.ie && !L.Browser.opera && !L.Browser.edge) {
         layerObj.bringToFront();
       }
+      if (stateLayer) stateLayer.bringToFront();
     }
-    hoveredState = normState(feature.properties.state);
-    if (stateLayer) stateLayer.setStyle(styleState);
-  });
-  layerObj.on("mouseout", function() {
-    if (layerObj !== selectedDistrictLayer && distLayer) {
-      distLayer.resetStyle(layerObj);
-    }
-    hoveredState = null;
-    if (stateLayer) stateLayer.setStyle(styleState);
+    showMapTooltip(buildDistrictHoverTooltipHtml(feature.properties, dataFor(feature.properties)), e);
   });
 
-  var distData = dataFor(feature.properties);
-  var statusText = "Agricultural prediction data unavailable.";
-  if (distData) {
-    if (distData.stress) {
-      statusText = distData.stress + " Stress · IPI " + distData.ipi;
+  layerObj.on("mousemove", function(e) {
+    if (!current) {
+      showMapTooltip(buildStateHoverTooltipHtml(formatStateName(feature.properties.state)), e);
     } else {
-      statusText = "IPI " + distData.ipi;
+      showMapTooltip(buildDistrictHoverTooltipHtml(feature.properties, dataFor(feature.properties)), e);
     }
-  }
-  var tipText = "<b>" + feature.properties.district + "</b>, " + formatStateName(feature.properties.state)
-    + "<br><span style='font-size:11px;opacity:0.85;'>" + statusText + "</span>";
-  layerObj.bindTooltip(tipText, { sticky: true });
+  });
+
+  layerObj.on("mouseout", function() {
+    hoveredState = null;
+    if (stateLayer) stateLayer.setStyle(styleState);
+    if (!current) {
+      if (distLayer) distLayer.setStyle(styleDist);
+    } else if (layerObj !== selectedDistrictLayer && distLayer) {
+      distLayer.resetStyle(layerObj);
+    }
+    hideMapTooltip();
+  });
 }
 
 function populateMapControls() {
   stateList = [];
   var seenStates = {};
-  stateBounds = {};
   stateCounts = {};
   districtMap = {};
+
+  if (statesGeo && statesGeo.features) {
+    for (var s = 0; s < statesGeo.features.length; s++) {
+      var stFromGeo = formatStateName(statesGeo.features[s].properties.state);
+      var nGeoSt = normState(stFromGeo);
+      if (!seenStates[nGeoSt]) {
+        seenStates[nGeoSt] = stFromGeo;
+        stateList.push(stFromGeo);
+      }
+    }
+  }
 
   for (var i = 0; i < distsGeo.features.length; i++) {
     var feature = distsGeo.features[i];
@@ -1467,16 +2107,17 @@ function populateMapControls() {
 
   var coverageBadge = document.getElementById("coverage-badge");
   if (coverageBadge) {
-    coverageBadge.textContent = distsGeo.features.length + " Districts | All India Coverage";
+    coverageBadge.textContent = distsGeo.features.length + " Districts · " + stateList.length + " States/UTs";
   }
 
   var sel = document.getElementById("state-select");
-  sel.innerHTML = "<option value='ALL'>All States / UTs (" + distsGeo.features.length + " Districts)</option>";
+  sel.innerHTML = "<option value='ALL'>All States / UTs (" + stateList.length + ")</option>";
   for (var j = 0; j < stateList.length; j++) {
     var st = stateList[j];
+    var cnt = stateCounts[normState(st)] || 0;
     var opt = document.createElement("option");
     opt.value = st;
-    opt.textContent = st + " (" + (stateCounts[normState(st)] || 0) + " districts)";
+    opt.textContent = st + " (" + cnt + ")";
     sel.appendChild(opt);
   }
   sel.onchange = function() {
@@ -1494,6 +2135,8 @@ function populateMapControls() {
   document.getElementById("dl").innerHTML = dlHtml;
 }
 
+setGeoLoading(true, "Loading India boundaries & agricultural datasets...");
+
 Promise.all([
   fetch("data/india_states_simplified.geojson").then(function(r) { return r.json(); }),
   fetch("data/india_districts_simplified.geojson").then(function(r) { return r.json(); }),
@@ -1504,6 +2147,8 @@ Promise.all([
     distsGeo = res[1];
     DATA = res[2];
     computeRanges();
+    computeStateSummaries();
+    syncLayerButtonsState();
     buildLayerLinks();
     populateMapControls();
 
@@ -1518,6 +2163,16 @@ Promise.all([
       interactive: false
     }).addTo(map);
 
+    for (var sbIdx = 0; sbIdx < statesGeo.features.length; sbIdx++) {
+      var stFeat = statesGeo.features[sbIdx];
+      var sbName = formatStateName(stFeat.properties.state);
+      var sbNorm = normState(sbName);
+      var tempLayer = L.geoJSON(stFeat);
+      if (!stateBounds[sbNorm]) {
+        stateBounds[sbNorm] = L.latLngBounds(tempLayer.getBounds());
+      }
+    }
+
     var btnStateBorders = document.getElementById("btn-state-borders");
     if (btnStateBorders) {
       btnStateBorders.onclick = function() {
@@ -1529,33 +2184,82 @@ Promise.all([
 
     distLayer.bringToFront();
     stateLayer.bringToFront();
-    showInfo(null);
+    syncBreadcrumbControls();
+    updateRiskPulseMarkers();
+    showInfo(null, null);
+    setGeoLoading(false);
     initPredictorForm();
   })
   .catch(function(err) {
+    setGeoLoading(false);
     console.error("Map initialization failed:", err);
     document.getElementById("info").innerHTML = "<h4>Could not load data</h4><p>Open this page through the FastAPI server at /app/.</p>";
   });
 
+var zoomInBtn = document.getElementById("map-zoom-in");
+if (zoomInBtn) {
+  zoomInBtn.onclick = function() {
+    map.zoomIn();
+  };
+}
+var zoomOutBtn = document.getElementById("map-zoom-out");
+if (zoomOutBtn) {
+  zoomOutBtn.onclick = function() {
+    map.zoomOut();
+  };
+}
+var resetCamBtn = document.getElementById("map-reset");
+if (resetCamBtn) {
+  resetCamBtn.onclick = function() {
+    filterByState("ALL");
+  };
+}
+
 document.getElementById("lb").onclick = function() {
-  document.getElementById("panel").classList.add("on");
-  this.style.display = "none";
+  var panelEl = document.getElementById("panel");
+  if (panelEl) panelEl.classList.toggle("on");
 };
 document.getElementById("lyr").onclick = function() {
-  document.getElementById("panel").classList.toggle("on");
+  var panelEl = document.getElementById("panel");
+  if (panelEl) panelEl.classList.toggle("on");
 };
 document.getElementById("pill").onclick = function() {
   filterByState("ALL");
 };
+var btnBackIndia = document.getElementById("btn-back-india");
+if (btnBackIndia) {
+  btnBackIndia.onclick = function() {
+    filterByState("ALL");
+  };
+}
+var btnBackState = document.getElementById("btn-back-state");
+if (btnBackState) {
+  btnBackState.onclick = window.backToParentState;
+}
+var crumbStateBtn = document.getElementById("crumb-state");
+if (crumbStateBtn) {
+  crumbStateBtn.onclick = window.backToParentState;
+}
+
 document.getElementById("theme").onclick = function() {
+  var appEl = document.getElementById("app");
   if (document.documentElement.dataset.theme === "dark") {
     document.documentElement.dataset.theme = "";
+    if (appEl) appEl.removeAttribute("data-contrast");
   } else {
     document.documentElement.dataset.theme = "dark";
+    if (appEl) appEl.setAttribute("data-contrast", "dark");
   }
 };
 
-var msBtns = document.querySelectorAll(".map-switcher .ms-btn");
+var layerDockBtns = document.querySelectorAll(".layer-dock .ld-btn");
+for (var ldIdx = 0; ldIdx < layerDockBtns.length; ldIdx++) {
+  layerDockBtns[ldIdx].onclick = function() {
+    setActiveLayer(this.getAttribute("data-layer"));
+  };
+}
+
+var msBtns = document.querySelectorAll(".map-switcher .ms-btn[data-style]");
 for (var msIdx = 0; msIdx < msBtns.length; msIdx++) {
   msBtns[msIdx].onclick = function() {
     setBasemap(this.dataset.style);
@@ -1607,6 +2311,7 @@ function loadPriorityData() {
       populateStateDropdown(allPriorityList);
       renderTop10Chart(allPriorityList.slice(0, 10));
       filterRankings();
+      if (selected && distLayer) recolor();
     })
     .catch(function(err) {
       console.error("Could not load priority rankings:", err);
@@ -1878,6 +2583,7 @@ function loadClustersData() {
       renderClusterCardsStats(clustersSummaryMeta);
       renderPcaScatterPlot(allClustersList);
       filterClusters();
+      if (selected && distLayer) recolor();
     })
     .catch(function(err) {
       console.error("Could not load regional clusters:", err);
@@ -2434,6 +3140,7 @@ function activateNavLink(id) {
 }
 
 function route() {
+  hideMapTooltip();
   var hash = location.hash || "#/";
   var sectionIds = [
     "app",

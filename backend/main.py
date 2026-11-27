@@ -366,6 +366,7 @@ class PredictRequest(BaseModel):
     farmer_name: Optional[str] = None
     farmer_phone: Optional[str] = ""
     farmer_village: Optional[str] = ""
+    save_history: Optional[bool] = True
 
 
 class CropStressSimRequest(BaseModel):
@@ -692,17 +693,23 @@ def predict(item: PredictRequest):
     daily_deficit = max(0.0, round(etc_val - (rain_val + soil_val * etc_val), 2))
     stress_label = stress_label_map.get(stress_code, "Moderate")
 
-    pred_id, saved_farmer_id, db_saved, db_msg = save_prediction_to_mysql(
-        item,
-        raw_df,
-        stress_code,
-        stress_label,
-        priority_index,
-        priority_category,
-        recommended_depth,
-        daily_deficit,
-        advisory,
-    )
+    if item.save_history is False:
+        pred_id = None
+        saved_farmer_id = None
+        db_saved = False
+        db_msg = "Read-only map intelligence lookup"
+    else:
+        pred_id, saved_farmer_id, db_saved, db_msg = save_prediction_to_mysql(
+            item,
+            raw_df,
+            stress_code,
+            stress_label,
+            priority_index,
+            priority_category,
+            recommended_depth,
+            daily_deficit,
+            advisory,
+        )
 
     input_features_out = {}
     for col in feature_cols:

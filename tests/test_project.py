@@ -188,6 +188,13 @@ def verify_prediction_endpoints():
     if pred_id:
         client.delete(f"/api/predictions/{pred_id}")
 
+    payload_readonly = dict(payload_14)
+    payload_readonly["save_history"] = False
+    r_ro = client.post("/predict", json=payload_readonly)
+    assert r_ro.status_code == 200
+    assert r_ro.json()["database"]["saved"] is False
+    assert r_ro.json()["database"]["prediction_id"] is None
+
     payload_9 = {
         "cwsi": 0.35,
         "effective_soil_wetness": 0.40,
@@ -348,6 +355,8 @@ def test_8_frontend_integrity():
         "view-benchmarks", "view-clusters", "view-farmers",
         "hero-shortcut", "nav-card",
         "#/map", "#/predictor", "#/ranking", "#/benchmarks", "#/clusters", "#/farmers",
+        "btn-back-india", "btn-back-state", "map-legend", "map-tooltip",
+        "layer-dock", 'data-style="dark"', 'data-style="light"', 'data-style="satellite"',
     ]
     for token in required_html_tokens:
         assert token in html, f"Missing {token} in frontend/index.html"
@@ -357,6 +366,8 @@ def test_8_frontend_integrity():
     required_js_tokens = [
         "module-dock", "selectDistrict", "runPredictionInference", "loadPriorityData",
         "loadModelBenchmarks", "loadClustersData", "initFarmersView", "initModuleDocks",
+        "setActiveLayer", "filterByState", "backToParentState", "fetchDistrictMlIntelligence",
+        "renderDynamicLegend",
     ]
     for token in required_js_tokens:
         assert token in js, f"Missing {token} in frontend/portal.js"
