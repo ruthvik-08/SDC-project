@@ -1,0 +1,7 @@
+# Additional dependencies required only when running Jupyter notebooks & plots offline
+-r requirements.txt
+matplotlib
+seaborn
+imbalanced-learn
+jupyter
+nbformat

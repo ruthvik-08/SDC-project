@@ -1,8 +1,8 @@
 {
   "info": {
-    "_postman_id": "krishijal-deployment-fastapi-v2",
-    "name": "KrishiJal - Crop Stress & Irrigation Priority Decision Support API",
-    "description": "Postman Collection for KrishiJal FastAPI Backend & Public Deployment.\nSupports testing against Localhost (http://127.0.0.1:8000) and Public Ngrok (https://<your-id>.ngrok-free.dev) using the {{base_url}} variable.",
+    "_postman_id": "krishijal-fastapi-mysql-v2",
+    "name": "KrishiJal - Crop Stress, Irrigation Priority & MySQL API",
+    "description": "Complete Postman Collection for the KrishiJal FastAPI Backend, ML Inference, Geospatial Analytics, and MySQL Farmer Records CRUD.\nSupports Localhost (http://127.0.0.1:8000) and Render production using the {{base_url}} variable.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -10,14 +10,24 @@
       "key": "base_url",
       "value": "http://127.0.0.1:8000",
       "type": "string"
+    },
+    {
+      "key": "farmer_id",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "prediction_id",
+      "value": "1",
+      "type": "string"
     }
   ],
   "item": [
     {
-      "name": "1. Deployment & Health Checks",
+      "name": "1. Health & System Checks",
       "item": [
         {
-          "name": "GET Project Information (/)",
+          "name": "GET Project Overview (/)",
           "request": {
             "method": "GET",
             "header": [],
@@ -25,13 +35,11 @@
               "raw": "{{base_url}}/",
               "host": ["{{base_url}}"],
               "path": [""]
-            },
-            "description": "Displays KrishiJal project details, active models, stakeholders, and full endpoint directory."
-          },
-          "response": []
+            }
+          }
         },
         {
-          "name": "GET API & Model Health (/health)",
+          "name": "GET API & ML Model Health (/health)",
           "request": {
             "method": "GET",
             "header": [],
@@ -39,18 +47,28 @@
               "raw": "{{base_url}}/health",
               "host": ["{{base_url}}"],
               "path": ["health"]
-            },
-            "description": "Verifies whether the FastAPI service and trained ML models (Random Forest Classifier & Regressor) are loaded and operational."
-          },
-          "response": []
+            }
+          }
+        },
+        {
+          "name": "GET MySQL Database Health (/api/db/health)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/db/health",
+              "host": ["{{base_url}}"],
+              "path": ["api", "db", "health"]
+            }
+          }
         }
       ]
     },
     {
-      "name": "2. Machine Learning Predictions (/predict)",
+      "name": "2. Machine Learning Predictions",
       "item": [
         {
-          "name": "POST Predict - Valid Agricultural Features (200 OK)",
+          "name": "POST Predict Full 14 Features & Save History (/predict)",
           "request": {
             "method": "POST",
             "header": [
@@ -61,19 +79,17 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"cwsi\": 0.35,\n  \"effective_soil_wetness\": 0.40,\n  \"water_deficit\": 1.50,\n  \"ndvi\": 0.60,\n  \"et0\": 4.80,\n  \"etc\": 5.20,\n  \"temperature\": 30.0,\n  \"rainfall\": 0.0,\n  \"humidity\": 50.0\n}"
+              "raw": "{\n  \"state\": \"Telangana\",\n  \"district\": \"Khammam\",\n  \"farmer_name\": \"Suresh Reddy\",\n  \"farmer_phone\": \"9876543210\",\n  \"farmer_village\": \"Kothagudem\",\n  \"temperature\": 34.0,\n  \"temp_max\": 39.5,\n  \"temp_min\": 26.5,\n  \"rainfall\": 0.0,\n  \"humidity\": 40.0,\n  \"effective_soil_wetness\": 0.30,\n  \"solar_radiation\": 21.5,\n  \"soil_ph\": 7.4,\n  \"soil_organic_carbon\": 0.48,\n  \"ndvi\": 0.56,\n  \"et0\": 5.2,\n  \"etc\": 5.7,\n  \"crop_type\": \"Cotton\",\n  \"growth_stage\": \"Reproductive\"\n}"
             },
             "url": {
               "raw": "{{base_url}}/predict",
               "host": ["{{base_url}}"],
               "path": ["predict"]
-            },
-            "description": "Passes authentic agronomic features to the loaded Scikit-Learn models. Returns both Crop Stress classification (Low, Moderate, High, Severe) and Irrigation Priority regression index with farmer advisories."
-          },
-          "response": []
+            }
+          }
         },
         {
-          "name": "POST Predict - Missing Inputs (422 Error Test)",
+          "name": "POST Predict Invalid Data Type - 422 Validation Test (/predict)",
           "request": {
             "method": "POST",
             "header": [
@@ -84,19 +100,17 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"cwsi\": 0.35,\n  \"temperature\": 30.0\n}"
+              "raw": "{\n  \"temperature\": \"not_a_number\",\n  \"humidity\": 50.0,\n  \"rainfall\": 0.0,\n  \"effective_soil_wetness\": 0.40\n}"
             },
             "url": {
               "raw": "{{base_url}}/predict",
               "host": ["{{base_url}}"],
               "path": ["predict"]
-            },
-            "description": "Omits mandatory input features to verify that FastAPI and Pydantic handle missing inputs properly with HTTP 422 Unprocessable Entity."
-          },
-          "response": []
+            }
+          }
         },
         {
-          "name": "POST Predict - Invalid Data Type (422 Error Test)",
+          "name": "POST Crop Stress Simulation (/api/predict/crop-stress)",
           "request": {
             "method": "POST",
             "header": [
@@ -107,24 +121,43 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"cwsi\": \"not_a_number\",\n  \"effective_soil_wetness\": 0.40,\n  \"water_deficit\": 1.50,\n  \"ndvi\": 0.60,\n  \"et0\": 4.80,\n  \"etc\": 5.20,\n  \"temperature\": 30.0,\n  \"rainfall\": 0.0,\n  \"humidity\": 50.0\n}"
+              "raw": "{\n  \"temperature\": 33.5,\n  \"temp_max\": 39.0,\n  \"temp_min\": 25.0,\n  \"rainfall\": 0.0,\n  \"humidity\": 42.0,\n  \"effective_soil_wetness\": 0.32,\n  \"solar_radiation\": 21.0,\n  \"soil_ph\": 7.5,\n  \"soil_organic_carbon\": 0.45,\n  \"crop_type\": \"Cotton\",\n  \"growth_stage\": \"Reproductive\",\n  \"selected_model\": \"Random Forest\"\n}"
             },
             "url": {
-              "raw": "{{base_url}}/predict",
+              "raw": "{{base_url}}/api/predict/crop-stress",
               "host": ["{{base_url}}"],
-              "path": ["predict"]
+              "path": ["api", "predict", "crop-stress"]
+            }
+          }
+        },
+        {
+          "name": "POST Irrigation Priority Only (/api/predict/irrigation-priority)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"temperature\": 33.0,\n  \"rainfall\": 0.0,\n  \"humidity\": 40.0,\n  \"effective_soil_wetness\": 0.30,\n  \"cwsi\": 0.45,\n  \"water_deficit\": 2.2,\n  \"ndvi\": 0.50,\n  \"et0\": 5.0,\n  \"etc\": 5.5\n}"
             },
-            "description": "Sends string instead of float for 'cwsi' to verify Pydantic data validation with HTTP 422."
-          },
-          "response": []
+            "url": {
+              "raw": "{{base_url}}/api/predict/irrigation-priority",
+              "host": ["{{base_url}}"],
+              "path": ["api", "predict", "irrigation-priority"]
+            }
+          }
         }
       ]
     },
     {
-      "name": "3. Nationwide Dataset & Directory Endpoints",
+      "name": "3. Dataset, Priority, Clusters & Benchmarks",
       "item": [
         {
-          "name": "GET Master Dataset Info (/api/dataset/info)",
+          "name": "GET Master Dataset Summary (/api/dataset/info)",
           "request": {
             "method": "GET",
             "header": [],
@@ -132,27 +165,51 @@
               "raw": "{{base_url}}/api/dataset/info",
               "host": ["{{base_url}}"],
               "path": ["api", "dataset", "info"]
-            },
-            "description": "Returns national agricultural summary statistics, state lists, and district counts."
-          },
-          "response": []
+            }
+          }
         },
         {
-          "name": "GET 159 Districts Directory (/api/districts)",
+          "name": "GET District Profile (/api/district-profile)",
           "request": {
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{base_url}}/api/districts",
+              "raw": "{{base_url}}/api/district-profile?state=Telangana&district=Karimnagar",
               "host": ["{{base_url}}"],
-              "path": ["api", "districts"]
-            },
-            "description": "Lists all 159 districts across all 37 Indian States and UTs with agro-climatic indicators."
-          },
-          "response": []
+              "path": ["api", "district-profile"],
+              "query": [
+                {"key": "state", "value": "Telangana"},
+                {"key": "district", "value": "Karimnagar"}
+              ]
+            }
+          }
         },
         {
-          "name": "GET Irrigation Priority Ranked List (/api/irrigation/priority)",
+          "name": "GET Coverage Report (/api/coverage-report)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/coverage-report",
+              "host": ["{{base_url}}"],
+              "path": ["api", "coverage-report"]
+            }
+          }
+        },
+        {
+          "name": "GET All 732 Districts (/api/districts/all)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/districts/all",
+              "host": ["{{base_url}}"],
+              "path": ["api", "districts", "all"]
+            }
+          }
+        },
+        {
+          "name": "GET Irrigation Priority Ranking (/api/irrigation/priority)",
           "request": {
             "method": "GET",
             "header": [],
@@ -160,13 +217,23 @@
               "raw": "{{base_url}}/api/irrigation/priority",
               "host": ["{{base_url}}"],
               "path": ["api", "irrigation", "priority"]
-            },
-            "description": "Returns all 159 districts sorted in strict descending order of irrigation urgency."
-          },
-          "response": []
+            }
+          }
         },
         {
-          "name": "GET Model Evaluation Metrics (/api/models/evaluation)",
+          "name": "GET Agro-Climatic Clusters (/api/clusters/regions)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/clusters/regions",
+              "host": ["{{base_url}}"],
+              "path": ["api", "clusters", "regions"]
+            }
+          }
+        },
+        {
+          "name": "GET Kaggle Model Benchmarks (/api/models/evaluation)",
           "request": {
             "method": "GET",
             "header": [],
@@ -174,10 +241,103 @@
               "raw": "{{base_url}}/api/models/evaluation",
               "host": ["{{base_url}}"],
               "path": ["api", "models", "evaluation"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. MySQL Farmer Records & Prediction History CRUD",
+      "item": [
+        {
+          "name": "GET List Farmers (/api/farmers)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/farmers",
+              "host": ["{{base_url}}"],
+              "path": ["api", "farmers"]
+            }
+          }
+        },
+        {
+          "name": "POST Create Farmer (/api/farmers)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"farmer_name\": \"Ramesh Kumar\",\n  \"phone\": \"9876543210\",\n  \"village\": \"Madhira\",\n  \"state_name\": \"Telangana\",\n  \"district_name\": \"Khammam\",\n  \"primary_crop\": \"Cotton\",\n  \"soil_type\": \"Loamy\",\n  \"land_area_acres\": 3.5\n}"
             },
-            "description": "Returns benchmark test-set evaluation metrics for all algorithms."
-          },
-          "response": []
+            "url": {
+              "raw": "{{base_url}}/api/farmers",
+              "host": ["{{base_url}}"],
+              "path": ["api", "farmers"]
+            }
+          }
+        },
+        {
+          "name": "PUT Update Farmer (/api/farmers/:farmer_id)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"farmer_name\": \"Ramesh Kumar Updated\",\n  \"phone\": \"9876543211\",\n  \"village\": \"Madhira\",\n  \"state_name\": \"Telangana\",\n  \"district_name\": \"Khammam\",\n  \"primary_crop\": \"Rice\",\n  \"soil_type\": \"Alluvial\",\n  \"land_area_acres\": 4.0\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/farmers/{{farmer_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "farmers", "{{farmer_id}}"]
+            }
+          }
+        },
+        {
+          "name": "DELETE Farmer (/api/farmers/:farmer_id)",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/farmers/{{farmer_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "farmers", "{{farmer_id}}"]
+            }
+          }
+        },
+        {
+          "name": "GET Prediction History (/api/predictions/history)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/predictions/history",
+              "host": ["{{base_url}}"],
+              "path": ["api", "predictions", "history"]
+            }
+          }
+        },
+        {
+          "name": "DELETE Prediction Record (/api/predictions/:prediction_id)",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/predictions/{{prediction_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "predictions", "{{prediction_id}}"]
+            }
+          }
         }
       ]
     }

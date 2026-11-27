@@ -3,14 +3,14 @@ Stage 14: Comprehensive Automated Test Suite
 Updated for Single Master Dataset Pipeline: data/processed/krishijal_master_dataset.csv
 Author: First-Year B.Tech Student Project
 Tests:
- 1. Master Dataset Loading & Schema Integrity (6,654 rows, 48 columns)
+ 1. Master Dataset Loading & Schema Integrity (6,654/7,386 rows, 72 columns)
  2. Agronomic Bounds & Data Quality (CWSI, NDVI, IPI, Soil Wetness [0, 1], No -999 anomalies)
- 3. In-Memory ML Models & Transformers Verification
+ 3. Saved ML Models & Transformers Verification
  4. Model Predictions (Classification, Regression, Clustering, PCA)
- 5. FastAPI Backend Endpoints (All 7 REST routes return HTTP 200 OK)
+ 5. FastAPI Backend Endpoints, Benchmarks & MySQL CRUD Health
  6. Error Handling, Invalid Inputs, and Edge Cases
  7. Irrigation Priority Sorting and Ranking Logic (Descending order)
- 8. Frontend Static Files Integrity (HTML, CSS, JS)
+ 8. Active 6-Module Frontend Static Files Integrity (HTML, CSS, JS, simplified GeoJSON)
 """
 
 import sys
@@ -180,7 +180,47 @@ def test_5_api_endpoints():
     # Model Evaluation Benchmarks
     r5 = client.get("/api/models/evaluation")
     assert r5.status_code == 200
-    assert "classification" in r5.json()
+    eval_data = r5.json()
+    assert "classification" in eval_data
+    assert eval_data["best_classifier"] == "Random Forest Classifier"
+    assert eval_data["classification"]["Random Forest Classifier"]["accuracy"] == 0.9955
+    assert eval_data["best_regressor"] == "Random Forest Regressor"
+    assert eval_data["regression"]["Random Forest Regressor"]["r2_score"] == 0.9952
+
+    # MySQL Health & CRUD verification (runs full CRUD round-trip when local MySQL is active)
+    r_db = client.get("/api/db/health")
+    assert r_db.status_code == 200
+    db_info = r_db.json()
+    assert "connected" in db_info
+    if db_info.get("connected"):
+        r_hist = client.get("/api/predictions/history")
+        assert r_hist.status_code == 200
+        assert r_hist.json()["status"] == "success"
+        r_create = client.post("/api/farmers", json={
+            "farmer_name": "Pytest Automated Check",
+            "phone": "9000000000",
+            "village": "Test Village",
+            "state_name": "Telangana",
+            "district_name": "Khammam",
+            "primary_crop": "Cotton",
+            "soil_type": "Loamy",
+            "land_area_acres": 3.0
+        })
+        assert r_create.status_code == 200
+        new_id = r_create.json()["farmer"]["farmer_id"]
+        r_update = client.put(f"/api/farmers/{new_id}", json={
+            "farmer_name": "Pytest Automated Updated",
+            "phone": "9000000001",
+            "village": "Test Village",
+            "state_name": "Telangana",
+            "district_name": "Khammam",
+            "primary_crop": "Rice",
+            "soil_type": "Alluvial",
+            "land_area_acres": 4.0
+        })
+        assert r_update.status_code == 200
+        r_del = client.delete(f"/api/farmers/{new_id}")
+        assert r_del.status_code == 200
 
     r_prof = client.get("/api/district-profile?state=Telangana&district=Karimnagar")
     assert r_prof.status_code == 200
@@ -332,13 +372,14 @@ def test_7_irrigation_priority_logic():
     print(f"  -> PASSED: Irrigation priority table verified ({len(districts)} districts in strict descending rank order).")
 
 def test_8_frontend_integrity():
-    print("\n[Test 8] Testing Frontend Files Integrity...")
+    print("\n[Test 8] Testing Active 6-Module Frontend Files Integrity...")
     for f_path in [
         "frontend/index.html",
-        "frontend/style.css",
-        "frontend/app.js",
-        "frontend/data/india_states_official.geojson",
-        "frontend/data/india_districts_official.geojson",
+        "frontend/portal.css",
+        "frontend/portal.js",
+        "frontend/data/portal_data.json",
+        "frontend/data/india_states_simplified.geojson",
+        "frontend/data/india_districts_simplified.geojson",
     ]:
         try:
             with open(f_path, "r") as f:
@@ -350,17 +391,23 @@ def test_8_frontend_integrity():
     
     with open("frontend/index.html") as f:
         html = f.read()
-        assert "sim-form" in html, "Missing sim-form in index.html"
-        assert "geospatial-map" in html, "Missing geospatial-map container in index.html"
-        assert "district-drawer" in html, "Missing district-drawer in index.html"
+        for token in [
+            "view-home", "id=\"app\"", "view-predictor", "view-ranking",
+            "view-benchmarks", "view-clusters", "view-farmers",
+            "hero-shortcut", "nav-card",
+            "#/map", "#/predictor", "#/ranking", "#/benchmarks", "#/clusters", "#/farmers"
+        ]:
+            assert token in html, f"Missing {token} in frontend/index.html"
         
-    with open("frontend/app.js") as f:
+    with open("frontend/portal.js") as f:
         js = f.read()
-        assert "handleStateClick" in js, "Missing handleStateClick in app.js"
-        assert "handleDistrictClick" in js, "Missing handleDistrictClick in app.js"
-        assert "runSimulation" in js, "Missing runSimulation in app.js"
+        for fn in [
+            "module-dock", "selectDistrict", "runPredictionInference", "loadPriorityData",
+            "loadModelBenchmarks", "loadClustersData", "initFarmersView", "initModuleDocks"
+        ]:
+            assert fn in js, f"Missing {fn} in frontend/portal.js"
         
-    print("  -> PASSED: Frontend HTML, CSS, JS and official Survey of India GeoJSON assets verified.")
+    print("  -> PASSED: Active 6-module HTML, CSS, JS, portal_data.json and simplified GeoJSON assets verified.")
 
 if __name__ == "__main__":
     test_1_master_dataset_loading()

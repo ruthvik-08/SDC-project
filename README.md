@@ -1,443 +1,163 @@
-# 🌾 KrishiJal: Crop Stress and Irrigation Priority Decision Support System
-### *Local & Public Deployment Using FastAPI, Scikit-Learn, and Ngrok*
-**First-Year B.Tech Academic Project | Faculty Deployment Standard**  
-**Repository:** [https://github.com/ruthvik-08/SDC-project.git](https://github.com/ruthvik-08/SDC-project.git)
+# KrishiJal: All-India Crop Stress & Irrigation Priority Decision Support System
+
+[![Python](https://img.shields.io/badge/Python-3.11+-blue.svg)](https://www.python.org/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-Backend-009688.svg)](https://fastapi.tiangolo.com/)
+[![Scikit-Learn](https://img.shields.io/badge/Scikit--Learn-ML%20Models-F7931E.svg)](https://scikit-learn.org/)
+[![MySQL](https://img.shields.io/badge/MySQL-8.0%20CRUD-4479A1.svg)](https://www.mysql.com/)
+[![Kaggle](https://img.shields.io/badge/Kaggle-Notebook%20v5%20Synced-20BEFF.svg)](https://www.kaggle.com/code/ruthvikpasupunuri/crop-stress-and-irrigation-priority-decision-suppo)
+
+**KrishiJal** is an end-to-end **Agricultural Intelligence and Decision Support System** built for KMIT academic submission. It unifies satellite/meteorological agro-climatic data, trained Scikit-Learn ML models, a MySQL 8.0 relational database, and a unified 6-module Leaflet + FastAPI portal covering Indian States & Union Territories.
 
 ---
 
-## 1. Project Overview
-In India, agriculture sustains over 55% of the national population, but farmers routinely face extreme water scarcity, unpredictable dry spells, and depleting groundwater aquifers. The **Crop Stress and Irrigation Priority Decision Support System (KrishiJal)** is an end-to-end Machine Learning solution designed to help farmers detect plant water stress early and understand exactly where and when irrigation water must be applied.
+## Live Demo & Kaggle Single Source of Truth
 
-The project combines authentic agro-meteorological observations from **NASA POWER**, satellite canopy indices (**NDVI**), United Nations **FAO-56 Penman-Monteith** crop water physics, and Government of India **Soil Health Card (SHC)** data.
+- **GitHub Repository:** https://github.com/ruthvik-08/SDC-project
+- **Deployed Portal (Render):** https://crop-stress-and-irrigation-priority.onrender.com/app/
+- **Kaggle Training Notebook (Version 5):** https://www.kaggle.com/code/ruthvikpasupunuri/crop-stress-and-irrigation-priority-decision-suppo
 
-### Key Capabilities:
-1. **Crop Water Stress Classification:** Predicts crop stress into 4 severity classes (*Low, Moderate, High, Severe*).
-2. **Irrigation Priority Index Regression:** Predicts a continuous score from **0.0 to 100.0** indicating irrigation urgency.
-3. **Actionable Farmer Advisory:** Generates exact irrigation depth recommendations (e.g., *45–55 mm within 24–48 hours*) to prevent permanent crop damage.
-4. **FastAPI & Public Ngrok Deployment:** High-performance REST API with interactive Swagger UI and public HTTPS tunneling.
+All website ML metrics in [backend/model_evaluation_metrics.json](backend/model_evaluation_metrics.json) and saved `.pkl` weights in [models/saved_models/](models/saved_models/) are directly synchronized with [notebooks/krishijal_complete_pipeline.ipynb](notebooks/krishijal_complete_pipeline.ipynb) (Kaggle Version 5).
 
 ---
 
-## 2. Machine Learning Algorithms Used
+## Six Integrated Dashboard Modules
 
-To avoid unnecessary complexity, we selected the smallest set of relevant algorithms strictly from **Scikit-learn**:
+Every page of [frontend/index.html](frontend/index.html) shares consistent navigation across all 6 modules via the top sticky bar, home shortcut buttons, feature cards, and per-view quick-switch dock:
 
-### A. Classification Algorithms (Target: `stress_level`)
-| Algorithm | Role | Test Accuracy | Test Weighted F1 | Status |
-| :--- | :--- | :--- | :--- | :--- |
-| **Logistic Regression** | Baseline linear model | 95.94% | 0.9607 | Evaluated |
-| **KNN (k=5)** | Non-parametric neighbor voting | 92.79% | 0.9307 | Evaluated |
-| **Gaussian Naive Bayes** | Probabilistic baseline | 81.14% | 0.8267 | Evaluated |
-| **Decision Tree Classifier** | Non-linear rule-based tree | 98.80% | 0.9881 | Evaluated |
-| **Random Forest Classifier** | Bagging ensemble (GridSearchCV tuned) | **99.62%** | **0.9963** | **Selected Final Model** |
-
-### B. Regression Algorithms (Target: `irrigation_priority_index`)
-| Algorithm | Role | Test $R^2$ Score | Test MAE | Test RMSE | Status |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| **Linear Regression** | Parametric linear baseline | 0.8055 | 4.87 | 6.10 | Evaluated |
-| **Polynomial Regression (Deg 2)** | Quadratic non-linear baseline | 0.9394 | 2.60 | 3.40 | Evaluated |
-| **Decision Tree Regressor** | Non-linear tree regression | 0.9888 | 0.85 | 1.46 | Evaluated |
-| **Random Forest Regressor** | Bagging ensemble (GridSearchCV tuned) | **0.9954** | **0.43** | **0.94** | **Selected Final Model** |
-
-### Elimination of Target Data Leakage:
-- **No Target Leakage:** Previous versions accepted `cwsi` (Crop Water Stress Index) and `water_deficit` as model inputs. Because `stress_level` is mathematically calculated from `cwsi`, passing `cwsi` constituted direct target leakage.
-- **Physics-Based Authentic Features:** Models are trained strictly on 14 observable agro-meteorological, soil, and phenological features. Even when `cwsi` or `water_deficit` are supplied by legacy clients, they are safely ignored in the ML feature pipeline.
+| # | Module | Route | Capability |
+| :-: | :--- | :--- | :--- |
+| 1 | **Geospatial Map** | `#/map` | Interactive Leaflet choropleth with Clean/Satellite basemaps, highlighted State borders, 732+ district drilldowns, soil health, and seasonal profiles |
+| 2 | **Predictor** | `#/predictor` | Live 14-feature control station predicting Stress Level (`Low`–`Severe`), Irrigation Priority Index (`0–100`), daily water deficit, and farmer advisory |
+| 3 | **Irrigation Priority** | `#/ranking` | Ranked district priority queue sorted descending by urgency score with crop/soil water deficit breakdown |
+| 4 | **ML Benchmarks** | `#/benchmarks` | Dynamic benchmark dashboard displaying actual Kaggle Version 5 classifier & regressor metrics plus Random Forest confusion matrix |
+| 5 | **Agro-Climatic Clusters** | `#/clusters` | K-Means (`k=4`) and 2D PCA zone segmentation grouping districts into homogeneous water-management zones |
+| 6 | **Farmer Records** | `#/farmers` | Full MySQL CRUD portal (`Create`, `Read`, `Update`, `Delete`) linked to prediction history and one-click loading into Predictor |
 
 ---
 
-## 3. Input Features and Prediction Outputs
+## Kaggle Version 5 Machine Learning Evaluation
 
-The model uses 14 observable physical features:
-| Feature Name | Description | Physical Range / Units |
-| :--- | :--- | :--- |
-| `temperature` | Ambient air temperature | $^\circ\text{C}$ (e.g. $10.0 \text{ to } 48.0$) |
-| `temp_max` | Daily maximum temperature | $^\circ\text{C}$ |
-| `temp_min` | Daily minimum temperature | $^\circ\text{C}$ |
-| `rainfall` | Daily precipitation | $\text{mm/day}$ |
-| `humidity` | Relative humidity | $\%$ ($0 \text{ to } 100$) |
-| `effective_soil_wetness` | Dimensionless soil moisture index | $0.0 \text{ to } 1.0$ |
-| `solar_radiation` | All-sky surface solar radiation | $\text{MJ/m}^2/\text{day}$ |
-| `soil_ph` | Soil acidity / alkalinity | $4.5 \text{ to } 9.5$ |
-| `soil_organic_carbon` | Soil organic carbon content | $\%$ ($0.1 \text{ to } 2.5$) |
-| `ndvi` | Normalized Difference Vegetation Index | $0.1 \text{ to } 0.9$ |
-| `et0` | Reference Evapotranspiration (FAO-56) | $\text{mm/day}$ |
-| `etc` | Crop Evapotranspiration under standard conditions | $\text{mm/day}$ |
-| `crop_code` | Integer-encoded crop type (e.g., Cotton, Rice) | Integer index |
-| `stage_code` | Integer-encoded growth phenology stage | Integer index |
+Dataset pipeline in [notebooks/krishijal_complete_pipeline.ipynb](notebooks/krishijal_complete_pipeline.ipynb):
+- Master dataset ([data/processed/krishijal_master_dataset.csv](data/processed/krishijal_master_dataset.csv)): **7,386 total rows × 72 columns** (`4,758` daily + `1,896` monthly + `732` district baselines) covering **10 crops** and **4 growth stages**.
+- Training/Test modeling subset: **6,654 daily/monthly observations** across 159 sampled stations, stratified 80/20 split (**5,323 train / 1,331 test**) scaled with `StandardScaler` (`14` agronomic features).
 
----
+### 1. Crop Stress Classification (4 Classes: Low, Moderate, High, Severe)
 
-## 4. Installation Commands
+| Algorithm | Hyperparameters | Accuracy | Precision | Recall | F1-Score | Status |
+| :--- | :--- | :---: | :---: | :---: | :---: | :--- |
+| **Random Forest Classifier** | `n_estimators=100, max_depth=12` (GridSearchCV cv=3) | **99.55%** | **99.56%** | **99.55%** | **99.55%** | **Best Overall** (`.pkl`) |
+| **Decision Tree Classifier** | `max_depth=8` | 99.47% | 99.48% | 99.47% | 99.47% | Comparison Model |
+| **Logistic Regression** | `max_iter=1000` | 96.02% | 96.06% | 96.02% | 96.03% | Linear Baseline |
 
-In compliance with the faculty document (*Local and Public Deployment Using FastAPI.docx*), install the required dependencies:
-
-```bash
-# Clone the repository
-git clone https://github.com/ruthvik-08/SDC-project.git
-cd SDC-project
-
-# Install required libraries
-python3 -m pip install pandas numpy scikit-learn joblib fastapi uvicorn pydantic
+**Random Forest Confusion Matrix (1,331 Test Samples):**
+```text
+Actual \ Pred |  Low | Moderate | High | Severe
+--------------+------+----------+------+-------
+Low           |  995 |        2 |    0 |      0
+Moderate      |    0 |      180 |    2 |      0
+High          |    0 |        0 |  113 |      0
+Severe        |    0 |        0 |    2 |     37
 ```
 
-Or install directly using the backend requirements file:
-```bash
-pip install -r backend/requirements.txt
+### 2. Irrigation Priority Index Regression (Continuous Score `0–100`)
+
+| Algorithm | Hyperparameters | MAE | MSE | RMSE | R² Score | Status |
+| :--- | :--- | :---: | :---: | :---: | :---: | :--- |
+| **Random Forest Regressor** | `n_estimators=100, max_depth=12` | **0.4538** | **0.9127** | **0.9554** | **0.9952** | **Best Regressor** (`.pkl`) |
+| **Decision Tree Regressor** | `max_depth=8` | 1.1975 | 4.0257 | 2.0064 | 0.9789 | Non-Linear Comparison |
+| **Linear Regression** | Default OLS | 4.8669 | 37.1909 | 6.0984 | 0.8055 | Linear Baseline |
+
+### Verified Output Plots (Extracted from Kaggle Version 5)
+
+| Confusion Matrix (RF) | Actual vs Predicted (RF Regressor) |
+| :---: | :---: |
+| ![Confusion Matrix](docs/figures/05_confusion_matrix_random_forest.png) | ![Regression Fit](docs/figures/06_actual_vs_predicted_priority.png) |
+
+| Feature Correlation Heatmap | PCA 2D Agro-Climatic Clusters |
+| :---: | :---: |
+| ![Correlation Heatmap](docs/figures/03_feature_correlation_heatmap.png) | ![PCA Clusters](docs/figures/08_agro_climatic_pca_clusters.png) |
+
+---
+
+## Clean Project Structure
+
+```text
+SDC-project/
+├── backend/
+│   ├── main.py                           # FastAPI API server, ML inference & MySQL CRUD routes
+│   ├── model_evaluation_metrics.json     # Kaggle Version 5 evaluation metrics & confusion matrix
+│   ├── data -> ../data                   # Symlink for Uvicorn working directory safety
+│   ├── frontend -> ../frontend
+│   └── models -> ../models
+├── data/
+│   ├── build_portal_data.py              # Aggregates dataset into frontend/data/portal_data.json
+│   └── processed/
+│       └── krishijal_master_dataset.csv  # Unified 7,386-row × 72-col dataset
+├── database/
+│   └── crop_stress_db.sql                # Normalized 6-table MySQL schema
+├── docs/
+│   ├── KrishiJal_Complete_Project_Explanation.md  # Detailed academic walkthrough (13 sections + Viva Q&A)
+│   └── figures/                          # 8 authentic PNG visualizations from Kaggle Version 5
+├── frontend/
+│   ├── index.html                        # 6-module Single Page Application
+│   ├── portal.css                        # Responsive portal design system
+│   ├── portal.js                         # Map, Predictor, Priority, Benchmarks, Clusters & CRUD logic
+│   └── data/
+│       ├── india_districts_simplified.geojson
+│       ├── india_states_simplified.geojson
+│       └── portal_data.json
+├── models/
+│   └── saved_models/
+│       ├── crop_stress_classifier.pkl    # Tuned Random Forest Classifier
+│       ├── irrigation_priority_regressor.pkl # Random Forest Regressor
+│       ├── feature_scaler.pkl            # StandardScaler fitted on 5,323 train rows
+│       ├── crop_stress_decision_tree.pkl
+│       ├── crop_stress_logistic_regression.pkl
+│       ├── irrigation_decision_tree.pkl
+│       ├── irrigation_linear_regression.pkl
+│       └── model_metadata.json
+├── notebooks/
+│   └── krishijal_complete_pipeline.ipynb # Synced Kaggle Version 5 notebook (35 cells + outputs)
+├── postman/
+│   └── KrishiJal_Postman_Collection.json # Updated Postman suite (ML + Analytics + MySQL CRUD)
+├── tests/
+│   └── test_project.py                   # 8-stage automated verification suite
+├── main.py -> backend/main.py            # Root entry symlink for Render / Uvicorn
+├── run_local.py                          # Local server launcher
+├── render.yaml                           # Render deployment configuration
+├── requirements.txt                      # Runtime backend & MySQL dependencies
+├── requirements-notebook.txt             # Optional offline Jupyter plotting dependencies
+├── .env.example                          # Template MySQL environment configuration
+└── .gitignore                            # Protects .env, OS & Python/Jupyter caches
 ```
 
 ---
 
-## 5. Model Training & Persistence Instructions
+## Quickstart (Local Mac / Linux / Windows)
 
-The models can be trained or re-evaluated using the Jupyter Notebooks or modular training scripts:
-
-### Option A: Using the Complete Unified Jupyter Notebook
-Open and execute:
 ```bash
-jupyter notebook krishijal_complete_pipeline.ipynb
-```
-*Cell 40 saves the final tuned models into `models/saved_models/`:*
-- `crop_stress_classifier.pkl` / `crop_stress_classifier.joblib`
-- `irrigation_priority_regressor.pkl` / `irrigation_priority_regressor.joblib`
-- `feature_scaler.pkl` / `feature_scaler.joblib`
-- `model_metadata.json`
+# 1. Install dependencies
+pip install -r requirements.txt
 
-### Complete Unified Machine Learning Pipeline:
-Execute the unified Jupyter Notebook from the project root or `notebooks/` directory:
-```bash
-jupyter notebook krishijal_complete_pipeline.ipynb
-```
-This single notebook runs the entire end-to-end pipeline:
-1. Data loading and validation across 159 Indian districts
-2. Agro-climatic preprocessing and feature scaling
-3. Exploratory Data Analysis (EDA) visualizations
-4. Algorithm training (Random Forest, Decision Tree, Logistic Regression, Linear Regression)
-5. `GridSearchCV` hyperparameter tuning (3-fold cross-validation)
-6. Model evaluation benchmarks ($100\%$ accuracy, $R^2 = 0.9950$)
-7. Final model serialization (`.pkl` / `.joblib`) for FastAPI deployment
+# 2. Initialize MySQL schema & create .env from .env.example
+mysql -u root -p < database/crop_stress_db.sql
+cp .env.example .env   # Fill in your MYSQL_PASSWORD locally
 
----
-
-## 6. FastAPI Backend Architecture
-
-The backend is built using **FastAPI** and located in `backend/`:
-- **`backend/main.py`**: High-performance REST API server.
-- **`backend/requirements.txt`**: Minimal, faculty-approved dependency specification.
-- **Startup Model Loading:** Pre-trained `.pkl` / `.joblib` models are loaded into RAM once when the server boots. **Models are never retrained per request**, ensuring response times under 10 milliseconds.
-- **Data Validation with Pydantic:** The `PredictRequest` schema validates data types and rejects invalid or incomplete JSON payloads with HTTP 422 errors.
-
----
-
-## 7. Local Deployment Instructions
-
-### Method 1: Using the Pre-configured Runner (Recommended)
-From the project root:
-```bash
+# 3. Start backend & portal
 python3 run_local.py
 ```
 
-### Method 2: Running Uvicorn Directly
-From the `backend/` directory:
-```bash
-cd backend
-python3 -m uvicorn main:app --reload --port 8000
-```
-Or from the root directory:
-```bash
-python3 -m uvicorn backend.main:app --reload --port 8000
-```
+Open **http://127.0.0.1:8000/app/** in your browser, or explore **http://127.0.0.1:8000/docs** for interactive Swagger API documentation.
 
-### Local URLs:
-| Service | Local URL |
-| :--- | :--- |
-| **API Root Information** | [http://127.0.0.1:8000/](http://127.0.0.1:8000/) |
-| **Health Check** | [http://127.0.0.1:8000/health](http://127.0.0.1:8000/health) |
-| **Interactive Swagger UI Docs** | [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs) |
-| **Alternative ReDoc** | [http://127.0.0.1:8000/redoc](http://127.0.0.1:8000/redoc) |
-| **Prediction Endpoint** | `POST http://127.0.0.1:8000/predict` |
-
----
-
-## 8. API Endpoints Specification
-
-### 1. `GET /` — Project Information
-**Response:**
-```json
-{
-  "project": "Crop Stress and Irrigation Priority Decision Support System (KrishiJal)",
-  "project_name": "KrishiJal Decision Support System",
-  "description": "Machine Learning-based decision support system helping Indian farmers identify crop water stress and optimize irrigation scheduling.",
-  "primary_stakeholders": "Farmers",
-  "status": "Online and Operational",
-  "version": "2.1.0",
-  "api_documentation": "/docs"
-}
-```
-
-### 2. `GET /health` — Service & Model Health Check
-**Response:**
-```json
-{
-  "status": "healthy",
-  "api_operational": true,
-  "models_loaded": {
-    "crop_stress_classifier": true,
-    "irrigation_priority_regressor": true
-  },
-  "model_types": {
-    "classification": "RandomForestClassifier",
-    "regression": "RandomForestRegressor"
-  }
-}
-```
-
-### 3. `POST /predict` — Unified Machine Learning Prediction
-Supports either the 14 authentic physical agro-meteorological features or backward-compatible 9-feature payloads:
-
-**Option A: 14 Physical Features Payload (Recommended):**
-```json
-{
-  "temperature": 32.0,
-  "temp_max": 38.0,
-  "temp_min": 24.0,
-  "rainfall": 0.0,
-  "humidity": 45.0,
-  "effective_soil_wetness": 0.35,
-  "solar_radiation": 21.0,
-  "soil_ph": 7.5,
-  "soil_organic_carbon": 0.45,
-  "crop_type": "Cotton",
-  "growth_stage": "Reproductive"
-}
-```
-
-**Option B: Legacy 9-Feature Payload (Backward Compatibility):**
-```json
-{
-  "temperature": 30.0,
-  "rainfall": 0.0,
-  "humidity": 50.0,
-  "effective_soil_wetness": 0.40,
-  "ndvi": 0.60,
-  "et0": 4.80,
-  "etc": 5.20,
-  "cwsi": 0.35,
-  "water_deficit": 1.50
-}
-```
-*(Note: `cwsi` and `water_deficit` are safely ignored by the ML pipeline to prevent target leakage).*
-
-**Response (HTTP 200 OK):**
-```json
-{
-  "status": "success",
-  "input_features": {
-    "temperature": 32.0,
-    "temp_max": 38.0,
-    "temp_min": 24.0,
-    "rainfall": 0.0,
-    "humidity": 45.0,
-    "effective_soil_wetness": 0.35,
-    "solar_radiation": 21.0,
-    "soil_ph": 7.5,
-    "soil_organic_carbon": 0.45,
-    "ndvi": 0.62,
-    "et0": 6.21,
-    "etc": 6.83,
-    "crop_code": 1.0,
-    "stage_code": 2.0
-  },
-  "crop_stress_prediction": {
-    "stress_level_code": 1,
-    "stress_level": "Moderate",
-    "stress_probabilities": {
-      "Low": 0.0872,
-      "Moderate": 0.4822,
-      "High": 0.3739,
-      "Severe": 0.0568
-    },
-    "condition_summary": "High stress, significant water deficit impacting crop growth."
-  },
-  "irrigation_priority_prediction": {
-    "irrigation_priority_index": 46.9,
-    "priority_category": "High Priority",
-    "recommended_irrigation_depth": "35–45 mm",
-    "actionable_farmer_advisory": "HIGH: Rapid soil moisture depletion observed. Schedule irrigation within 24–48 hours."
-  },
-  "calculated_agronomic_indicators": {
-    "daily_water_deficit_mm": 4.44,
-    "reference_et0_mm": 6.21,
-    "crop_etc_mm": 6.83,
-    "vegetation_ndvi": 0.62
-  },
-  "models_used": {
-    "classifier": "Tuned RandomForestClassifier (.pkl)",
-    "regressor": "Tuned RandomForestRegressor (.pkl)"
-  }
-}
-```
-
----
-
-## 9. Postman Testing Instructions
-
-A ready-to-use Postman Collection is provided in `postman/KrishiJal_Postman_Collection.json`.
-
-### How to Import & Test:
-1. Open **Postman**.
-2. Click **Import** &rarr; select `postman/KrishiJal_Postman_Collection.json`.
-3. The collection includes a `{{base_url}}` variable (defaults to `http://127.0.0.1:8000`).
-
-### Test Cases Included:
-1. **Valid Prediction (HTTP 200 OK):**
-   - Method: `POST`
-   - URL: `{{base_url}}/predict`
-   - Sends complete JSON body with all 9 features.
-   - Verifies real-time predictions for crop stress and irrigation priority.
-2. **Missing Inputs Test (HTTP 422 Unprocessable Entity):**
-   - Sends incomplete JSON (omitting `effective_soil_wetness`).
-   - Verifies that FastAPI/Pydantic returns a validation error identifying missing fields.
-3. **Invalid Data Type Test (HTTP 422 Unprocessable Entity):**
-   - Sends `"cwsi": "not_a_number"`.
-   - Verifies that Pydantic rejects non-numeric inputs.
-
----
-
-## 10. Public Deployment Using Ngrok
-
-To share your API publicly with faculty or external reviewers via a secure HTTPS tunnel, follow the instructions from the faculty document:
-
-### Step 1: Install Ngrok
-*On macOS (Homebrew already installed):*
-```bash
-brew install --cask ngrok
-```
-
-### Step 2: Configure Your Personal Ngrok AuthToken
-1. Sign up for a free account at [https://dashboard.ngrok.com/signup](https://dashboard.ngrok.com/signup).
-2. Copy your AuthToken from [https://dashboard.ngrok.com/get-started/your-authtoken](https://dashboard.ngrok.com/get-started/your-authtoken).
-3. Authenticate your local machine (*never share or commit your token*):
-```bash
-ngrok config add-authtoken <YOUR_PERSONAL_AUTHTOKEN>
-```
-
-### Step 3: Start the Local FastAPI Backend (Terminal 1)
-```bash
-python3 run_local.py
-```
-
-### Step 4: Start the Ngrok Tunnel (Terminal 2)
-```bash
-ngrok http 8000
-```
-
-Ngrok will display output similar to:
-```
-Forwarding                    https://abc1-23-45-67.ngrok-free.app -> http://localhost:8000
-```
-
-### Step 5: Verify the Public HTTPS Endpoints
-Replace `http://127.0.0.1:8000` with your public ngrok URL:
-- **Public API Root:** `https://<your-id>.ngrok-free.app/`
-- **Public Health Check:** `https://<your-id>.ngrok-free.app/health`
-- **Public Swagger UI Docs:** `https://<your-id>.ngrok-free.app/docs`
-- **Public Prediction Endpoint:** `POST https://<your-id>.ngrok-free.app/predict`
-
-In Postman, set the collection variable `base_url` to `https://<your-id>.ngrok-free.app` to test the public deployment with a single click!
-
----
-
-## 11. Cloud Deployment on Render (24/7 Independent Cloud Hosting)
-
-In addition to local + Ngrok deployment, KrishiJal supports automated cloud deployment via **Render** using the included [render.yaml](file:///Users/p.ruthvik/Desktop/sdc_project/render.yaml) blueprint:
-
-### Quick Render Deployment Steps:
-1. Push your code to GitHub: `https://github.com/ruthvik-08/SDC-project`
-2. Log in to [Render Dashboard](https://dashboard.render.com).
-3. Click **New +** &rarr; **Blueprint** &rarr; Connect repository `ruthvik-08/SDC-project`.
-4. Render detects `render.yaml` and executes:
-   - **Build Command:** `pip install -r requirements.txt`
-   - **Start Command:** `uvicorn backend.main:app --host 0.0.0.0 --port $PORT`
-   - **Health Check Path:** `/health`
-5. Once live, access:
-   - **Cloud Web Application:** `https://<service-name>.onrender.com/app/`
-   - **Cloud Swagger UI:** `https://<service-name>.onrender.com/docs`
-   - **Cloud Health Check:** `https://<service-name>.onrender.com/health`
-
-*Detailed step-by-step instructions for both Ngrok and Render are documented in [DEPLOYMENT.md](file:///Users/p.ruthvik/Desktop/sdc_project/DEPLOYMENT.md).*
-
----
-
-## 12. Automated Test Suite Verification
-
-To verify all system components, data bounds, model serialization, and API endpoints:
+Run all 8 automated verification stages:
 ```bash
 python3 tests/test_project.py
 ```
-Or using pytest:
-```bash
-pytest tests/test_project.py
-```
-**Results:** 8/8 test stages pass with 100% pass rate:
-- Test 1: Master Dataset Loading & Schema Integrity (6,654 rows, 159 districts, 37 States & UTs)
-- Test 2: Data Preprocessing & Agronomic Physical Bounds (zero anomalies, zero -999 nulls)
-- Test 3: Persistent Scikit-Learn Model Deserialization & Scaler Verification
-- Test 4: Model Inferences (Classification, Regression, Multiclass boundaries)
-- Test 5: FastAPI REST Endpoints (`/`, `/health`, `/docs`, `/redoc`, `/predict`, `/api/...`)
-- Test 6: Edge Cases, Type Safety, and HTTP 422 Validation
-- Test 7: Irrigation Priority Ranking Logic (Strict descending order)
-- Test 8: Frontend Assets & Official Survey of India GeoJSON Integrity
 
 ---
 
-## 13. Project Directory Structure
+## Documentation Index
 
-```
-sdc_project/
-├── DEPLOYMENT.md                       # Comprehensive Dual Deployment Manual (Ngrok & Render)
-├── README.md                           # Master Academic Documentation
-├── render.yaml                         # Render Cloud Infrastructure Blueprint
-├── requirements.txt                    # Project-wide Python dependencies
-├── run_local.py                        # Unified Local & Cloud Server Runner
-├── backend/
-│   ├── main.py                         # Production FastAPI application & ML inference pipeline
-│   ├── model_evaluation_metrics.json   # Benchmarks (Accuracy, F1, R², MAE, RMSE)
-│   └── requirements.txt                # Faculty-compliant minimal dependencies
-├── data/
-│   ├── collect_data.py                 # NASA POWER & Soil Health Card acquisition
-│   ├── preprocess_data.py              # FAO-56 Penman-Monteith physical calculators
-│   ├── processed/
-│   │   ├── krishijal_master_dataset.csv# Clean consolidated master dataset (6,654 rows)
-│   │   └── krishijal_ml_clean.csv      # Clean feature matrix
-│   └── raw/                            # Original raw agricultural data
-├── docs/
-│   ├── KrishiJal_Complete_Project_Explanation.md
-│   └── KrishiJal_Complete_Project_Explanation.pdf
-├── eda/                                # Exploratory data analysis scripts and generated plots
-│   ├── eda_analysis.py
-│   └── plots/
-├── frontend/
-│   ├── app.js                          # Dynamic API client, Leaflet map, ML simulator logic
-│   ├── index.html                      # Interactive geospatial UI (NABARD/UNDP inspired)
-│   ├── style.css                       # Responsive glassmorphism styling
-│   └── data/                           # Official Survey of India GeoJSON boundaries
-├── models/
-│   ├── crop_stress_classifier.pkl      # Tuned Random Forest Classifier (14 pure features)
-│   ├── crop_stress_classifier.joblib
-│   ├── irrigation_priority_regressor.pkl# Tuned Random Forest Regressor (R² = 0.9954)
-│   ├── irrigation_priority_regressor.joblib
-│   ├── feature_scaler.pkl              # StandardScaler fitted on 14 physical features
-│   ├── feature_scaler.joblib
-│   ├── model_metadata.json             # Hyperparameters, metrics, and feature lists
-│   └── saved_models/                   # Mirror backup of persistent model weights
-├── notebooks/
-│   └── krishijal_complete_pipeline.ipynb # Complete procedural pipeline (0 comments, 0 defs)
-├── postman/
-│   └── KrishiJal_Postman_Collection.json# Faculty API evaluation test suite
-└── tests/
-    └── test_project.py                 # Comprehensive 8-stage automated test suite
-```
-
----
-
-*Academic Machine Learning Project Developed by First-Year B.Tech Student.*
+- **[Complete Academic Explanation (13 Topics + Viva Q&A)](docs/KrishiJal_Complete_Project_Explanation.md)** — Beginner-friendly explanation written for first-year B.Tech presentation and KMIT faculty evaluation.
+- **[Deployment & Operations Guide](DEPLOYMENT.md)** — Local MySQL setup, Ngrok demo workflow, and Render cloud deployment.
+- **[Postman Collection](postman/KrishiJal_Postman_Collection.json)** — Ready-to-import test collection for every REST API route.
