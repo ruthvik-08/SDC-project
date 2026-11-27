@@ -7,7 +7,7 @@
   <title>KrishiJal – Crop Stress &amp; Irrigation Intelligence Portal</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-  <link rel="stylesheet" href="portal.css?v=4">
+  <link rel="stylesheet" href="portal.css?v=5">
 </head>
 <body>
 
@@ -223,7 +223,6 @@
     </div>
 
     <div class="bar">
-      <b>Krishi<span style="color:var(--geo-accent)">Jal</span></b>
       <div class="geo-breadcrumbs" aria-label="Geographical Hierarchy">
         <span class="pill" id="pill" title="Click to return to Entire India">INDIA</span>
         <button type="button" class="crumb-btn" id="crumb-state" style="display:none;"></button>
@@ -234,7 +233,7 @@
         <button type="button" class="geo-action-btn" id="btn-back-india" style="display:none;">&larr; Back to India</button>
         <button type="button" class="geo-action-btn" id="btn-back-state" style="display:none;">&larr; Back to State</button>
       </div>
-      <span class="coverage-badge" id="coverage-badge">732 Districts · All India</span>
+      <span class="coverage-badge" id="coverage-badge">732 Districts · 37 States/UTs</span>
       <select id="state-select" class="bar-select" aria-label="Select State or Union Territory">
         <option value="ALL">All States / UTs (37)</option>
       </select>
@@ -1268,6 +1267,6 @@
   </section>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="portal.js?v=4"></script>
+  <script src="portal.js?v=5"></script>
 </body>
 </html>

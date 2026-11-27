@@ -1,7 +1,7 @@
 var LAYERS = {
   stress: {
     name: "Crop Stress",
-    cat: ["#facc15", "#fb923c", "#ef4444", "#991b1b"],
+    cat: ["#48A66A", "#E9BD45", "#EF873D", "#D94740"],
     labels: ["Low", "Moderate", "High", "Severe"]
   },
   ipi: {
@@ -9,14 +9,14 @@ var LAYERS = {
     key: "ipi",
     unit: "/100",
     labels: ["Low", "Medium", "High"],
-    colors: ["#22c55e", "#f97316", "#dc2626"]
+    colors: ["#48A66A", "#E9BD45", "#D94740"]
   },
   wet: {
     name: "Soil Wetness",
     key: "soil_wetness",
     unit: "",
     labels: ["Low", "Moderate", "High"],
-    colors: ["#bae6fd", "#38bdf8", "#1d4ed8"]
+    colors: ["#D6B66A", "#A5B66B", "#538F65"]
   }
 };
 
@@ -176,6 +176,25 @@ function getPriorityCategoryLabel(ipi) {
   return "Low Priority";
 }
 
+function getStressLayerColor(stressLevel) {
+  if (stressLevel === "Severe") return "#D94740";
+  if (stressLevel === "High") return "#EF873D";
+  if (stressLevel === "Moderate") return "#E9BD45";
+  return "#48A66A";
+}
+
+function getPriorityLayerColor(score) {
+  if (score >= 50.0) return "#D94740";
+  if (score >= 35.0) return "#E9BD45";
+  return "#48A66A";
+}
+
+function getWetnessLayerColor(wetness) {
+  if (wetness >= 0.55) return "#538F65";
+  if (wetness >= 0.35) return "#A5B66B";
+  return "#D6B66A";
+}
+
 function getPriorityScoreColor(score) {
   if (score >= 50.0) {
     return "var(--red)";
@@ -197,13 +216,7 @@ function getPriorityBadgeClass(score) {
 }
 
 function getSelectedDistrictColor() {
-  if (currentBasemap === "satellite") {
-    return "#fbbf24";
-  }
-  if (currentBasemap === "light") {
-    return "#0f766e";
-  }
-  return "#22d3ee";
+  return "#FFF0D5";
 }
 
 function setBasemap(styleKey) {
@@ -216,12 +229,10 @@ function setBasemap(styleKey) {
   }
 
   var mapEl = document.getElementById("map");
-  if (styleKey === "satellite") {
-    mapEl.style.backgroundColor = "#060d14";
-  } else if (styleKey === "dark") {
-    mapEl.style.backgroundColor = "#07111a";
+  if (styleKey === "satellite" || styleKey === "dark") {
+    mapEl.style.backgroundColor = "#171615";
   } else {
-    mapEl.style.backgroundColor = "#f4f6f8";
+    mapEl.style.backgroundColor = "#fafaf8";
   }
 
   var tilePane = map.getPane("tilePane");
@@ -261,32 +272,23 @@ setBasemap("dark");
 
 function colorFor(d) {
   if (!d) {
-    if (currentBasemap === "light") return "#cbd5e1";
-    return "#1e293b";
+    if (currentBasemap === "light") return "#d6cfc7";
+    return "#332F2B";
   }
 
   if (layer === "stress") {
-    var layerInfo = LAYERS.stress;
-    var catIndex = layerInfo.labels.indexOf(d.stress);
-    if (catIndex >= 0) {
-      return layerInfo.cat[catIndex];
-    }
-    return "#fb923c";
+    return getStressLayerColor(d.stress);
   }
 
   if (layer === "ipi") {
-    if (d.ipi >= 50.0) return "#dc2626";
-    if (d.ipi >= 35.0) return "#f97316";
-    return "#22c55e";
+    return getPriorityLayerColor(Number(d.ipi || 0));
   }
 
   if (layer === "wet") {
-    if (d.soil_wetness >= 0.55) return "#1d4ed8";
-    if (d.soil_wetness >= 0.35) return "#38bdf8";
-    return "#bae6fd";
+    return getWetnessLayerColor(Number(d.soil_wetness || 0));
   }
 
-  return "#fb923c";
+  return "#EF873D";
 }
 
 function dataFor(p) {
@@ -324,7 +326,7 @@ function styleState(f) {
   var isHovered = hoveredState && nSt === hoveredState;
 
   var activeWeight = 1.6;
-  var strokeOpacity = 0.72;
+  var strokeOpacity = 0.80;
   if (isCurrent) {
     activeWeight = 3.6;
     strokeOpacity = 1.0;
@@ -333,26 +335,19 @@ function styleState(f) {
     strokeOpacity = 1.0;
   } else if (current) {
     activeWeight = 1.0;
-    strokeOpacity = 0.25;
+    strokeOpacity = 0.30;
   }
 
-  var strokeColor = "#22d3ee";
-  if (currentBasemap === "satellite") {
-    strokeColor = "#38bdf8";
-    if (isCurrent || isHovered) strokeColor = "#fbbf24";
-  } else if (currentBasemap === "light") {
-    strokeColor = "#0f172a";
-    if (isCurrent || isHovered) strokeColor = "#0f766e";
-  } else {
-    strokeColor = "#38bdf8";
-    if (isCurrent || isHovered) strokeColor = "#4ade80";
+  var strokeColor = "#F28C45";
+  if (isCurrent || isHovered) {
+    strokeColor = "#FFAD55";
   }
 
   var glowFill = "transparent";
   var glowFillOp = 0;
   if (!current && isHovered) {
-    glowFill = strokeColor;
-    glowFillOp = 0.14;
+    glowFill = "#F28C45";
+    glowFillOp = 0.16;
   }
 
   return {
@@ -375,39 +370,40 @@ function styleDist(f) {
   var isStateDimmed = current && !inActiveState;
   var isStateHovered = !current && hoveredState && nDistState === hoveredState;
 
-  var fillOpacity = 0.74;
-  var borderColor = "rgba(15, 23, 42, 0.55)";
+  var fillOpacity = 0.78;
+  var borderColor = "rgba(23, 22, 21, 0.55)";
   var borderWeight = 0.75;
-  var borderOpacity = 0.7;
+  var borderOpacity = 0.72;
 
   if (currentBasemap === "satellite") {
     fillOpacity = 0.72;
-    borderColor = "rgba(255, 255, 255, 0.48)";
+    borderColor = "rgba(255, 240, 213, 0.42)";
   } else if (currentBasemap === "light") {
-    fillOpacity = 0.84;
-    borderColor = "#ffffff";
+    fillOpacity = 0.86;
+    borderColor = "#49413A";
+    borderOpacity = 0.40;
   }
 
   if (!hasData) {
-    fillOpacity = 0.25;
+    fillOpacity = 0.30;
   }
 
   if (isStateHovered) {
-    fillOpacity = 0.90;
-    borderColor = "#22d3ee";
+    fillOpacity = 0.92;
+    borderColor = "#FFAD55";
     borderWeight = 1.0;
   } else if (inActiveState) {
     fillOpacity = 0.88;
-    borderColor = "rgba(255, 255, 255, 0.72)";
+    borderColor = "rgba(255, 240, 213, 0.65)";
     borderWeight = 1.1;
-    borderOpacity = 0.92;
+    borderOpacity = 0.90;
     if (currentBasemap === "light") {
-      borderColor = "#0f172a";
-      borderOpacity = 0.55;
+      borderColor = "#49413A";
+      borderOpacity = 0.58;
     }
   } else if (isStateDimmed) {
-    fillOpacity = 0.08;
-    borderOpacity = 0.15;
+    fillOpacity = 0.10;
+    borderOpacity = 0.18;
     borderWeight = 0.4;
   }
 
@@ -430,24 +426,24 @@ function renderDynamicLegend() {
   if (layer === "stress") {
     title = "Crop Stress Gradient";
     rows = [
-      { label: "Low", color: "#facc15" },
-      { label: "Moderate", color: "#fb923c" },
-      { label: "High", color: "#ef4444" },
-      { label: "Severe", color: "#991b1b" }
+      { label: "Low", color: "#48A66A" },
+      { label: "Moderate", color: "#E9BD45" },
+      { label: "High", color: "#EF873D" },
+      { label: "Severe", color: "#D94740" }
     ];
   } else if (layer === "ipi") {
     title = "Irrigation Priority";
     rows = [
-      { label: "Low (< 35)", color: "#22c55e" },
-      { label: "Medium (35–49)", color: "#f97316" },
-      { label: "High (50+)", color: "#dc2626" }
+      { label: "Low (< 35)", color: "#48A66A" },
+      { label: "Medium (35–49)", color: "#E9BD45" },
+      { label: "High (50+)", color: "#D94740" }
     ];
   } else {
     title = "Soil Wetness Index";
     rows = [
-      { label: "Low (< 0.35)", color: "#bae6fd" },
-      { label: "Moderate (0.35–0.54)", color: "#38bdf8" },
-      { label: "High (0.55+)", color: "#1d4ed8" }
+      { label: "Low (< 0.35)", color: "#D6B66A" },
+      { label: "Moderate (0.35–0.54)", color: "#A5B66B" },
+      { label: "High (0.55+)", color: "#538F65" }
     ];
   }
 
@@ -459,12 +455,8 @@ function renderDynamicLegend() {
       + "</div>";
   }
 
-  var borderColor = "#38bdf8";
-  if (currentBasemap === "light") borderColor = "#0f766e";
-  if (currentBasemap === "satellite") borderColor = "#fbbf24";
-
   itemsHtml += "<div class='geo-legend-item'>"
-    + "<span class='geo-legend-swatch' style='background:" + borderColor + ";'></span>"
+    + "<span class='geo-legend-swatch' style='background:#F28C45;'></span>"
     + "<span>State Border</span>"
     + "</div>";
 
@@ -568,13 +560,16 @@ function buildStateHoverTooltipHtml(stateName) {
       + "<div class='geo-tooltip-sub'>Indian State / Union Territory Boundary</div>"
       + "<div class='geo-tooltip-grid'><div><span>Coverage</span><b>Click to Explore</b></div><div><span>Districts</span><b>Boundary Only</b></div></div>";
   }
+  var stressCol = getStressLayerColor(summary.dominantStress);
+  var ipiCol = getPriorityLayerColor(summary.avgIpi);
+  var wetCol = getWetnessLayerColor(summary.avgWet);
   return "<div class='geo-tooltip-title'>" + summary.name + "</div>"
     + "<div class='geo-tooltip-sub'>Click State to View " + summary.districtCount + " Districts</div>"
     + "<div class='geo-tooltip-grid'>"
     + "<div><span>Districts</span><b>" + summary.districtCount + "</b></div>"
-    + "<div><span>Avg Priority</span><b>" + summary.avgIpi.toFixed(1) + " / 100</b></div>"
-    + "<div><span>Dominant Stress</span><b>" + summary.dominantStress + "</b></div>"
-    + "<div><span>Soil Wetness</span><b>" + summary.avgWet.toFixed(2) + "</b></div>"
+    + "<div><span>Avg Priority</span><b style='color:" + ipiCol + ";'>" + summary.avgIpi.toFixed(1) + " / 100</b></div>"
+    + "<div><span>Dominant Stress</span><b style='color:" + stressCol + ";'>" + summary.dominantStress + "</b></div>"
+    + "<div><span>Soil Wetness</span><b style='color:" + wetCol + ";'>" + summary.avgWet.toFixed(2) + "</b></div>"
     + "</div>";
 }
 
@@ -585,12 +580,15 @@ function buildDistrictHoverTooltipHtml(props, d) {
       + "<div class='geo-tooltip-sub'>" + stateTitle + "</div>"
       + "<div class='geo-tooltip-grid'><div><span>Status</span><b>Data Unavailable</b></div><div><span>Boundary</span><b>Verified</b></div></div>";
   }
+  var stressCol = getStressLayerColor(d.stress);
+  var ipiCol = getPriorityLayerColor(Number(d.ipi || 0));
+  var wetCol = getWetnessLayerColor(Number(d.soil_wetness || 0));
   return "<div class='geo-tooltip-title'>" + d.district + "</div>"
     + "<div class='geo-tooltip-sub'>" + formatStateName(d.state) + " · " + (d.crop || "Mixed") + "</div>"
     + "<div class='geo-tooltip-grid'>"
-    + "<div><span>Crop Stress</span><b>" + d.stress + "</b></div>"
-    + "<div><span>Priority</span><b>" + d.ipi + " / 100</b></div>"
-    + "<div><span>Soil Wetness</span><b>" + d.soil_wetness + "</b></div>"
+    + "<div><span>Crop Stress</span><b style='color:" + stressCol + ";'>" + d.stress + "</b></div>"
+    + "<div><span>Priority</span><b style='color:" + ipiCol + ";'>" + d.ipi + " / 100</b></div>"
+    + "<div><span>Soil Wetness</span><b style='color:" + wetCol + ";'>" + d.soil_wetness + "</b></div>"
     + "<div><span>Risk Status</span><b>" + getRiskStatusLabel(d) + "</b></div>"
     + "</div>";
 }
@@ -630,9 +628,9 @@ function buildIndiaOverviewHtml() {
     + "<div class='intel-section-title'>National Agricultural Snapshot</div>"
     + "<div class='intel-kpi-grid'>"
     + "<div class='intel-kpi'><span>Districts Covered</span><b class='intel-anim-num' data-target='" + count + "' data-decimals='0'>0</b></div>"
-    + "<div class='intel-kpi'><span>High / Severe Stress</span><b style='color:var(--geo-danger);' class='intel-anim-num' data-target='" + highCount + "' data-decimals='0'>0</b></div>"
-    + "<div class='intel-kpi'><span>Moderate Stress</span><b style='color:var(--geo-warn);' class='intel-anim-num' data-target='" + modCount + "' data-decimals='0'>0</b></div>"
-    + "<div class='intel-kpi'><span>Mean Soil Wetness</span><b style='color:var(--geo-accent);' class='intel-anim-num' data-target='" + meanWet.toFixed(2) + "' data-decimals='2'>0.00</b></div>"
+    + "<div class='intel-kpi'><span>High / Severe Stress</span><b style='color:#D94740;' class='intel-anim-num' data-target='" + highCount + "' data-decimals='0'>0</b></div>"
+    + "<div class='intel-kpi'><span>Moderate Stress</span><b style='color:#E9BD45;' class='intel-anim-num' data-target='" + modCount + "' data-decimals='0'>0</b></div>"
+    + "<div class='intel-kpi'><span>Mean Soil Wetness</span><b style='color:" + getWetnessLayerColor(meanWet) + ";' class='intel-anim-num' data-target='" + meanWet.toFixed(2) + "' data-decimals='2'>0.00</b></div>"
     + "</div></div>"
     + "<div class='intel-section'>"
     + "<div class='intel-section-title'>Navigation Guide</div>"
@@ -653,16 +651,16 @@ function buildStateSummaryHtml() {
       + "</div>";
   }
 
-  return "<span class='tag' style='color:var(--geo-neon);margin-bottom:4px;'>STATE INTELLIGENCE VIEW</span>"
+  return "<span class='tag' style='color:var(--geo-highlight);margin-bottom:4px;'>STATE INTELLIGENCE VIEW</span>"
     + "<h4>" + summary.name + "</h4>"
     + "<p>Click any highlighted district boundary inside " + summary.name + " to open its ML District Intelligence Panel.</p>"
     + "<div class='intel-section'>"
     + "<div class='intel-section-title'>State Agricultural Statistics</div>"
     + "<div class='intel-kpi-grid'>"
     + "<div class='intel-kpi'><span>Total Districts</span><b class='intel-anim-num' data-target='" + summary.districtCount + "' data-decimals='0'>0</b></div>"
-    + "<div class='intel-kpi'><span>Avg Priority Index</span><b class='intel-anim-num' data-target='" + summary.avgIpi.toFixed(1) + "' data-decimals='1'>0.0</b></div>"
-    + "<div class='intel-kpi'><span>Dominant Stress</span><b>" + summary.dominantStress + "</b></div>"
-    + "<div class='intel-kpi'><span>Mean Soil Wetness</span><b class='intel-anim-num' data-target='" + summary.avgWet.toFixed(2) + "' data-decimals='2'>0.00</b></div>"
+    + "<div class='intel-kpi'><span>Avg Priority Index</span><b style='color:" + getPriorityLayerColor(summary.avgIpi) + ";' class='intel-anim-num' data-target='" + summary.avgIpi.toFixed(1) + "' data-decimals='1'>0.0</b></div>"
+    + "<div class='intel-kpi'><span>Dominant Stress</span><b style='color:" + getStressLayerColor(summary.dominantStress) + ";'>" + summary.dominantStress + "</b></div>"
+    + "<div class='intel-kpi'><span>Mean Soil Wetness</span><b style='color:" + getWetnessLayerColor(summary.avgWet) + ";' class='intel-anim-num' data-target='" + summary.avgWet.toFixed(2) + "' data-decimals='2'>0.00</b></div>"
     + "<div class='intel-kpi'><span>Primary Crop</span><b>" + summary.dominantCrop + "</b></div>"
     + "<div class='intel-kpi'><span>Verified Rows</span><b>" + summary.dataCount + " / " + summary.districtCount + "</b></div>"
     + "</div></div>"
@@ -805,10 +803,10 @@ function buildDistrictInfoHtml(d, mlRes) {
     + "<div class='intel-section'>"
     + "<div class='intel-section-title'>2. ML Intelligence" + rankHtml + "</div>"
     + "<div class='intel-kpi-grid'>"
-    + "<div class='intel-kpi'><span>Crop Stress</span><b style='color:" + getPriorityScoreColor(ipiScore) + ";'>" + stressLevel + "</b></div>"
-    + "<div class='intel-kpi'><span>Irrigation Priority</span><b class='intel-anim-num' data-target='" + ipiScore.toFixed(1) + "' data-decimals='1' data-suffix='/100'>0.0</b></div>"
+    + "<div class='intel-kpi'><span>Crop Stress</span><b style='color:" + getStressLayerColor(stressLevel) + ";'>" + stressLevel + "</b></div>"
+    + "<div class='intel-kpi'><span>Irrigation Priority</span><b style='color:" + getPriorityLayerColor(ipiScore) + ";' class='intel-anim-num' data-target='" + ipiScore.toFixed(1) + "' data-decimals='1' data-suffix='/100'>0.0</b></div>"
     + "<div class='intel-kpi'><span>Risk Class</span><b>" + priorityCat + "</b></div>"
-    + "<div class='intel-kpi'><span>Soil Wetness</span><b class='intel-anim-num' data-target='" + Number(d.soil_wetness).toFixed(2) + "' data-decimals='2'>0.00</b></div>"
+    + "<div class='intel-kpi'><span>Soil Wetness</span><b style='color:" + getWetnessLayerColor(Number(d.soil_wetness || 0)) + ";' class='intel-anim-num' data-target='" + Number(d.soil_wetness).toFixed(2) + "' data-decimals='2'>0.00</b></div>"
     + "</div>"
     + confHtml
     + "</div>"
@@ -818,7 +816,7 @@ function buildDistrictInfoHtml(d, mlRes) {
     + "<p style='margin:0 0 4px;color:var(--geo-text);'><b>Priority &amp; Depth:</b> " + priorityCat + " (" + depthText + ")</p>"
     + "<p style='margin:0 0 4px;color:var(--geo-muted);'><b>Reason:</b> " + reasonText + "</p>"
     + "<p style='margin:0 0 4px;color:var(--geo-muted);'><b>Environment:</b> Temp " + (d.temperature || 28) + "°C · Humidity " + (d.humidity || 60) + "% · Rain " + d.rainfall + " mm · NDVI " + d.ndvi + deficitText + "</p>"
-    + "<p style='margin:0;color:var(--geo-neon);'><b>Action:</b> " + actionText + "</p>"
+    + "<p style='margin:0;color:var(--geo-highlight);'><b>Action:</b> " + actionText + "</p>"
     + "</div>"
     + "</div>"
     + "<div class='intel-section'>"
@@ -959,6 +957,9 @@ function selectDistrict(props, ly, skipFly) {
   }
 
   if (selectedDistrictLayer && distLayer) {
+    if (selectedDistrictLayer._path) {
+      selectedDistrictLayer._path.classList.remove("geo-district-selected");
+    }
     distLayer.resetStyle(selectedDistrictLayer);
   }
   selectedDistrictLayer = ly;
@@ -973,6 +974,9 @@ function selectDistrict(props, ly, skipFly) {
     fillOpacity: 0.94,
     opacity: 1
   });
+  if (ly._path) {
+    ly._path.classList.add("geo-district-selected");
+  }
   if (!L.Browser.ie && !L.Browser.opera && !L.Browser.edge) {
     ly.bringToFront();
   }
@@ -994,6 +998,9 @@ function selectDistrict(props, ly, skipFly) {
 
 function clearSelectedDistrict() {
   if (selectedDistrictLayer && distLayer) {
+    if (selectedDistrictLayer._path) {
+      selectedDistrictLayer._path.classList.remove("geo-district-selected");
+    }
     distLayer.resetStyle(selectedDistrictLayer);
   }
   selectedDistrictLayer = null;
@@ -1062,23 +1069,23 @@ function updateRiskPulseMarkers() {
     if (!d) continue;
 
     var isRisk = false;
-    var pulseColor = "#ef4444";
+    var pulseColor = "#EF873D";
     var score = Number(d.ipi || 0);
 
     if (layer === "stress") {
       if (d.stress === "Severe" || d.stress === "High") {
         isRisk = true;
-        if (d.stress === "Severe") pulseColor = "#ff2e4c";
+        if (d.stress === "Severe") pulseColor = "#D94740";
       }
     } else if (layer === "ipi") {
       if (d.ipi >= 50.0) {
         isRisk = true;
-        pulseColor = "#dc2626";
+        pulseColor = "#D94740";
       }
     } else if (layer === "wet") {
       if (d.soil_wetness < 0.30) {
         isRisk = true;
-        pulseColor = "#f97316";
+        pulseColor = "#D6B66A";
       }
     }
 
@@ -1120,6 +1127,9 @@ function recolor() {
   if (stateLayer) stateLayer.setStyle(styleState);
   if (selectedDistrictLayer) {
     selectedDistrictLayer.setStyle({ weight: 3.8, color: getSelectedDistrictColor(), fillOpacity: 0.94 });
+    if (selectedDistrictLayer._path) {
+      selectedDistrictLayer._path.classList.add("geo-district-selected");
+    }
   }
   updateRiskPulseMarkers();
   var selectedData = null;
@@ -2045,9 +2055,8 @@ function attachDistrictLayerEvents(feature, layerObj) {
       return;
     }
 
-    var hoverColor = getSelectedDistrictColor();
     if (layerObj !== selectedDistrictLayer) {
-      layerObj.setStyle({ weight: 2.6, color: hoverColor, fillOpacity: 0.96, opacity: 1.0 });
+      layerObj.setStyle({ weight: 2.8, color: "#FFC66D", fillOpacity: 0.96, opacity: 1.0 });
       if (!L.Browser.ie && !L.Browser.opera && !L.Browser.edge) {
         layerObj.bringToFront();
       }

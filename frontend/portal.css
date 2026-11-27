@@ -286,16 +286,21 @@ p.lead { font-size: 17.5px; line-height: 1.62; opacity: 0.94; margin-bottom: 28p
 .nav-card:hover .card-link span.arrow { transform: translateX(6px); }
 
 #app {
-  --geo-bg: #07111a;
-  --geo-surface: rgba(11, 22, 34, 0.86);
-  --geo-surface-solid: #0c1724;
-  --geo-border: rgba(34, 211, 238, 0.24);
-  --geo-text: #f1f5f9;
-  --geo-muted: #94a3b8;
-  --geo-accent: #22d3ee;
-  --geo-neon: #4ade80;
-  --geo-warn: #f97316;
-  --geo-danger: #ef4444;
+  --geo-bg: #171615;
+  --geo-bg-sec: #211F1D;
+  --geo-surface: rgba(41, 38, 35, 0.94);
+  --geo-surface-bar: rgba(33, 31, 29, 0.96);
+  --geo-surface-solid: #332F2B;
+  --geo-border: #49413A;
+  --geo-text: #F5F1EB;
+  --geo-muted: #AAA198;
+  --geo-accent: #F28C45;
+  --geo-accent-sec: #E9A23B;
+  --geo-highlight: #FFC66D;
+  --geo-glow: rgba(242, 140, 69, 0.45);
+  --geo-warn: #EF873D;
+  --geo-danger: #D94740;
+  --geo-safe: #48A66A;
   color-scheme: dark;
   color: var(--geo-text);
   display: none;
@@ -309,14 +314,18 @@ p.lead { font-size: 17.5px; line-height: 1.62; opacity: 0.94; margin-bottom: 28p
 #app.on { display: block; }
 
 #app[data-basemap="light"]:not([data-contrast="dark"]) {
-  --geo-bg: #f4f6f8;
-  --geo-surface: rgba(255, 255, 255, 0.90);
-  --geo-surface-solid: #ffffff;
-  --geo-border: rgba(15, 118, 110, 0.22);
-  --geo-text: #0f172a;
-  --geo-muted: #475569;
-  --geo-accent: #0f766e;
-  --geo-neon: #16a34a;
+  --geo-bg: #fafaf8;
+  --geo-bg-sec: #f3efe9;
+  --geo-surface: rgba(255, 255, 255, 0.94);
+  --geo-surface-bar: rgba(244, 240, 234, 0.96);
+  --geo-surface-solid: #f4f0ea;
+  --geo-border: #dcd3c8;
+  --geo-text: #1c1a18;
+  --geo-muted: #7a746d;
+  --geo-accent: #d96b27;
+  --geo-accent-sec: #c97f1d;
+  --geo-highlight: #b5573a;
+  --geo-glow: rgba(242, 140, 69, 0.35);
   color-scheme: light;
 }
 
@@ -327,7 +336,7 @@ p.lead { font-size: 17.5px; line-height: 1.62; opacity: 0.94; margin-bottom: 28p
   bottom: 0;
   width: 56px;
   border-right: 1px solid var(--geo-border);
-  background: var(--geo-surface);
+  background: var(--geo-surface-bar);
   backdrop-filter: blur(12px);
   z-index: 750;
   display: flex;
@@ -343,18 +352,20 @@ p.lead { font-size: 17.5px; line-height: 1.62; opacity: 0.94; margin-bottom: 28p
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: rgba(34, 211, 238, 0.08);
-  border: 1px solid transparent;
+  background: rgba(242, 140, 69, 0.12);
+  border: 1px solid var(--geo-border);
   font-size: 18px;
   font-weight: 700;
   color: var(--geo-accent);
   cursor: pointer;
-  transition: transform var(--dur-fast), border-color var(--dur-fast), background var(--dur-fast), color var(--dur-fast);
+  transition: transform var(--dur-fast), border-color var(--dur-fast), background var(--dur-fast), color var(--dur-fast), box-shadow var(--dur-fast);
 }
 .rail button:hover, .ibtn:hover {
   border-color: var(--geo-accent);
-  background: rgba(34, 211, 238, 0.16);
-  transform: scale(1.08);
+  background: rgba(242, 140, 69, 0.22);
+  color: var(--geo-highlight);
+  box-shadow: 0 0 12px var(--geo-glow);
+  transform: scale(1.06);
 }
 .rail button:active, .ibtn:active { transform: scale(0.92); }
 .rail .bot { margin-top: auto; }
@@ -367,15 +378,15 @@ p.lead { font-size: 17.5px; line-height: 1.62; opacity: 0.94; margin-bottom: 28p
   height: 60px;
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 0 16px;
-  background: var(--geo-surface);
+  gap: 8px;
+  padding: 0 14px;
+  background: var(--geo-surface-bar);
   backdrop-filter: blur(14px);
   border-bottom: 1px solid var(--geo-border);
   z-index: 750;
 }
 .bar b {
-  font-size: 19px;
+  font-size: 18px;
   color: var(--geo-text);
   font-weight: 800;
   letter-spacing: -0.2px;
@@ -388,9 +399,9 @@ p.lead { font-size: 17.5px; line-height: 1.62; opacity: 0.94; margin-bottom: 28p
   flex-shrink: 0;
 }
 .pill {
-  background: rgba(34, 211, 238, 0.16);
-  color: var(--geo-accent);
-  border: 1px solid var(--geo-border);
+  background: rgba(242, 140, 69, 0.16);
+  color: var(--geo-highlight);
+  border: 1px solid var(--geo-accent);
   padding: 5px 12px;
   border-radius: 7px;
   font-size: 11.5px;
@@ -398,61 +409,68 @@ p.lead { font-size: 17.5px; line-height: 1.62; opacity: 0.94; margin-bottom: 28p
   letter-spacing: 0.4px;
   cursor: pointer;
   white-space: nowrap;
-  transition: transform var(--dur-fast), background var(--dur-fast), border-color var(--dur-fast);
+  transition: transform var(--dur-fast), background var(--dur-fast), border-color var(--dur-fast), color var(--dur-fast), box-shadow var(--dur-fast);
 }
 .pill:hover {
   background: var(--geo-accent);
-  color: #06131d;
+  color: #171615;
+  box-shadow: 0 0 12px var(--geo-glow);
   transform: translateY(-1px);
 }
 .crumb-btn {
-  background: rgba(74, 222, 128, 0.14);
-  color: var(--geo-neon);
-  border: 1px solid rgba(74, 222, 128, 0.35);
+  background: rgba(233, 162, 59, 0.16);
+  color: var(--geo-highlight);
+  border: 1px solid rgba(255, 173, 85, 0.48);
   padding: 5px 10px;
   border-radius: 7px;
   font-size: 11.5px;
   font-weight: 700;
   cursor: pointer;
   white-space: nowrap;
-  transition: transform var(--dur-fast), background var(--dur-fast);
+  transition: transform var(--dur-fast), background var(--dur-fast), border-color var(--dur-fast);
 }
 .crumb-btn:hover {
-  background: rgba(74, 222, 128, 0.25);
+  background: rgba(242, 140, 69, 0.28);
+  border-color: #FFAD55;
   transform: translateY(-1px);
 }
 .crumb-sep { color: var(--geo-muted); font-size: 14px; font-weight: 700; }
 .crumb-district {
   font-size: 12px;
   font-weight: 700;
-  color: var(--geo-text);
+  color: #FFF0D5;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 140px;
+  max-width: 145px;
+}
+#app[data-basemap="light"]:not([data-contrast="dark"]) .crumb-district {
+  color: var(--geo-text);
 }
 
 .geo-nav-actions {
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  flex-shrink: 0;
 }
 .geo-action-btn {
   padding: 6px 11px;
   border-radius: 7px;
   border: 1px solid var(--geo-border);
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--geo-surface-solid);
   color: var(--geo-text);
   font-size: 11.5px;
   font-weight: 700;
   font-family: inherit;
   cursor: pointer;
   white-space: nowrap;
-  transition: border-color var(--dur-fast), background var(--dur-fast), transform var(--dur-fast);
+  transition: border-color var(--dur-fast), background var(--dur-fast), color var(--dur-fast), transform var(--dur-fast), box-shadow var(--dur-fast);
 }
 .geo-action-btn:hover {
   border-color: var(--geo-accent);
-  color: var(--geo-accent);
+  color: var(--geo-highlight);
+  box-shadow: 0 0 10px rgba(242, 140, 69, 0.25);
   transform: translateY(-1px);
 }
 
@@ -460,18 +478,19 @@ p.lead { font-size: 17.5px; line-height: 1.62; opacity: 0.94; margin-bottom: 28p
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  background: rgba(74, 222, 128, 0.10);
-  color: var(--geo-neon);
-  border: 1px solid rgba(74, 222, 128, 0.28);
+  background: rgba(233, 162, 59, 0.14);
+  color: var(--geo-highlight);
+  border: 1px solid rgba(242, 140, 69, 0.42);
   padding: 5px 10px;
   border-radius: 7px;
   font-size: 11px;
   font-weight: 700;
   white-space: nowrap;
+  flex-shrink: 0;
   font-family: 'JetBrains Mono', monospace;
 }
 
-@media (max-width: 1360px) {
+@media (max-width: 1120px) {
   .coverage-badge { display: none; }
 }
 
@@ -489,15 +508,19 @@ p.lead { font-size: 17.5px; line-height: 1.62; opacity: 0.94; margin-bottom: 28p
   outline: none;
   white-space: nowrap;
   flex-shrink: 0;
-  transition: border-color var(--dur-fast);
-  max-width: 175px;
+  transition: border-color var(--dur-fast), box-shadow var(--dur-fast);
+  max-width: 165px;
 }
-.bar-select:focus { border-color: var(--geo-accent); }
+.bar-select:hover,
+.bar-select:focus {
+  border-color: var(--geo-accent);
+  box-shadow: 0 0 0 3px rgba(242, 140, 69, 0.20);
+}
 
 .bar input {
   margin-left: auto;
-  width: min(250px, 22vw);
-  min-width: 150px;
+  width: min(245px, 21vw);
+  min-width: 145px;
   padding: 8px 12px;
   border: 1px solid var(--geo-border);
   border-radius: 8px;
@@ -507,10 +530,13 @@ p.lead { font-size: 17.5px; line-height: 1.62; opacity: 0.94; margin-bottom: 28p
   font-family: inherit;
   transition: border-color var(--dur-fast), box-shadow var(--dur-fast);
 }
+.bar input::placeholder {
+  color: var(--geo-muted);
+}
 .bar input:focus {
   outline: none;
   border-color: var(--geo-accent);
-  box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.20);
+  box-shadow: 0 0 0 3px rgba(242, 140, 69, 0.25);
 }
 
 #map {
@@ -526,7 +552,11 @@ p.lead { font-size: 17.5px; line-height: 1.62; opacity: 0.94; margin-bottom: 28p
   transition: opacity 0.32s ease, filter 0.32s ease;
 }
 #app[data-basemap="dark"] #map .leaflet-tile-pane {
-  filter: invert(92%) hue-rotate(180deg) brightness(86%) contrast(108%) saturate(45%);
+  filter: grayscale(85%) invert(93%) contrast(108%) brightness(82%) sepia(14%);
+}
+
+#map path.geo-district-selected {
+  filter: drop-shadow(0 0 8px rgba(242, 140, 69, 0.45));
 }
 
 .geo-grid-overlay {
@@ -538,16 +568,16 @@ p.lead { font-size: 17.5px; line-height: 1.62; opacity: 0.94; margin-bottom: 28p
   pointer-events: none;
   z-index: 410;
   background-image:
-    linear-gradient(to right, rgba(34, 211, 238, 0.05) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(34, 211, 238, 0.05) 1px, transparent 1px);
+    linear-gradient(to right, rgba(242, 140, 69, 0.04) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(242, 140, 69, 0.04) 1px, transparent 1px);
   background-size: 72px 72px;
-  box-shadow: inset 0 0 80px rgba(3, 10, 18, 0.45);
+  box-shadow: inset 0 0 80px rgba(23, 22, 21, 0.45);
 }
 #app[data-basemap="light"] .geo-grid-overlay {
   background-image:
-    linear-gradient(to right, rgba(15, 118, 110, 0.04) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(15, 118, 110, 0.04) 1px, transparent 1px);
-  box-shadow: inset 0 0 40px rgba(15, 23, 42, 0.06);
+    linear-gradient(to right, rgba(242, 140, 69, 0.05) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(242, 140, 69, 0.05) 1px, transparent 1px);
+  box-shadow: inset 0 0 40px rgba(28, 26, 24, 0.06);
 }
 
 .geo-scan-overlay {
@@ -558,7 +588,7 @@ p.lead { font-size: 17.5px; line-height: 1.62; opacity: 0.94; margin-bottom: 28p
   height: 110px;
   pointer-events: none;
   z-index: 415;
-  background: linear-gradient(180deg, transparent 0%, rgba(34, 211, 238, 0.07) 50%, transparent 100%);
+  background: linear-gradient(180deg, transparent 0%, rgba(242, 140, 69, 0.06) 50%, transparent 100%);
   opacity: 0;
 }
 
@@ -604,15 +634,15 @@ p.lead { font-size: 17.5px; line-height: 1.62; opacity: 0.94; margin-bottom: 28p
   width: 22px;
   height: 22px;
   border-radius: 50%;
-  border: 2px solid var(--geo-pulse-color, #ef4444);
-  background: rgba(239, 68, 68, 0.16);
+  border: 2px solid var(--geo-pulse-color, #D94740);
+  background: rgba(217, 71, 64, 0.16);
 }
 .geo-risk-pulse-core {
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: var(--geo-pulse-color, #ef4444);
-  box-shadow: 0 0 8px var(--geo-pulse-color, #ef4444);
+  background: var(--geo-pulse-color, #D94740);
+  box-shadow: 0 0 8px var(--geo-pulse-color, #D94740);
 }
 
 .geo-loading-wrap {
@@ -688,16 +718,17 @@ progress.geo-loading-progress {
 .layer-dock .ld-btn:hover,
 .map-switcher .ms-btn:hover {
   color: var(--geo-text);
-  background: rgba(34, 211, 238, 0.10);
+  background: rgba(242, 140, 69, 0.14);
 }
 .layer-dock .ld-btn.active {
-  background: rgba(34, 211, 238, 0.20);
-  color: var(--geo-accent);
-  box-shadow: inset 0 -2px 0 var(--geo-accent);
+  background: rgba(242, 140, 69, 0.22);
+  color: var(--geo-highlight);
+  box-shadow: inset 0 -2px 0 var(--geo-accent), 0 0 12px rgba(242, 140, 69, 0.28);
 }
 .map-switcher .ms-btn.active {
   background: var(--geo-accent);
-  color: #06131d;
+  color: #171615;
+  box-shadow: 0 0 10px rgba(242, 140, 69, 0.35);
 }
 #app[data-basemap="light"] .map-switcher .ms-btn.active {
   color: #ffffff;
@@ -908,13 +939,13 @@ progress.geo-loading-progress {
   gap: 8px;
 }
 .intel-kpi {
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--geo-surface-solid);
   border: 1px solid var(--geo-border);
   border-radius: 9px;
   padding: 8px 10px;
 }
 #app[data-basemap="light"] .intel-kpi {
-  background: rgba(15, 23, 42, 0.03);
+  background: #ffffff;
 }
 .intel-kpi span {
   display: block;
@@ -947,19 +978,19 @@ progress.geo-loading-progress {
   flex: 1;
   height: 7px;
   border-radius: 999px;
-  background: rgba(148, 163, 184, 0.20);
+  background: rgba(170, 161, 152, 0.22);
   overflow: hidden;
 }
 .intel-conf-fill {
   height: 100%;
   border-radius: 999px;
-  background: var(--geo-accent);
+  background: linear-gradient(90deg, #F28C45, #FFC66D);
   transition: width 0.4s var(--ease-genie);
 }
 .intel-conf-pct { width: 42px; text-align: right; font-family: 'JetBrains Mono', monospace; font-weight: 700; }
 
 .intel-advisory-box {
-  background: rgba(34, 211, 238, 0.08);
+  background: rgba(242, 140, 69, 0.10);
   border-left: 3px solid var(--geo-accent);
   border-radius: 0 9px 9px 0;
   padding: 9px 11px;
@@ -980,6 +1011,36 @@ progress.geo-loading-progress {
   padding: 8px 10px;
   font-size: 12px;
 }
+#app .info.geo-intel-panel .btn.fill {
+  background: var(--geo-accent);
+  color: #171615;
+  border: 1px solid #FFAD55;
+  font-weight: 800;
+}
+#app .info.geo-intel-panel .btn.fill:hover {
+  background: var(--geo-highlight);
+  box-shadow: 0 0 12px var(--geo-glow);
+}
+#app .info.geo-intel-panel .badge {
+  background: var(--geo-surface-solid);
+  color: var(--geo-highlight);
+  border: 1px solid var(--geo-border);
+}
+#app .info.geo-intel-panel .badge.high {
+  background: rgba(217, 71, 64, 0.20);
+  color: #ffb4ad;
+  border: 1px solid rgba(217, 71, 64, 0.55);
+}
+#app .info.geo-intel-panel .badge.med {
+  background: rgba(233, 189, 69, 0.18);
+  color: #FFC66D;
+  border: 1px solid rgba(233, 189, 69, 0.45);
+}
+#app .info.geo-intel-panel .badge.low {
+  background: rgba(72, 166, 106, 0.20);
+  color: #8ee0aa;
+  border: 1px solid rgba(72, 166, 106, 0.45);
+}
 
 .chart { display: flex; align-items: flex-end; gap: 6px; height: 54px; margin-top: 10px; margin-bottom: 16px; }
 .chart div {
@@ -987,9 +1048,9 @@ progress.geo-loading-progress {
   background: var(--geo-accent);
   border-radius: 4px 4px 0 0;
   position: relative;
-  transition: height 0.4s var(--ease-genie);
+  transition: height 0.4s var(--ease-genie), background var(--dur-fast);
 }
-.chart div:hover { background: var(--geo-neon); }
+.chart div:hover { background: var(--geo-highlight); }
 .chart div:after {
   content: attr(data-m);
   position: absolute;
